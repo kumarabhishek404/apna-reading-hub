@@ -69,3 +69,7 @@ app.use(
 app.listen(PORT, () => {
   console.log(`Reading Hub API running on port ${PORT}`);
 });
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+});

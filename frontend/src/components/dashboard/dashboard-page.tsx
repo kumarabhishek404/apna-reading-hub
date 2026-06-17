@@ -60,18 +60,33 @@ export function DashboardPage() {
         setRecent(data.recent ?? []);
         setFavorites(data.favorites ?? []);
         setError(null);
+        setLoading(false);
+        return true;
       } catch {
         if (!cancelled) {
-          setError("Could not reach the API. Make sure the backend is running on port 4000.");
+          setError(
+            "Could not reach the API. Make sure the backend is running (npm run dev from project root)."
+          );
+          setLoading(false);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
+        return false;
       }
     }
 
-    load();
+    let retryTimer: ReturnType<typeof setInterval> | null = null;
+
+    load().then((ok) => {
+      if (!ok && !cancelled) {
+        retryTimer = setInterval(async () => {
+          const success = await load();
+          if (success && retryTimer) clearInterval(retryTimer);
+        }, 5000);
+      }
+    });
+
     return () => {
       cancelled = true;
+      if (retryTimer) clearInterval(retryTimer);
     };
   }, []);
 
