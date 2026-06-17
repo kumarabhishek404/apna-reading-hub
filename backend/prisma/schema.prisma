@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  blogs     BlogTag[]
+  links     LinkTag[]
+  pdfs      PdfTag[]
+  notes     NoteTag[]
+}
+
+model Blog {
+  id         String    @id @default(cuid())
+  title      String
+  url        String?
+  content    String    @default("")
+  isFavorite Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tags       BlogTag[]
+}
+
+model BlogTag {
+  blogId String
+  tagId  String
+  blog   Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, tagId])
+}
+
+model Link {
+  id          String    @id @default(cuid())
+  title       String
+  url         String
+  description String    @default("")
+  isFavorite  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tags        LinkTag[]
+}
+
+model LinkTag {
+  linkId String
+  tagId  String
+  link   Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([linkId, tagId])
+}
+
+model Pdf {
+  id          String   @id @default(cuid())
+  title       String
+  pdfUrl      String
+  description String   @default("")
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tags        PdfTag[]
+}
+
+model PdfTag {
+  pdfId String
+  tagId String
+  pdf   Pdf  @relation(fields: [pdfId], references: [id], onDelete: Cascade)
+  tag   Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pdfId, tagId])
+}
+
+model Note {
+  id         String    @id @default(cuid())
+  title      String
+  content    String    @default("")
+  isPinned   Boolean   @default(false)
+  isFavorite Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tags       NoteTag[]
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+  note   Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}

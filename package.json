@@ -2,26 +2,22 @@
   "name": "apna-reading-hub",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @reading-hub/backend\" \"npx wait-on http://localhost:4000/health -t 30000 && npm run dev -w @reading-hub/frontend\"",
+    "dev:backend": "npm run dev -w @reading-hub/backend",
+    "dev:frontend": "npm run dev -w @reading-hub/frontend",
+    "build": "npm run build -w @reading-hub/backend && npm run build -w @reading-hub/frontend",
+    "start": "concurrently \"npm run start -w @reading-hub/backend\" \"npm run start -w @reading-hub/frontend\"",
+    "db:migrate": "npm run db:migrate -w @reading-hub/backend",
+    "db:studio": "npm run db:studio -w @reading-hub/backend",
+    "lint": "npm run lint -w @reading-hub/frontend"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^9.1.2",
+    "wait-on": "^8.0.5"
   }
 }

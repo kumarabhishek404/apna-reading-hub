@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: readinghub
+      POSTGRES_PASSWORD: readinghub
+      POSTGRES_DB: readinghub
+    volumes:
+      - readinghub_pg:/var/lib/postgresql/data
+
+volumes:
+  readinghub_pg:
