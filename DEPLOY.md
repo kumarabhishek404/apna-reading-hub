@@ -78,7 +78,7 @@ After setting env vars, click **Manual Deploy → Deploy latest commit** on both
 | Name | `reading-hub-api` |
 | Root Directory | `backend` |
 | Runtime | Node |
-| Build Command | `npm install && npx prisma generate && npx prisma db push && npm run build` |
+| Build Command | `NPM_CONFIG_PRODUCTION=false npm install && npx prisma generate && npx prisma db push && npm run build` |
 | Start Command | `npm start` |
 | Plan | Free |
 
@@ -104,7 +104,7 @@ After setting env vars, click **Manual Deploy → Deploy latest commit** on both
 | Name | `reading-hub-web` |
 | Root Directory | `frontend` |
 | Runtime | Node |
-| Build Command | `npm install && npm run build` |
+| Build Command | `cd .. && NPM_CONFIG_PRODUCTION=false npm install && cd frontend && npm run build` |
 | Start Command | `npm start` |
 | Plan | Free |
 

@@ -11,7 +11,7 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
+    buildCommand: cd .. && NPM_CONFIG_PRODUCTION=false npm install && cd backend && npx prisma generate && npx prisma db push && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -32,7 +32,7 @@ services:
     runtime: node
     plan: free
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: cd .. && NPM_CONFIG_PRODUCTION=false npm install && cd frontend && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
