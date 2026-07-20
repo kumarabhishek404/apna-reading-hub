@@ -1,11 +1,12 @@
 #!/bin/sh
 set -e
 
+# Default to SQLite when the platform does not inject DATABASE_URL
 if [ -z "$DATABASE_URL" ]; then
-  echo "ERROR: DATABASE_URL is required (PostgreSQL connection string)."
-  exit 1
+  export DATABASE_URL="file:./dev.db"
 fi
 
+echo "Using DATABASE_URL=${DATABASE_URL}"
 echo "Syncing database schema..."
 cd /app/backend
 npx prisma db push --skip-generate

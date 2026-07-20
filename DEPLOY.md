@@ -6,15 +6,17 @@ This guide walks you through deploying the monorepo (frontend + backend + databa
 
 A root [`Dockerfile`](./Dockerfile) builds **both** the API and the Next.js app into one image (public port = Next.js; API listens on `4000` inside the container).
 
-**Required env vars on your container platform:**
+It uses **SQLite by default** — no `DATABASE_URL` is required. Push and redeploy.
+
+**Optional env vars:**
 
 | Key | Value |
 |-----|-------|
-| `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | Usually injected by the platform (defaults to `3000`) |
 | `FRONTEND_URL` | Your public app URL (for CORS) |
+| `DATABASE_URL` | Override only if you intentionally use a custom SQLite path |
 
-Then redeploy the container app after pushing this repo (including the root `Dockerfile`).
+> SQLite data lives on the container filesystem and is **lost on redeploy** unless you mount a persistent volume at `/app/backend/prisma` (and `/app/backend/uploads` for PDFs). For durable data, use the Render + PostgreSQL setup below.
 
 ---
 

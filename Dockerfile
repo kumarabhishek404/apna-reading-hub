@@ -1,5 +1,7 @@
 # Reading Hub — single-container image (Next.js + Express API)
-# Platform exposes one PORT; Next.js serves that port and proxies /api to the API.
+# Uses SQLite by default so deploy works without a managed database.
+# Optional: set DATABASE_URL to a PostgreSQL URL only if you rebuild with
+# schema.postgresql.prisma (see DEPLOY.md Render section for Postgres).
 
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
@@ -20,10 +22,8 @@ COPY package.json package-lock.json ./
 COPY frontend ./frontend
 COPY backend ./backend
 
-# Production uses PostgreSQL
-RUN cp backend/prisma/schema.postgresql.prisma backend/prisma/schema.prisma
-
-ENV DATABASE_URL="postgresql://user:pass@localhost:5432/readinghub?schema=public"
+# Keep SQLite schema (default schema.prisma) for zero-config container deploys
+ENV DATABASE_URL="file:./dev.db"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV INTERNAL_API_URL=http://127.0.0.1:4000
@@ -41,6 +41,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV INTERNAL_API_URL=http://127.0.0.1:4000
 ENV UPLOADS_DIR=/app/backend/uploads
+ENV DATABASE_URL="file:./dev.db"
 ENV PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs \
