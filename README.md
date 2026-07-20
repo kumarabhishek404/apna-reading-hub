@@ -55,6 +55,13 @@ npm run dev
 - **Backend API:** http://localhost:4000
 - **Health check:** http://localhost:4000/health
 
+### Deploy
+
+| Target | Guide |
+|--------|--------|
+| **Vercel** (full stack) | [DEPLOY.md](./DEPLOY.md#deploy-full-stack-on-vercel-frontend--backend) — Root Directory `frontend` + Postgres `DATABASE_URL` |
+| **Render** (API + DB + optional web) | [DEPLOY.md](./DEPLOY.md) |
+
 ### Run Individually
 
 ```bash

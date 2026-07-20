@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import path from "path";
+import { UPLOADS_DIR } from "../lib/uploads";
 import {
   createPdf,
   deletePdf,
@@ -11,9 +11,6 @@ import {
 } from "../services/pdf.service";
 
 const router = Router();
-
-const UPLOADS_DIR =
-  process.env.UPLOADS_DIR || path.join(__dirname, "../../uploads");
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {

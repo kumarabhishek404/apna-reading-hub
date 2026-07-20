@@ -1,19 +1,27 @@
+function defaultBackendUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Same-origin Next.js (embedded Express) during local `next dev` without a separate API
+  return "http://localhost:3000";
+}
+
 const BACKEND_URL =
   process.env.INTERNAL_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:4000";
+  defaultBackendUrl();
 
 /** Resolve the API base URL for the current environment. */
 export function apiUrl(path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
 
-  // Browser: call backend directly (works locally + on Render)
+  // Browser: prefer same-origin relative URLs unless an external API is configured
   if (typeof window !== "undefined") {
     const publicUrl = process.env.NEXT_PUBLIC_API_URL;
     return publicUrl ? `${publicUrl}${normalized}` : normalized;
   }
 
-  // Server-side rendering: call backend directly
+  // Server-side rendering: call backend (embedded or external)
   return `${BACKEND_URL}${normalized}`;
 }
 

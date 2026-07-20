@@ -29,6 +29,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# This repo uses npm (package-lock.json). A pnpm lockfile breaks Vercel installs.
+pnpm-lock.yaml
+yarn.lock
+
 # env files
 .env
 .env*.local

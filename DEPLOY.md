@@ -1,6 +1,56 @@
-# Deploy Reading Hub on Render
+# Deploy Reading Hub
 
-This guide walks you through deploying the monorepo (frontend + backend + database) on [Render](https://render.com).
+Guides for **Vercel** (frontend), **Docker**, and **Render** (API + Postgres).
+
+## Deploy full stack on Vercel (frontend + backend)
+
+One Vercel project serves **Next.js and the Express API** together. The API is mounted at `/api/*` via a serverless catch-all that imports the Express app.
+
+### 1. Create a Postgres database
+
+Vercel serverless cannot use SQLite. Create a free DB (any one):
+
+- [Neon](https://neon.tech) → copy the connection string  
+- [Supabase](https://supabase.com) → Project Settings → Database → URI  
+- [Vercel Postgres](https://vercel.com/storage/postgres)
+
+### 2. Import the repo on Vercel
+
+1. Push this repo to GitHub.
+2. [vercel.com/new](https://vercel.com/new) → import the repo.
+3. Set **Root Directory** to `frontend`.
+4. Framework: **Next.js** (auto-detected).
+
+### 3. Environment variables
+
+| Key | Value |
+|-----|-------|
+| `DATABASE_URL` | Your **PostgreSQL** connection string (required) |
+| `FRONTEND_URL` | Your Vercel URL, e.g. `https://your-app.vercel.app` (optional, CORS) |
+
+Do **not** set `NEXT_PUBLIC_API_URL` or `INTERNAL_API_URL` — the frontend will call `/api` on the same origin.
+
+### 4. Deploy
+
+Click Deploy. The build runs `scripts/prepare-vercel-db.js` (switches Prisma to Postgres, generates client, pushes schema).
+
+### Notes
+
+- PDF uploads on Vercel are stored under `/tmp` and **may be lost** when the serverless instance recycles. For durable PDFs later, use Vercel Blob or S3.
+- Local development is unchanged: run `npm run dev` with SQLite + separate API on port 4000.
+
+---
+
+## Deploy frontend only on Vercel (API elsewhere)
+
+If the API stays on Render (or similar), set Root Directory to `frontend` and:
+
+| Key | Value |
+|-----|-------|
+| `NEXT_PUBLIC_API_URL` | Your API URL, e.g. `https://reading-hub-api.onrender.com` |
+| `INTERNAL_API_URL` | Same API URL |
+
+---
 
 ## Container / Docker deploy
 

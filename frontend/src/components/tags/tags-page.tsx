@@ -11,7 +11,7 @@ import type { TagWithCount } from "@/lib/types";
 export function TagsPageClient() {
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const searchParams = useSearchParams();
-  const activeTag = searchParams.get("name");
+  const activeTag = searchParams?.get("name");
 
   useEffect(() => {
     apiFetch("/api/tags").then((r) => r.json()).then((d) => setTags(d.tags ?? []));

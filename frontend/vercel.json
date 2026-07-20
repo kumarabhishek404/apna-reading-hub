@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "installCommand": "cd .. && npm install && node scripts/prepare-vercel-db.js",
+  "buildCommand": "cd .. && node scripts/prepare-vercel-db.js && npm run build -w @reading-hub/frontend"
+}

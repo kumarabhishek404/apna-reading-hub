@@ -20,7 +20,7 @@ export function LinksPageClient() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
   const searchParams = useSearchParams();
-  const tag = searchParams.get("tag") ?? undefined;
+  const tag = searchParams?.get("tag") ?? undefined;
   const router = useRouter();
 
   useEffect(() => {

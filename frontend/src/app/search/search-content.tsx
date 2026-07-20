@@ -18,7 +18,7 @@ const typeLabels = {
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
-  const q = searchParams.get("q") ?? "";
+  const q = searchParams?.get("q") ?? "";
   const [results, setResults] = useState<SearchResult[]>([]);
 
   useEffect(() => {
