@@ -9,14 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useDebounce } from "@/hooks/use-debounce";
-import type { SearchResult } from "@/lib/types";
+import type { ContentType, SearchResult } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
-const typeLabels = {
+const typeLabels: Record<ContentType, string> = {
   blog: "Blog",
   link: "Link",
   pdf: "PDF",
   note: "Note",
+  reminder: "Reminder",
+  alarm: "Alarm",
 };
 
 export function GlobalSearch({ className }: { className?: string }) {

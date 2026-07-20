@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, FileText, Link2, StickyNote } from "lucide-react";
+import { AlarmClock, Bell, Bookmark, FileText, Link2, StickyNote } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListSkeleton } from "@/components/shared/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,8 @@ const typeConfig: Record<ContentType, { label: string; href: (id: string) => str
   link: { label: "Link", href: (id) => `/links/${id}`, icon: Link2 },
   pdf: { label: "PDF", href: (id) => `/pdfs/${id}`, icon: FileText },
   note: { label: "Note", href: (id) => `/notes/${id}/read`, icon: StickyNote },
+  reminder: { label: "Reminder", href: () => `/reminders`, icon: Bell },
+  alarm: { label: "Alarm", href: () => `/alarms`, icon: AlarmClock },
 };
 
 export default function BookmarksPage() {

@@ -35,6 +35,8 @@ const typeConfig: Record<
   link: { label: "Link", href: (id) => `/links/${id}`, icon: Link2 },
   pdf: { label: "PDF", href: (id) => `/pdfs/${id}`, icon: FileText },
   note: { label: "Note", href: (id) => `/notes/${id}/read`, icon: StickyNote },
+  reminder: { label: "Reminder", href: () => `/reminders`, icon: Bell },
+  alarm: { label: "Alarm", href: () => `/alarms`, icon: AlarmClock },
 };
 
 const quickActions = [

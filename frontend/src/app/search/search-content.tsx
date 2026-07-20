@@ -6,14 +6,16 @@ import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api";
-import type { SearchResult } from "@/lib/types";
+import type { ContentType, SearchResult } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
-const typeLabels = {
+const typeLabels: Record<ContentType, string> = {
   blog: "Blog",
   link: "Link",
   pdf: "PDF",
   note: "Note",
+  reminder: "Reminder",
+  alarm: "Alarm",
 };
 
 export default function SearchPage() {
