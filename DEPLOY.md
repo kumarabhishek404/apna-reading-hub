@@ -2,6 +2,24 @@
 
 This guide walks you through deploying the monorepo (frontend + backend + database) on [Render](https://render.com).
 
+## Container / Docker deploy
+
+A root [`Dockerfile`](./Dockerfile) builds **both** the API and the Next.js app into one image (public port = Next.js; API listens on `4000` inside the container).
+
+**Required env vars on your container platform:**
+
+| Key | Value |
+|-----|-------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `PORT` | Usually injected by the platform (defaults to `3000`) |
+| `FRONTEND_URL` | Your public app URL (for CORS) |
+
+Then redeploy the container app after pushing this repo (including the root `Dockerfile`).
+
+---
+
+## Render (Node runtimes)
+
 ## Architecture on Render
 
 | Service | Type | Example URL |
