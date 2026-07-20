@@ -18,8 +18,17 @@ Vercel serverless cannot use SQLite. Create a free DB (any one):
 
 1. Push this repo to GitHub.
 2. [vercel.com/new](https://vercel.com/new) → import the repo.
-3. Set **Root Directory** to `frontend`.
-4. Framework: **Next.js** (auto-detected).
+3. Set **Root Directory** to `frontend` (Edit → select `frontend`).
+4. Open **Build and Development Settings** and set:
+
+| Setting | Value |
+|---------|--------|
+| Framework Preset | **Next.js** |
+| Build Command | Leave as from `vercel.json` (or clear override) |
+| Output Directory | **Leave empty** — turn **Override** OFF (do not use `public`) |
+| Install Command | Leave as from `vercel.json` |
+
+> If you see `No Output Directory named "public"`, the project is not using the Next.js preset. Set Framework to **Next.js**, clear Output Directory, ensure Root Directory is `frontend`, then redeploy.
 
 ### 3. Environment variables
 

@@ -1,5 +1,6 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "cd .. && npm install && node scripts/prepare-vercel-db.js",
-  "buildCommand": "cd .. && node scripts/prepare-vercel-db.js && npm run build -w @reading-hub/frontend"
+  "installCommand": "cd .. && npm install",
+  "buildCommand": "node ../scripts/prepare-vercel-db.js && next build --webpack"
 }
