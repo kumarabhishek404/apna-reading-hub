@@ -1,4 +1,4 @@
-export type ContentType = "blog" | "link" | "pdf" | "note";
+export type ContentType = "blog" | "link" | "pdf" | "note" | "reminder" | "alarm";
 
 export interface TagItem {
   id: string;
@@ -59,11 +59,44 @@ export interface SearchResult {
   createdAt: string;
 }
 
+export interface TagWithCount {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export type ReminderPriority = "low" | "medium" | "high";
+export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly";
+
+export interface ReminderItem {
+  id: string;
+  title: string;
+  description: string;
+  dueAt: string;
+  priority: ReminderPriority;
+  repeat: ReminderRepeat;
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlarmItem {
+  id: string;
+  title: string;
+  time: string;
+  repeatDays: number[];
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardStats {
   totalBlogs: number;
   totalLinks: number;
   totalPdfs: number;
   totalNotes: number;
+  totalReminders: number;
+  totalAlarms: number;
 }
 
 export interface RecentItem {
@@ -72,10 +105,4 @@ export interface RecentItem {
   title: string;
   createdAt: string;
   tags: TagItem[];
-}
-
-export interface TagWithCount {
-  id: string;
-  name: string;
-  count: number;
 }

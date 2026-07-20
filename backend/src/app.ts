@@ -4,6 +4,8 @@ import blogsRouter from "./routes/blogs";
 import linksRouter from "./routes/links";
 import pdfsRouter from "./routes/pdfs";
 import notesRouter from "./routes/notes";
+import remindersRouter from "./routes/reminders";
+import alarmsRouter from "./routes/alarms";
 import miscRouter from "./routes/misc";
 import { UPLOADS_DIR } from "./lib/uploads";
 
@@ -53,6 +55,8 @@ app.use("/api/blogs", blogsRouter);
 app.use("/api/links", linksRouter);
 app.use("/api/pdfs", pdfsRouter);
 app.use("/api/notes", notesRouter);
+app.use("/api/reminders", remindersRouter);
+app.use("/api/alarms", alarmsRouter);
 app.use("/api", miscRouter);
 
 app.use(

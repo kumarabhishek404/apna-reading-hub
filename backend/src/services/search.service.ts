@@ -1,22 +1,29 @@
 import { prisma } from "../lib/prisma";
 import type { DashboardStats, RecentItem, SearchResult } from "../lib/types";
+import { getUpcomingAlarms } from "./alarm.service";
+import { getUpcomingReminders } from "./reminder.service";
 
 export async function getDashboardData() {
-  const [totalBlogs, totalLinks, totalPdfs, totalNotes] = await Promise.all([
-    prisma.blog.count(),
-    prisma.link.count(),
-    prisma.pdf.count(),
-    prisma.note.count(),
-  ]);
+  const [totalBlogs, totalLinks, totalPdfs, totalNotes, totalReminders, totalAlarms] =
+    await Promise.all([
+      prisma.blog.count(),
+      prisma.link.count(),
+      prisma.pdf.count(),
+      prisma.note.count(),
+      prisma.reminder.count({ where: { isCompleted: false } }),
+      prisma.alarm.count({ where: { isEnabled: true } }),
+    ]);
 
   const stats: DashboardStats = {
     totalBlogs,
     totalLinks,
     totalPdfs,
     totalNotes,
+    totalReminders,
+    totalAlarms,
   };
 
-  const [blogs, links, pdfs, notes] = await Promise.all([
+  const [blogs, links, pdfs, notes, upcomingReminders, todayAlarms] = await Promise.all([
     prisma.blog.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -37,6 +44,8 @@ export async function getDashboardData() {
       orderBy: { createdAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
+    getUpcomingReminders(5),
+    getUpcomingAlarms(5),
   ]);
 
   const recent: RecentItem[] = [
@@ -77,7 +86,7 @@ export async function getDashboardData() {
 
   const favorites = await getFavorites();
 
-  return { stats, recent, favorites };
+  return { stats, recent, favorites, upcomingReminders, todayAlarms };
 }
 
 export async function getFavorites() {
@@ -139,7 +148,7 @@ export async function getFavorites() {
 export async function globalSearch(query: string): Promise<SearchResult[]> {
   if (!query.trim()) return [];
 
-  const [blogs, links, pdfs, notes] = await Promise.all([
+  const [blogs, links, pdfs, notes, reminders, alarms] = await Promise.all([
     prisma.blog.findMany({
       where: {
         OR: [
@@ -186,6 +195,21 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       include: { tags: { include: { tag: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.reminder.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { description: { contains: query } },
+        ],
+      },
+      take: 10,
+      orderBy: { dueAt: "asc" },
+    }),
+    prisma.alarm.findMany({
+      where: { title: { contains: query } },
+      take: 10,
+      orderBy: { time: "asc" },
+    }),
   ]);
 
   const results: SearchResult[] = [
@@ -224,6 +248,24 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       url: `/notes/${n.id}/read`,
       tags: n.tags.map((t) => t.tag),
       createdAt: n.createdAt.toISOString(),
+    })),
+    ...reminders.map((r) => ({
+      id: r.id,
+      type: "reminder" as const,
+      title: r.title,
+      subtitle: r.description || undefined,
+      url: `/reminders`,
+      tags: [],
+      createdAt: r.dueAt.toISOString(),
+    })),
+    ...alarms.map((a) => ({
+      id: a.id,
+      type: "alarm" as const,
+      title: a.title,
+      subtitle: a.time,
+      url: `/alarms`,
+      tags: [],
+      createdAt: a.createdAt.toISOString(),
     })),
   ];
 

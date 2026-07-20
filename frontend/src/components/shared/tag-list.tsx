@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Pin } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ export function PinButton({ isPinned, onToggle, className }: PinButtonProps) {
       <Pin
         className={cn(
           "h-4 w-4",
-          isPinned ? "fill-stone-700 text-stone-700" : "text-stone-400"
+          isPinned ? "fill-brand-orange text-brand-orange" : "text-muted"
         )}
       />
     </Button>
@@ -38,7 +38,7 @@ export function TagList({ tags }: { tags: { id: string; name: string }[] }) {
         <Link
           key={tag.id}
           href={`/tags?name=${encodeURIComponent(tag.name)}`}
-          className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600 hover:bg-stone-200"
+          className="rounded-full bg-brand/5 px-2.5 py-0.5 text-xs font-medium text-brand transition-colors hover:bg-brand/10"
         >
           {tag.name}
         </Link>

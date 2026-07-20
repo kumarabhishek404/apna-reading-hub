@@ -1,25 +1,34 @@
+"use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
-  BookOpen,
+  AlarmClock,
+  Bell,
+  Bookmark,
   FileText,
-  Home,
+  LayoutDashboard,
   Link2,
-  Menu,
+  Settings,
   StickyNote,
-  Tags,
+  User,
   X,
 } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/blogs", label: "Blogs", icon: BookOpen },
-  { href: "/links", label: "Links", icon: Link2 },
-  { href: "/pdfs", label: "PDFs", icon: FileText },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/tags", label: "Tags", icon: Tags },
+  { href: "/pdfs", label: "PDFs", icon: FileText },
+  { href: "/links", label: "Links", icon: Link2 },
+  { href: "/reminders", label: "Reminders", icon: Bell },
+  { href: "/alarms", label: "Alarms", icon: AlarmClock },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 interface SidebarProps {
@@ -31,23 +40,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname() ?? "";
 
   const content = (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-stone-200 px-5 py-5">
-        <Link href="/" className="flex items-center gap-2" onClick={onMobileClose}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
-            RH
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-stone-900">Reading Hub</p>
-            <p className="text-xs text-stone-500">Personal library</p>
-          </div>
-        </Link>
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex items-center justify-between border-b border-border px-4 py-4">
+        <Logo onClick={onMobileClose} size="sm" />
         {onMobileClose && (
           <Button variant="ghost" size="icon" onClick={onMobileClose} className="lg:hidden">
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
+
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -55,41 +57,59 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
+
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onMobileClose}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-stone-100 text-stone-900"
-                  : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+                  ? "bg-brand text-white shadow-sm"
+                  : "text-brand/80 hover:bg-brand/5 hover:text-brand"
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              {active && (
+                <motion.span
+                  layoutId="sidebar-active"
+                  className="absolute inset-0 rounded-xl bg-brand"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Icon className={cn("relative z-10 h-4 w-4", active && "text-white")} />
+              <span className="relative z-10">{item.label}</span>
             </Link>
           );
         })}
       </nav>
+
+      <div className="border-t border-border p-4">
+        <p className="text-center text-[11px] leading-relaxed text-muted">
+          Apna Sathi — free productivity by{" "}
+          <span className="font-medium text-brand">Apna Rojgar</span>
+        </p>
+      </div>
     </div>
   );
 
   return (
     <>
-      <aside className="hidden w-64 shrink-0 border-r border-stone-200 bg-white lg:block">
+      <aside className="hidden w-64 shrink-0 border-r border-border lg:block">
         <div className="sticky top-0 h-screen">{content}</div>
       </aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={onMobileClose}
-          />
-          <aside className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
+          <div className="absolute inset-0 bg-brand/20 backdrop-blur-sm" onClick={onMobileClose} />
+          <motion.aside
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="absolute left-0 top-0 h-full w-72 border-r border-border bg-white shadow-2xl"
+          >
             {content}
-          </aside>
+          </motion.aside>
         </div>
       )}
     </>
@@ -99,7 +119,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="outline" size="icon" onClick={onClick} className="lg:hidden">
-      <Menu className="h-4 w-4" />
+      <LayoutDashboard className="h-4 w-4" />
     </Button>
   );
 }

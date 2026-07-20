@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, Plus, Search } from "lucide-react";
+import { Download, Plus, Search, StickyNote } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/shared/empty-state";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { PinButton, TagList } from "@/components/shared/tag-list";
 import { apiFetch, apiUrl } from "@/lib/api";
@@ -26,7 +28,9 @@ export function NotesPageClient() {
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (tag) params.set("tag", tag);
-    apiFetch(`/api/notes?${params}`).then((r) => r.json()).then((d) => setNotes(d.notes ?? []));
+    apiFetch(`/api/notes?${params}`)
+      .then((r) => r.json())
+      .then((d) => setNotes(d.notes ?? []));
   }, [debouncedSearch, tag]);
 
   async function toggleFavorite(id: string) {
@@ -36,7 +40,10 @@ export function NotesPageClient() {
       body: JSON.stringify({ id, action: "favorite" }),
     });
     const data = await res.json();
-    if (data.note) setNotes((prev) => prev.map((n) => (n.id === id ? data.note : n)));
+    if (data.note) {
+      setNotes((prev) => prev.map((n) => (n.id === id ? data.note : n)));
+      toast.success(data.note.isFavorite ? "Added to bookmarks" : "Removed from bookmarks");
+    }
   }
 
   async function togglePin(id: string) {
@@ -54,21 +61,29 @@ export function NotesPageClient() {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
       });
+      toast.success(data.note.isPinned ? "Note pinned" : "Note unpinned");
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this note?")) return;
-    await apiFetch(`/api/notes?id=${id}`, { method: "DELETE" });
-    setNotes((prev) => prev.filter((n) => n.id !== id));
+    toast("Delete this note?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          await apiFetch(`/api/notes?id=${id}`, { method: "DELETE" });
+          setNotes((prev) => prev.filter((n) => n.id !== id));
+          toast.success("Deleted successfully");
+        },
+      },
+    });
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Notes</h1>
-          <p className="text-stone-500">Personal notes with Markdown support</p>
+          <h1 className="text-2xl font-bold text-brand">Notes</h1>
+          <p className="text-muted">Capture ideas with Markdown support</p>
         </div>
         <Button onClick={() => router.push("/notes/new")}>
           <Plus className="h-4 w-4" /> Create Note
@@ -76,35 +91,61 @@ export function NotesPageClient() {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes..." className="pl-9" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search notes..."
+          className="pl-9"
+        />
       </div>
 
       <div className="space-y-3">
         {notes.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-stone-500">No notes found</CardContent></Card>
+          <EmptyState
+            icon={StickyNote}
+            title="No Notes Yet"
+            description="Create your first note and start organizing your thoughts."
+            actionLabel="Create Note"
+            actionHref="/notes/new"
+          />
         ) : (
           notes.map((note) => (
-            <Card key={note.id} className={note.isPinned ? "border-stone-400" : ""}>
-              <CardContent className="p-5 space-y-2">
+            <Card
+              key={note.id}
+              className={note.isPinned ? "border-brand-orange/40 ring-1 ring-brand-orange/20" : ""}
+            >
+              <CardContent className="space-y-2 p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <PinButton isPinned={note.isPinned} onToggle={() => togglePin(note.id)} />
-                    <Link href={`/notes/${note.id}/read`} className="text-lg font-medium hover:underline">{note.title}</Link>
+                    <Link
+                      href={`/notes/${note.id}/read`}
+                      className="text-lg font-medium text-brand hover:text-brand-orange"
+                    >
+                      {note.title}
+                    </Link>
                   </div>
-                  <FavoriteButton isFavorite={note.isFavorite} onToggle={() => toggleFavorite(note.id)} />
+                  <FavoriteButton
+                    isFavorite={note.isFavorite}
+                    onToggle={() => toggleFavorite(note.id)}
+                  />
                 </div>
-                <p className="line-clamp-2 text-sm text-stone-500">{note.content}</p>
+                <p className="line-clamp-2 text-sm text-muted">{note.content || "Empty note"}</p>
                 <TagList tags={note.tags} />
-                <p className="text-xs text-stone-400">{formatDate(note.createdAt)}</p>
+                <p className="text-xs text-muted">{formatDate(note.createdAt)}</p>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" asChild><Link href={`/notes/${note.id}/edit`}>Edit</Link></Button>
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href={`/notes/${note.id}/edit`}>Edit</Link>
+                  </Button>
                   <Button variant="outline" size="sm" asChild>
                     <a href={apiUrl(`/api/notes/${note.id}?format=markdown`)} download>
                       <Download className="h-4 w-4" /> Export MD
                     </a>
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(note.id)}>Delete</Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(note.id)}>
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>

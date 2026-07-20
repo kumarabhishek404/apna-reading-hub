@@ -18,8 +18,8 @@ export function ReadingLayout({
   return (
     <div className="mx-auto flex max-w-6xl gap-8">
       <aside className="hidden w-56 shrink-0 lg:block">
-        <div className="sticky top-20 space-y-4">
-          <Button variant="ghost" size="sm" asChild className="w-full justify-start">
+        <div className="sticky top-24 space-y-4">
+          <Button variant="ghost" size="sm" asChild className="w-full justify-start text-brand">
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -37,13 +37,15 @@ export function ReadingLayout({
             </Link>
           </Button>
         </div>
-        <header className="mb-8 border-b border-stone-200 pb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-900 md:text-4xl">
+        <header className="mb-8 rounded-2xl border border-border bg-white p-6 shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-brand md:text-4xl">
             {title}
           </h1>
           <div className="mt-4 lg:hidden">{meta}</div>
         </header>
-        <div className="prose-reading mx-auto">{children}</div>
+        <div className="prose-reading mx-auto rounded-2xl border border-border bg-white p-6 shadow-sm">
+          {children}
+        </div>
       </article>
     </div>
   );

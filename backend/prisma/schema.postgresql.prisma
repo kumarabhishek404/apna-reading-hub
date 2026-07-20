@@ -96,3 +96,25 @@ model NoteTag {
 
   @@id([noteId, tagId])
 }
+
+model Reminder {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  dueAt       DateTime
+  priority    String   @default("medium")
+  repeat      String   @default("none")
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Alarm {
+  id         String   @id @default(cuid())
+  title      String
+  time       String
+  repeatDays String   @default("0,1,2,3,4,5,6")
+  isEnabled  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

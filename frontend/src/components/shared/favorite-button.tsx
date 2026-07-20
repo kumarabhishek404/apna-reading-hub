@@ -21,12 +21,12 @@ export function FavoriteButton({
       size="icon"
       className={cn(className)}
       onClick={onToggle}
-      aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      aria-label={isFavorite ? "Remove from bookmarks" : "Add to bookmarks"}
     >
       <Star
         className={cn(
           "h-4 w-4",
-          isFavorite ? "fill-amber-400 text-amber-400" : "text-stone-400"
+          isFavorite ? "fill-brand-orange text-brand-orange" : "text-muted"
         )}
       />
     </Button>
