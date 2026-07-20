@@ -6,16 +6,10 @@ import { ReadingLayout } from "@/components/layout/reading-layout";
 import { MarkdownViewer } from "@/components/shared/markdown-viewer";
 import { TagList } from "@/components/shared/tag-list";
 import { CopyButton } from "@/components/shared/copy-button";
-import { apiUrl } from "@/lib/api";
+import { getBlogById } from "@/lib/server-data";
 import { formatDate } from "@/lib/utils";
-import type { BlogItem } from "@/lib/types";
 
-async function getBlog(id: string): Promise<BlogItem | null> {
-  const res = await fetch(apiUrl(`/api/blogs/${id}`), { cache: "no-store" });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.blog;
-}
+export const dynamic = "force-dynamic";
 
 export default async function BlogReadPage({
   params,
@@ -23,7 +17,7 @@ export default async function BlogReadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const blog = await getBlog(id);
+  const blog = await getBlogById(id);
   if (!blog) notFound();
 
   return (

@@ -4,16 +4,10 @@ import { ExternalLink, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/copy-button";
 import { TagList } from "@/components/shared/tag-list";
-import { apiUrl } from "@/lib/api";
+import { getLinkById } from "@/lib/server-data";
 import { formatDate } from "@/lib/utils";
-import type { LinkItem } from "@/lib/types";
 
-async function getLink(id: string): Promise<LinkItem | null> {
-  const res = await fetch(apiUrl(`/api/links/${id}`), { cache: "no-store" });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.link;
-}
+export const dynamic = "force-dynamic";
 
 export default async function LinkDetailPage({
   params,
@@ -21,7 +15,7 @@ export default async function LinkDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const link = await getLink(id);
+  const link = await getLinkById(id);
   if (!link) notFound();
 
   return (
