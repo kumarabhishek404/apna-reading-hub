@@ -59,7 +59,7 @@ npm run dev
 
 | Target | Guide |
 |--------|--------|
-| **Vercel** (full stack) | [DEPLOY.md](./DEPLOY.md#deploy-full-stack-on-vercel-frontend--backend) — Root Directory `frontend` + Postgres `DATABASE_URL` |
+| **Vercel** (full stack) | [DEPLOY.md](./DEPLOY.md#deploy-full-stack-on-vercel-frontend--backend) — Framework **Next.js**, Root `./`, set `DATABASE_URL` |
 | **Render** (API + DB + optional web) | [DEPLOY.md](./DEPLOY.md) |
 
 ### Run Individually

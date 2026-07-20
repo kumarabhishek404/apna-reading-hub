@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": "20.x"
+  },
   "workspaces": [
     "frontend",
     "backend"
@@ -15,10 +18,16 @@
     "db:setup": "docker compose up -d && npm run db:push -w @reading-hub/backend",
     "db:push": "npm run db:push -w @reading-hub/backend",
     "build": "npm run build -w @reading-hub/backend && npm run build -w @reading-hub/frontend",
+    "vercel-build": "node scripts/prepare-vercel-db.js && next build --webpack",
     "start": "concurrently \"npm run start -w @reading-hub/backend\" \"npm run start -w @reading-hub/frontend\"",
     "db:migrate": "npm run db:migrate -w @reading-hub/backend",
     "db:studio": "npm run db:studio -w @reading-hub/backend",
     "lint": "npm run lint -w @reading-hub/frontend"
+  },
+  "dependencies": {
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

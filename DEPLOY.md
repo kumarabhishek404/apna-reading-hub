@@ -6,6 +6,8 @@ Guides for **Vercel** (frontend), **Docker**, and **Render** (API + Postgres).
 
 One Vercel project serves **Next.js and the Express API** together. The API is mounted at `/api/*` via a serverless catch-all that imports the Express app.
 
+The repo root is a valid Next.js app (`vercel.json` + `src` → `frontend/src`), so you can keep **Root Directory** as `./`.
+
 ### 1. Create a Postgres database
 
 Vercel serverless cannot use SQLite. Create a free DB (any one):
@@ -14,21 +16,22 @@ Vercel serverless cannot use SQLite. Create a free DB (any one):
 - [Supabase](https://supabase.com) → Project Settings → Database → URI  
 - [Vercel Postgres](https://vercel.com/storage/postgres)
 
-### 2. Import the repo on Vercel
+### 2. Vercel project settings (required)
 
-1. Push this repo to GitHub.
-2. [vercel.com/new](https://vercel.com/new) → import the repo.
-3. Set **Root Directory** to `frontend` (Edit → select `frontend`).
-4. Open **Build and Development Settings** and set:
+In **Settings → Build and Deployment**:
 
 | Setting | Value |
 |---------|--------|
-| Framework Preset | **Next.js** |
-| Build Command | Leave as from `vercel.json` (or clear override) |
-| Output Directory | **Leave empty** — turn **Override** OFF (do not use `public`) |
-| Install Command | Leave as from `vercel.json` |
+| **Framework Preset** | **Next.js** (not "Other") |
+| **Root Directory** | `./` or empty (repo root) |
+| **Build Command** | Override OFF (uses `vercel.json` → `npm run vercel-build`) |
+| **Output Directory** | Override **OFF** — leave empty (never set to `public`) |
+| **Install Command** | Override OFF |
+| **Node.js Version** | **20.x** (recommended) |
 
-> If you see `No Output Directory named "public"`, the project is not using the Next.js preset. Set Framework to **Next.js**, clear Output Directory, ensure Root Directory is `frontend`, then redeploy.
+Then **Save** and redeploy.
+
+> `No Output Directory named "public"` happens when Framework Preset is **Other**. Switching to **Next.js** fixes it permanently with this repo’s root `vercel.json`.
 
 ### 3. Environment variables
 
@@ -41,7 +44,7 @@ Do **not** set `NEXT_PUBLIC_API_URL` or `INTERNAL_API_URL` — the frontend will
 
 ### 4. Deploy
 
-Click Deploy. The build runs `scripts/prepare-vercel-db.js` (switches Prisma to Postgres, generates client, pushes schema).
+Click **Deploy**. The build runs `npm run vercel-build` (Postgres Prisma schema + `next build`).
 
 ### Notes
 
@@ -52,7 +55,7 @@ Click Deploy. The build runs `scripts/prepare-vercel-db.js` (switches Prisma to 
 
 ## Deploy frontend only on Vercel (API elsewhere)
 
-If the API stays on Render (or similar), set Root Directory to `frontend` and:
+If the API stays on Render (or similar):
 
 | Key | Value |
 |-----|-------|

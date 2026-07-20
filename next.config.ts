@@ -4,8 +4,10 @@ import path from "path";
 const externalApi =
   process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL;
 
-// When no external API URL is set, Express runs inside this Next.js deployment
-// (Vercel). Local monorepo still sets NEXT_PUBLIC_API_URL=http://localhost:4000.
+/**
+ * Root Next.js config for Vercel (Root Directory = repo root / "./").
+ * Local day-to-day UI still runs via `npm run dev:frontend` in /frontend.
+ */
 const nextConfig: NextConfig = {
   reactCompiler: true,
   experimental: {
@@ -15,7 +17,7 @@ const nextConfig: NextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "@backend": path.join(__dirname, "../backend/src"),
+      "@backend": path.join(__dirname, "backend/src"),
     };
     return config;
   },
