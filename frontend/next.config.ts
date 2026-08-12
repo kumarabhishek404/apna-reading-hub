@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   experimental: {
     externalDir: true,
   },
-  serverExternalPackages: ["@prisma/client", "prisma", "express", "multer"],
+  serverExternalPackages: ["mongoose", "express", "multer"],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

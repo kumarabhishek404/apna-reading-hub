@@ -1,56 +1,22 @@
 #!/usr/bin/env node
 /**
- * Prepares Prisma for Vercel: use PostgreSQL schema and generate the client.
- * Requires DATABASE_URL (Postgres) in the Vercel project env.
+ * Vercel build prep after the MongoDB migration.
+ * Prisma/Postgres schema generation is no longer required.
+ *
+ * Requires MONGODB_URI in the Vercel project environment at runtime.
  */
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+const uri = process.env.MONGODB_URI || "";
 
-const root = path.join(__dirname, "..");
-const prismaDir = path.join(root, "backend", "prisma");
-const sqliteSchema = path.join(prismaDir, "schema.prisma");
-const postgresSchema = path.join(prismaDir, "schema.postgresql.prisma");
-
-const databaseUrl = process.env.DATABASE_URL || "";
-const usePostgres =
-  process.env.VERCEL === "1" ||
-  databaseUrl.startsWith("postgres://") ||
-  databaseUrl.startsWith("postgresql://");
-
-if (usePostgres) {
-  if (!fs.existsSync(postgresSchema)) {
-    console.error("Missing backend/prisma/schema.postgresql.prisma");
-    process.exit(1);
-  }
-  fs.copyFileSync(postgresSchema, sqliteSchema);
-  console.log("Using PostgreSQL Prisma schema for Vercel/production.");
-} else {
-  console.log("Keeping local SQLite Prisma schema.");
-}
-
-execSync("npx prisma generate", {
-  cwd: path.join(root, "backend"),
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    // prisma generate needs the var present when schema uses env("DATABASE_URL")
-    DATABASE_URL:
-      process.env.DATABASE_URL ||
-      "postgresql://user:pass@localhost:5432/readinghub?schema=public",
-  },
-});
-
-if (usePostgres && databaseUrl) {
-  try {
-    execSync("npx prisma db push --skip-generate", {
-      cwd: path.join(root, "backend"),
-      stdio: "inherit",
-      env: process.env,
-    });
-  } catch (err) {
+if (process.env.VERCEL === "1") {
+  if (!uri) {
     console.warn(
-      "prisma db push skipped or failed (set DATABASE_URL to a reachable Postgres DB)."
+      "[vercel-prep] MONGODB_URI is not set. API routes that touch the DB will fail at runtime until you add it in Vercel → Settings → Environment Variables."
     );
+  } else {
+    console.log("[vercel-prep] MongoDB configured for Vercel (mongoose). Skipping Prisma steps.");
   }
+} else {
+  console.log("[vercel-prep] Local/non-Vercel build — no Prisma prep needed.");
 }
+
+process.exit(0);
