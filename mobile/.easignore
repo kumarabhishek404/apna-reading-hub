@@ -1,0 +1,12 @@
+# Keep EAS uploads focused on the Expo app.
+../frontend/node_modules
+../backend/node_modules
+../node_modules
+../frontend/.next
+../backend/dist
+../backend/uploads
+../**/.git
+../docs
+../.agents
+../**/*.md
+!../README.md
