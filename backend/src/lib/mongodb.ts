@@ -55,6 +55,7 @@ export async function connectDB() {
         bufferCommands: false,
         serverSelectionTimeoutMS: 10_000,
         maxPoolSize: 10,
+        retryWrites: true,
       })
       .then((instance) => instance);
   }
