@@ -39,7 +39,7 @@ router.patch("/", async (req, res) => {
   const userId = (req as any).user?.userId;
   if (!id) return res.status(400).json({ error: "ID required" });
 
-  if (action === "favorite") {
+  if (action === "favorite" || action === "toggleFavorite") {
     const blog = await toggleBlogFavorite(id, userId);
     return res.json({ blog });
   }

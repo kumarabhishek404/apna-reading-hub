@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { prisma } from "./prisma";
+import { User } from "../models";
 
 const JWT_SECRET = process.env.JWT_SECRET || "apna-sathi-dev-secret";
 const JWT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -28,20 +28,24 @@ export async function getCurrentUserFromRequest(req: Request) {
 
   try {
     const payload = verifyAuthToken(token);
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: {
-        id: true,
-        fullName: true,
-        title: true,
-        mobile: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const user = await User.findById(payload.userId).select({
+      _id: 1,
+      fullName: 1,
+      title: 1,
+      mobile: 1,
+      createdAt: 1,
+      updatedAt: 1,
     });
 
     if (!user) return null;
-    return user;
+    return {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      title: user.title,
+      mobile: user.mobile,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   } catch {
     return null;
   }
@@ -49,20 +53,25 @@ export async function getCurrentUserFromRequest(req: Request) {
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization || "";
+  console.log('[Auth Middleware] Checking authentication', { hasAuthHeader: !!authHeader, authHeaderLength: authHeader.length });
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
+    console.warn('[Auth Middleware] No token found');
     return res.status(401).json({ error: "Authentication required" });
   }
 
   try {
+    console.log('[Auth Middleware] Verifying token');
     const payload = verifyAuthToken(token);
+    console.log('[Auth Middleware] Token verified successfully', { userId: payload.userId, mobile: payload.mobile });
     (req as Request & { user?: AuthUserPayload }).user = {
       userId: payload.userId,
       mobile: payload.mobile,
     };
     next();
-  } catch {
+  } catch (error) {
+    console.error('[Auth Middleware] Token verification failed', error);
     return res.status(401).json({ error: "Session expired. Please login again." });
   }
 }

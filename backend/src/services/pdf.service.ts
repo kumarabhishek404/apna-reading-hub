@@ -1,61 +1,47 @@
-import { prisma } from "../lib/prisma";
+import { Pdf, Tag } from "../models";
 import type { PdfItem } from "../lib/types";
 import { upsertTags } from "./tag.service";
 
-const pdfInclude = {
-  tags: { include: { tag: true } },
-} as const;
-
-function mapPdf(pdf: {
-  id: string;
-  title: string;
-  pdfUrl: string;
-  description: string;
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  tags: { tag: { id: string; name: string } }[];
-}): PdfItem {
+function mapPdf(pdf: any): PdfItem {
   return {
-    id: pdf.id,
+    id: pdf._id.toString(),
     title: pdf.title,
     pdfUrl: pdf.pdfUrl,
     description: pdf.description,
     isFavorite: pdf.isFavorite,
     createdAt: pdf.createdAt.toISOString(),
     updatedAt: pdf.updatedAt.toISOString(),
-    tags: pdf.tags.map((t) => t.tag),
+    tags: pdf.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
   };
 }
 
 export async function getPdfs(search?: string, tag?: string, userId?: string) {
-  const pdfs = await prisma.pdf.findMany({
-    where: {
-      userId: userId ?? undefined,
-      AND: [
-        search
-          ? {
-              OR: [
-                { title: { contains: search } },
-                { description: { contains: search } },
-              ],
-            }
-          : {},
-        tag ? { tags: { some: { tag: { name: tag } } } } : {},
-      ],
-    },
-    include: pdfInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  const filter: any = {};
+  
+  if (userId) {
+    filter.userId = userId;
+  }
+  
+  if (tag) {
+    filter.tags = tag;
+  }
+  
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const pdfs = await Pdf.find(filter)
+    .sort({ createdAt: "desc" });
+  
   return pdfs.map(mapPdf);
 }
 
 export async function getPdfById(id: string, userId?: string) {
-  const pdf = await prisma.pdf.findUnique({
-    where: { id },
-    include: pdfInclude,
-  });
-  if (!pdf || (userId && pdf.userId !== userId)) return null;
+  const pdf = await Pdf.findById(id);
+  if (!pdf || (userId && pdf.userId.toString() !== userId)) return null;
   return mapPdf(pdf);
 }
 
@@ -67,18 +53,13 @@ export async function createPdf(data: {
   isFavorite?: boolean;
 }, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
-  const pdf = await prisma.pdf.create({
-    data: {
-      userId,
-      title: data.title,
-      pdfUrl: data.pdfUrl,
-      description: data.description ?? "",
-      isFavorite: data.isFavorite ?? false,
-      tags: {
-        create: tags.map((tag) => ({ tagId: tag.id })),
-      },
-    },
-    include: pdfInclude,
+  const pdf = await Pdf.create({
+    userId,
+    title: data.title,
+    pdfUrl: data.pdfUrl,
+    description: data.description ?? "",
+    isFavorite: data.isFavorite ?? false,
+    tags: tags.map((tag) => tag.name),
   });
   return mapPdf(pdf);
 }
@@ -94,38 +75,31 @@ export async function updatePdf(
   },
   userId?: string
 ) {
-  const existing = await prisma.pdf.findUnique({ where: { id } });
-  if (!existing || (userId && existing.userId !== userId)) throw new Error("PDF not found");
+  const existing = await Pdf.findById(id);
+  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("PDF not found");
 
-  if (data.tags) {
+  const updateData: any = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.pdfUrl !== undefined) updateData.pdfUrl = data.pdfUrl;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.isFavorite !== undefined) updateData.isFavorite = data.isFavorite;
+  if (data.tags !== undefined) {
     const tags = await upsertTags(data.tags);
-    await prisma.pdfTag.deleteMany({ where: { pdfId: id } });
-    await prisma.pdfTag.createMany({
-      data: tags.map((tag) => ({ pdfId: id, tagId: tag.id })),
-    });
+    updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const pdf = await prisma.pdf.update({
-    where: { id },
-    data: {
-      title: data.title,
-      pdfUrl: data.pdfUrl,
-      description: data.description,
-      isFavorite: data.isFavorite,
-    },
-    include: pdfInclude,
-  });
+  const pdf = await Pdf.findByIdAndUpdate(id, updateData, { new: true });
   return mapPdf(pdf);
 }
 
 export async function deletePdf(id: string, userId?: string) {
-  const existing = await prisma.pdf.findUnique({ where: { id } });
-  if (!existing || (userId && existing.userId !== userId)) throw new Error("PDF not found");
-  await prisma.pdf.delete({ where: { id } });
+  const existing = await Pdf.findById(id);
+  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("PDF not found");
+  await Pdf.findByIdAndDelete(id);
 }
 
 export async function togglePdfFavorite(id: string, userId?: string) {
-  const current = await prisma.pdf.findUnique({ where: { id } });
-  if (!current || (userId && current.userId !== userId)) return null;
+  const current = await Pdf.findById(id);
+  if (!current || (userId && current.userId.toString() !== userId)) return null;
   return updatePdf(id, { isFavorite: !current.isFavorite }, userId);
 }

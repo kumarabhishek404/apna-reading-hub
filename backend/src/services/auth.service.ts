@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "../lib/prisma";
+import { User } from "../models";
 import { createAuthToken } from "../lib/auth";
 
 export type RegisterPayload = {
@@ -34,25 +34,23 @@ export async function registerUser(payload: RegisterPayload) {
     throw new Error("Password and confirm password do not match.");
   }
 
-  const existing = await prisma.user.findUnique({ where: { mobile } });
+  const existing = await User.findOne({ mobile });
   if (existing) {
     throw new Error("A user with this mobile number already exists.");
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: {
-      fullName,
-      title,
-      mobile,
-      passwordHash,
-    },
+  const user = await User.create({
+    fullName,
+    title,
+    mobile,
+    passwordHash,
   });
 
-  const token = createAuthToken(user.id, user.mobile);
+  const token = createAuthToken(user._id.toString(), user.mobile);
   return {
     user: {
-      id: user.id,
+      id: user._id.toString(),
       fullName: user.fullName,
       title: user.title,
       mobile: user.mobile,
@@ -70,7 +68,7 @@ export async function loginUser(mobile: string, password: string) {
     throw new Error("Mobile number and password are required.");
   }
 
-  const user = await prisma.user.findUnique({ where: { mobile: normalized } });
+  const user = await User.findOne({ mobile: normalized });
   if (!user) {
     throw new Error("Invalid mobile number or password.");
   }
@@ -80,10 +78,10 @@ export async function loginUser(mobile: string, password: string) {
     throw new Error("Invalid mobile number or password.");
   }
 
-  const token = createAuthToken(user.id, user.mobile);
+  const token = createAuthToken(user._id.toString(), user.mobile);
   return {
     user: {
-      id: user.id,
+      id: user._id.toString(),
       fullName: user.fullName,
       title: user.title,
       mobile: user.mobile,
@@ -96,17 +94,23 @@ export async function loginUser(mobile: string, password: string) {
 }
 
 export async function getUserProfile(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      fullName: true,
-      title: true,
-      mobile: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+  const user = await User.findById(userId).select({
+    _id: 1,
+    fullName: 1,
+    title: 1,
+    mobile: 1,
+    createdAt: 1,
+    updatedAt: 1,
   });
 
-  return user;
+  if (!user) return null;
+
+  return {
+    id: user._id.toString(),
+    fullName: user.fullName,
+    title: user.title,
+    mobile: user.mobile,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  };
 }

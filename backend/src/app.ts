@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import connectDB from "./lib/mongodb";
 import blogsRouter from "./routes/blogs";
 import linksRouter from "./routes/links";
 import pdfsRouter from "./routes/pdfs";
@@ -11,6 +12,17 @@ import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
 
 const app = express();
+
+// Connect to MongoDB
+console.log('[Backend] Starting MongoDB connection...');
+connectDB()
+  .then(() => {
+    console.log('[Backend] MongoDB connected successfully');
+  })
+  .catch((err) => {
+    console.error("[Backend] Failed to connect to MongoDB:", err);
+    process.exit(1);
+  });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 

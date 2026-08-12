@@ -21,10 +21,10 @@ function resolveApiBaseUrl() {
   const host = normalizeHost(hostUri);
 
   if (host) {
-    return `http://${host}:4000`;
+    return `http://${host}:4001`;
   }
 
-  return Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
+  return Platform.OS === 'android' ? 'http://10.0.2.2:4001' : 'http://localhost:4001';
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();

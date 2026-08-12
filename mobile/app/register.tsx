@@ -50,7 +50,7 @@ export default function RegisterScreen() {
 
           {error ? (
             <View style={styles.alert}>
-              <Text style={styles.alertText}>Registration issue: {error}</Text>
+              <Text style={styles.alertText}>{error}</Text>
             </View>
           ) : null}
 

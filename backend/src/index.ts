@@ -1,6 +1,6 @@
 import app, { UPLOADS_DIR } from "./app";
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT || 4001);
 
 // Local / Docker / Render: run as a long-lived server.
 // On Vercel the Express app is imported by the Next.js API catch-all instead.

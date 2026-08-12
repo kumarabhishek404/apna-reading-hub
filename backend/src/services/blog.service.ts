@@ -1,64 +1,44 @@
-import { prisma } from "../lib/prisma";
+import { Blog, Tag } from "../models";
 import type { BlogItem } from "../lib/types";
 import { upsertTags } from "./tag.service";
 
-const blogInclude = {
-  tags: { include: { tag: true } },
-} as const;
-
-function mapBlog(blog: {
-  id: string;
-  title: string;
-  url: string | null;
-  content: string;
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  tags: { tag: { id: string; name: string } }[];
-}): BlogItem {
+function mapBlog(blog: any): BlogItem {
   return {
-    id: blog.id,
+    id: blog._id.toString(),
     title: blog.title,
     url: blog.url,
     content: blog.content,
     isFavorite: blog.isFavorite,
     createdAt: blog.createdAt.toISOString(),
     updatedAt: blog.updatedAt.toISOString(),
-    tags: blog.tags.map((t) => t.tag),
+    tags: blog.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
   };
 }
 
 export async function getBlogs(search?: string, tag?: string, userId?: string) {
-  const blogs = await prisma.blog.findMany({
-    where: {
-      userId: userId ?? undefined,
-      AND: [
-        search
-          ? {
-              OR: [
-                { title: { contains: search } },
-                { content: { contains: search } },
-                { url: { contains: search } },
-              ],
-            }
-          : {},
-        tag
-          ? { tags: { some: { tag: { name: tag } } } }
-          : {},
-      ],
-    },
-    include: blogInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  const filter: any = {};
+  
+  if (userId) {
+    filter.userId = userId;
+  }
+  
+  if (tag) {
+    filter.tags = tag;
+  }
+  
+  if (search) {
+    filter.$text = { $search: search };
+  }
+
+  const blogs = await Blog.find(filter)
+    .sort({ createdAt: "desc" });
+  
   return blogs.map(mapBlog);
 }
 
 export async function getBlogById(id: string, userId?: string) {
-  const blog = await prisma.blog.findUnique({
-    where: { id },
-    include: blogInclude,
-  });
-  if (!blog || (userId && blog.userId !== userId)) return null;
+  const blog = await Blog.findById(id);
+  if (!blog || (userId && blog.userId.toString() !== userId)) return null;
   return mapBlog(blog);
 }
 
@@ -70,18 +50,13 @@ export async function createBlog(data: {
   isFavorite?: boolean;
 }, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
-  const blog = await prisma.blog.create({
-    data: {
-      userId,
-      title: data.title,
-      url: data.url,
-      content: data.content ?? "",
-      isFavorite: data.isFavorite ?? false,
-      tags: {
-        create: tags.map((tag) => ({ tagId: tag.id })),
-      },
-    },
-    include: blogInclude,
+  const blog = await Blog.create({
+    userId,
+    title: data.title,
+    url: data.url,
+    content: data.content ?? "",
+    isFavorite: data.isFavorite ?? false,
+    tags: tags.map((tag) => tag.name),
   });
   return mapBlog(blog);
 }
@@ -97,38 +72,31 @@ export async function updateBlog(
   },
   userId?: string
 ) {
-  const existing = await prisma.blog.findUnique({ where: { id } });
-  if (!existing || (userId && existing.userId !== userId)) throw new Error("Blog not found");
+  const existing = await Blog.findById(id);
+  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Blog not found");
 
-  if (data.tags) {
+  const updateData: any = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.url !== undefined) updateData.url = data.url;
+  if (data.content !== undefined) updateData.content = data.content;
+  if (data.isFavorite !== undefined) updateData.isFavorite = data.isFavorite;
+  if (data.tags !== undefined) {
     const tags = await upsertTags(data.tags);
-    await prisma.blogTag.deleteMany({ where: { blogId: id } });
-    await prisma.blogTag.createMany({
-      data: tags.map((tag) => ({ blogId: id, tagId: tag.id })),
-    });
+    updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const blog = await prisma.blog.update({
-    where: { id },
-    data: {
-      title: data.title,
-      url: data.url,
-      content: data.content,
-      isFavorite: data.isFavorite,
-    },
-    include: blogInclude,
-  });
+  const blog = await Blog.findByIdAndUpdate(id, updateData, { new: true });
   return mapBlog(blog);
 }
 
 export async function deleteBlog(id: string, userId?: string) {
-  const existing = await prisma.blog.findUnique({ where: { id } });
-  if (!existing || (userId && existing.userId !== userId)) throw new Error("Blog not found");
-  await prisma.blog.delete({ where: { id } });
+  const existing = await Blog.findById(id);
+  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Blog not found");
+  await Blog.findByIdAndDelete(id);
 }
 
 export async function toggleBlogFavorite(id: string, userId?: string) {
-  const current = await prisma.blog.findUnique({ where: { id } });
-  if (!current || (userId && current.userId !== userId)) return null;
+  const current = await Blog.findById(id);
+  if (!current || (userId && current.userId.toString() !== userId)) return null;
   return updateBlog(id, { isFavorite: !current.isFavorite }, userId);
 }

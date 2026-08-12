@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
 import { getAlarms, toggleAlarm } from '@/api/alarms';
 import { BrandHeader } from '@/components/BrandHeader';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
@@ -40,7 +41,12 @@ export default function AlarmsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}><BrandHeader title="Alarms" subtitle="Stay on schedule" /></View>
+      <View style={styles.header}>
+        <BrandHeader title="Alarms" subtitle="Stay on schedule" />
+        <Link href="/alarms/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Create Alarm</Text></Pressable>
+        </Link>
+      </View>
       {loading ? <ActivityIndicator size="large" style={{ marginTop: 24 }} /> : error ? <Text style={styles.error}>{error}</Text> : (
         <FlatList
           data={alarms}
@@ -65,6 +71,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
   header: { paddingHorizontal: 20, paddingTop: 12 },
   title: { fontSize: 26, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.4 },
+  createButton: {
+    backgroundColor: '#22409a',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   card: {
     backgroundColor: '#fff',
     padding: 16,

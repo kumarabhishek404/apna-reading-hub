@@ -50,12 +50,12 @@ router.patch("/", async (req, res) => {
   const userId = (req as any).user?.userId;
   if (!id) return res.status(400).json({ error: "ID required" });
 
-  if (action === "favorite") {
+  if (action === "favorite" || action === "toggleFavorite") {
     const note = await toggleNoteFavorite(id, userId);
     return res.json({ note });
   }
 
-  if (action === "pin") {
+  if (action === "pin" || action === "togglePin") {
     const note = await toggleNotePin(id, userId);
     return res.json({ note });
   }

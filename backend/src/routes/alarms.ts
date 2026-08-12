@@ -34,8 +34,15 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const userId = (req as any).user?.userId;
-  const alarm = await createAlarm(req.body, userId);
-  res.status(201).json({ alarm });
+  console.log('[Backend POST /api/alarms] Creating alarm', { userId, body: req.body });
+  try {
+    const alarm = await createAlarm(req.body, userId);
+    console.log('[Backend POST /api/alarms] Alarm created successfully', { alarmId: alarm._id?.toString() });
+    res.status(201).json({ alarm });
+  } catch (error) {
+    console.error('[Backend POST /api/alarms] Error creating alarm', error);
+    res.status(500).json({ error: 'Failed to create alarm' });
+  }
 });
 
 router.patch("/", async (req, res) => {

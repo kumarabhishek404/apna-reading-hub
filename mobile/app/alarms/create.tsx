@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,7 +12,10 @@ export default function CreateAlarmScreen() {
   const [time, setTime] = useState('07:00');
   const [loading, setLoading] = useState(false);
 
+  console.log('[Alarm Create Screen] Component mounted', { loading });
+
   const goBack = () => {
+    console.log('[Alarm Create Screen] Navigating back');
     if (router.canGoBack()) {
       router.back();
       return;
@@ -25,15 +28,27 @@ export default function CreateAlarmScreen() {
       Alert.alert('Title required');
       return;
     }
+    console.log('[Alarm Create] Starting submission', { title, time });
     setLoading(true);
     try {
-      await createAlarm({ title, time, repeatDays: [1, 2, 3, 4, 5], isEnabled: true });
-      await syncScheduledNotificationsFromBackend();
-      Alert.alert('Alarm created');
-    } catch {
-      Alert.alert('Could not create alarm');
-    } finally {
+      console.log('[Alarm Create] Calling createAlarm API');
+      const result = await createAlarm({ title, time, repeatDays: [1, 2, 3, 4, 5], isEnabled: true });
+      console.log('[Alarm Create] API call successful', { result });
+      
+      // Clear loading state
       setLoading(false);
+      console.log('[Alarm Create] Loading state cleared');
+      
+      // Navigate back
+      router.back();
+      console.log('[Alarm Create] Navigation executed');
+      
+      // Sync notifications in background
+      syncScheduledNotificationsFromBackend().catch(console.error);
+    } catch (error) {
+      console.error('[Alarm Create] API call failed', error);
+      setLoading(false);
+      Alert.alert('Could not create alarm');
     }
   }
 
@@ -48,7 +63,7 @@ export default function CreateAlarmScreen() {
         <Text style={styles.title}>New Alarm</Text>
         <TextInput style={styles.input} placeholder="Alarm label" placeholderTextColor="#7b8798" value={title} onChangeText={setTitle} />
         <TextInput style={styles.input} placeholder="Time (HH:MM)" placeholderTextColor="#7b8798" value={time} onChangeText={setTime} />
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Alarm'} onPress={submit} />
+        <PrimaryButton title={loading ? 'Saving...' : 'Create Alarm'} onPress={submit} disabled={loading} />
       </View>
     </SafeAreaView>
   );

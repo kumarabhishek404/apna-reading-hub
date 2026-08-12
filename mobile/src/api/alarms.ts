@@ -11,7 +11,10 @@ export async function getTodayAlarms(): Promise<{ alarms: AlarmItem[] }> {
 }
 
 export async function createAlarm(payload: { title: string; time: string; repeatDays?: number[]; isEnabled?: boolean }) {
-  return apiClient.post<{ alarm: AlarmItem }>('/api/alarms', payload);
+  console.log('[API createAlarm] Starting alarm creation', { payload });
+  const result = await apiClient.post<{ alarm: AlarmItem }>('/api/alarms', payload);
+  console.log('[API createAlarm] Alarm creation completed', { result });
+  return result;
 }
 
 export async function updateAlarm(id: string, payload: Partial<AlarmItem>) {

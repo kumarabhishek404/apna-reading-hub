@@ -3,14 +3,13 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { createReminder } from '@/api/reminders';
+import { createBlog } from '@/api/blogs';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 
-export default function CreateReminderScreen() {
+export default function CreateBlogScreen() {
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueAt, setDueAt] = useState(new Date().toISOString());
+  const [url, setUrl] = useState('');
+  const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
 
   const goBack = () => {
@@ -18,7 +17,7 @@ export default function CreateReminderScreen() {
       router.back();
       return;
     }
-    router.replace('/(tabs)/home');
+    router.replace('/(tabs)/content');
   };
 
   async function submit() {
@@ -26,27 +25,24 @@ export default function CreateReminderScreen() {
       Alert.alert('Title required');
       return;
     }
-    console.log('[Reminder Create] Starting submission', { title, description, dueAt });
+    console.log('[Blog Create] Starting submission', { title, url, content });
     setLoading(true);
     try {
-      console.log('[Reminder Create] Calling createReminder API');
-      const result = await createReminder({ title, description, dueAt, priority: 'medium', repeat: 'none' });
-      console.log('[Reminder Create] API call successful', { result });
+      console.log('[Blog Create] Calling createBlog API');
+      const result = await createBlog({ title, url, content, isFavorite: false });
+      console.log('[Blog Create] API call successful', { result });
       
       // Clear loading state
       setLoading(false);
-      console.log('[Reminder Create] Loading state cleared');
+      console.log('[Blog Create] Loading state cleared');
       
       // Navigate back
       router.back();
-      console.log('[Reminder Create] Navigation executed');
-      
-      // Sync notifications in background
-      syncScheduledNotificationsFromBackend().catch(console.error);
+      console.log('[Blog Create] Navigation executed');
     } catch (error) {
-      console.error('[Reminder Create] API call failed', error);
+      console.error('[Blog Create] API call failed', error);
       setLoading(false);
-      Alert.alert('Could not create reminder');
+      Alert.alert('Could not create blog');
     }
   }
 
@@ -58,11 +54,33 @@ export default function CreateReminderScreen() {
             <Ionicons name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
-        <Text style={styles.title}>New Reminder</Text>
-        <TextInput style={styles.input} placeholder="Reminder title" placeholderTextColor="#7b8798" value={title} onChangeText={setTitle} />
-        <TextInput style={styles.input} placeholder="Description" placeholderTextColor="#7b8798" value={description} onChangeText={setDescription} multiline />
-        <TextInput style={styles.input} placeholder="Due date (ISO string)" placeholderTextColor="#7b8798" value={dueAt} onChangeText={setDueAt} />
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Reminder'} onPress={submit} disabled={loading} />
+        <Text style={styles.title}>New Blog</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Blog title" 
+          placeholderTextColor="#7b8798" 
+          value={title} 
+          onChangeText={setTitle} 
+        />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Blog URL (optional)" 
+          placeholderTextColor="#7b8798" 
+          value={url} 
+          onChangeText={setUrl} 
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextInput 
+          style={[styles.input, styles.textArea]} 
+          placeholder="Blog content" 
+          placeholderTextColor="#7b8798" 
+          value={content} 
+          onChangeText={setContent} 
+          multiline 
+          numberOfLines={4}
+        />
+        <PrimaryButton title={loading ? 'Saving...' : 'Create Blog'} onPress={submit} disabled={loading} />
       </View>
     </SafeAreaView>
   );
@@ -92,6 +110,9 @@ const styles = StyleSheet.create({
     borderColor: '#e3ebf7',
     color: '#1d2f5f',
     fontSize: 16,
-    minHeight: 48,
+  },
+  textArea: {
+    minHeight: 120,
+    textAlignVertical: 'top',
   },
 });

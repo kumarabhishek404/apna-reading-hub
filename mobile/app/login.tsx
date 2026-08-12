@@ -52,7 +52,7 @@ export default function LoginScreen() {
 
           {error ? (
             <View style={styles.alert}>
-              <Text style={styles.alertText}>Login issue: {error}</Text>
+              <Text style={styles.alertText}>{error}</Text>
             </View>
           ) : null}
 

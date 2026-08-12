@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiClient } from '@/api/client';
+import { Link } from 'expo-router';
+import { getNotes } from '@/api/notes';
+import { getBlogs } from '@/api/blogs';
+import { getLinks } from '@/api/links';
+import { getPdfs } from '@/api/pdfs';
 import { API_BASE_URL } from '@/config/env';
 import { BrandHeader } from '@/components/BrandHeader';
 import type { BlogItem, LinkItem, NoteItem, PdfItem } from '@/types';
@@ -21,10 +25,10 @@ export default function ContentScreen() {
     async function load() {
       try {
         const [notesRes, blogsRes, linksRes, pdfsRes] = await Promise.all([
-          apiClient.get<{ notes: NoteItem[] }>('/api/notes'),
-          apiClient.get<{ blogs: BlogItem[] }>('/api/blogs'),
-          apiClient.get<{ links: LinkItem[] }>('/api/links'),
-          apiClient.get<{ pdfs: PdfItem[] }>('/api/pdfs'),
+          getNotes(),
+          getBlogs(),
+          getLinks(),
+          getPdfs(),
         ]);
 
         const combined: ContentItem[] = [
@@ -81,6 +85,22 @@ export default function ContentScreen() {
       <View style={styles.header}>
         <BrandHeader title="Library" subtitle="Notes, links, blogs, and PDFs" />
       </View>
+      
+      <View style={styles.createButtons}>
+        <Link href="/notes/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
+        </Link>
+        <Link href="/blogs/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Blog</Text></Pressable>
+        </Link>
+        <Link href="/links/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Link</Text></Pressable>
+        </Link>
+        <Link href="/pdfs/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
+        </Link>
+      </View>
+      
       {loading ? (
         <ActivityIndicator size="large" style={{ marginTop: 24 }} />
       ) : error ? (
@@ -112,6 +132,26 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12 },
   title: { fontSize: 26, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.4 },
   subtitle: { fontSize: 13, color: '#64748b', marginTop: 4 },
+  createButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 10,
+    marginTop: 10,
+  },
+  createButton: {
+    backgroundColor: '#22409a',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   card: {
     backgroundColor: '#fff',
     padding: 16,
