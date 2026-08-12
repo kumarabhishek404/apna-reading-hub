@@ -28,9 +28,10 @@ function mapPdf(pdf: {
   };
 }
 
-export async function getPdfs(search?: string, tag?: string) {
+export async function getPdfs(search?: string, tag?: string, userId?: string) {
   const pdfs = await prisma.pdf.findMany({
     where: {
+      userId: userId ?? undefined,
       AND: [
         search
           ? {
@@ -49,12 +50,13 @@ export async function getPdfs(search?: string, tag?: string) {
   return pdfs.map(mapPdf);
 }
 
-export async function getPdfById(id: string) {
+export async function getPdfById(id: string, userId?: string) {
   const pdf = await prisma.pdf.findUnique({
     where: { id },
     include: pdfInclude,
   });
-  return pdf ? mapPdf(pdf) : null;
+  if (!pdf || (userId && pdf.userId !== userId)) return null;
+  return mapPdf(pdf);
 }
 
 export async function createPdf(data: {
@@ -63,10 +65,11 @@ export async function createPdf(data: {
   description?: string;
   tags?: string[];
   isFavorite?: boolean;
-}) {
+}, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
   const pdf = await prisma.pdf.create({
     data: {
+      userId,
       title: data.title,
       pdfUrl: data.pdfUrl,
       description: data.description ?? "",
@@ -88,8 +91,12 @@ export async function updatePdf(
     description?: string;
     tags?: string[];
     isFavorite?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.pdf.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("PDF not found");
+
   if (data.tags) {
     const tags = await upsertTags(data.tags);
     await prisma.pdfTag.deleteMany({ where: { pdfId: id } });
@@ -111,12 +118,14 @@ export async function updatePdf(
   return mapPdf(pdf);
 }
 
-export async function deletePdf(id: string) {
+export async function deletePdf(id: string, userId?: string) {
+  const existing = await prisma.pdf.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("PDF not found");
   await prisma.pdf.delete({ where: { id } });
 }
 
-export async function togglePdfFavorite(id: string) {
+export async function togglePdfFavorite(id: string, userId?: string) {
   const current = await prisma.pdf.findUnique({ where: { id } });
-  if (!current) return null;
-  return updatePdf(id, { isFavorite: !current.isFavorite });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updatePdf(id, { isFavorite: !current.isFavorite }, userId);
 }

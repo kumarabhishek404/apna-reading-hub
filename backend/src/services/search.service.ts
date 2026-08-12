@@ -3,15 +3,15 @@ import type { DashboardStats, RecentItem, SearchResult } from "../lib/types";
 import { getUpcomingAlarms } from "./alarm.service";
 import { getUpcomingReminders } from "./reminder.service";
 
-export async function getDashboardData() {
+export async function getDashboardData(userId?: string) {
   const [totalBlogs, totalLinks, totalPdfs, totalNotes, totalReminders, totalAlarms] =
     await Promise.all([
-      prisma.blog.count(),
-      prisma.link.count(),
-      prisma.pdf.count(),
-      prisma.note.count(),
-      prisma.reminder.count({ where: { isCompleted: false } }),
-      prisma.alarm.count({ where: { isEnabled: true } }),
+      prisma.blog.count({ where: userId ? { userId } : undefined }),
+      prisma.link.count({ where: userId ? { userId } : undefined }),
+      prisma.pdf.count({ where: userId ? { userId } : undefined }),
+      prisma.note.count({ where: userId ? { userId } : undefined }),
+      prisma.reminder.count({ where: { ...(userId ? { userId } : {}), isCompleted: false } }),
+      prisma.alarm.count({ where: { ...(userId ? { userId } : {}), isEnabled: true } }),
     ]);
 
   const stats: DashboardStats = {
@@ -25,27 +25,31 @@ export async function getDashboardData() {
 
   const [blogs, links, pdfs, notes, upcomingReminders, todayAlarms] = await Promise.all([
     prisma.blog.findMany({
+      where: userId ? { userId } : undefined,
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.link.findMany({
+      where: userId ? { userId } : undefined,
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.pdf.findMany({
+      where: userId ? { userId } : undefined,
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.note.findMany({
+      where: userId ? { userId } : undefined,
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
-    getUpcomingReminders(5),
-    getUpcomingAlarms(5),
+    getUpcomingReminders(5, userId),
+    getUpcomingAlarms(5, userId),
   ]);
 
   const recent: RecentItem[] = [
@@ -84,30 +88,30 @@ export async function getDashboardData() {
     )
     .slice(0, 10);
 
-  const favorites = await getFavorites();
+  const favorites = await getFavorites(userId);
 
   return { stats, recent, favorites, upcomingReminders, todayAlarms };
 }
 
-export async function getFavorites() {
+export async function getFavorites(userId?: string) {
   const [blogs, links, pdfs, notes] = await Promise.all([
     prisma.blog.findMany({
-      where: { isFavorite: true },
+      where: { ...(userId ? { userId } : {}), isFavorite: true },
       orderBy: { updatedAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.link.findMany({
-      where: { isFavorite: true },
+      where: { ...(userId ? { userId } : {}), isFavorite: true },
       orderBy: { updatedAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.pdf.findMany({
-      where: { isFavorite: true },
+      where: { ...(userId ? { userId } : {}), isFavorite: true },
       orderBy: { updatedAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
     prisma.note.findMany({
-      where: { isFavorite: true },
+      where: { ...(userId ? { userId } : {}), isFavorite: true },
       orderBy: { updatedAt: "desc" },
       include: { tags: { include: { tag: true } } },
     }),
@@ -145,12 +149,13 @@ export async function getFavorites() {
   ];
 }
 
-export async function globalSearch(query: string): Promise<SearchResult[]> {
+export async function globalSearch(query: string, userId?: string): Promise<SearchResult[]> {
   if (!query.trim()) return [];
 
   const [blogs, links, pdfs, notes, reminders, alarms] = await Promise.all([
     prisma.blog.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         OR: [
           { title: { contains: query } },
           { content: { contains: query } },
@@ -163,6 +168,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }),
     prisma.link.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         OR: [
           { title: { contains: query } },
           { description: { contains: query } },
@@ -175,6 +181,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }),
     prisma.pdf.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         OR: [
           { title: { contains: query } },
           { description: { contains: query } },
@@ -186,6 +193,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }),
     prisma.note.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         OR: [
           { title: { contains: query } },
           { content: { contains: query } },
@@ -197,6 +205,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
     }),
     prisma.reminder.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         OR: [
           { title: { contains: query } },
           { description: { contains: query } },
@@ -206,7 +215,10 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       orderBy: { dueAt: "asc" },
     }),
     prisma.alarm.findMany({
-      where: { title: { contains: query } },
+      where: {
+        ...(userId ? { userId } : {}),
+        title: { contains: query },
+      },
       take: 10,
       orderBy: { time: "asc" },
     }),

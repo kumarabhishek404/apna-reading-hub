@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import { requireAuth } from "../lib/auth";
 import { UPLOADS_DIR } from "../lib/uploads";
 import {
   createPdf,
@@ -11,6 +12,8 @@ import {
 } from "../services/pdf.service";
 
 const router = Router();
+
+router.use(requireAuth);
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -33,22 +36,26 @@ const upload = multer({
 router.get("/", async (req, res) => {
   const search = (req.query.search as string) || undefined;
   const tag = (req.query.tag as string) || undefined;
-  const pdfs = await getPdfs(search, tag);
+  const userId = (req as any).user?.userId;
+  const pdfs = await getPdfs(search, tag, userId);
   res.json({ pdfs });
 });
 
 router.get("/:id", async (req, res) => {
-  const pdf = await getPdfById(req.params.id);
+  const userId = (req as any).user?.userId;
+  const pdf = await getPdfById(req.params.id, userId);
   if (!pdf) return res.status(404).json({ error: "PDF not found" });
   res.json({ pdf });
 });
 
 router.post("/", async (req, res) => {
-  const pdf = await createPdf(req.body);
+  const userId = (req as any).user?.userId;
+  const pdf = await createPdf(req.body, userId);
   res.status(201).json({ pdf });
 });
 
 router.post("/upload", upload.single("file"), async (req, res) => {
+  const userId = (req as any).user?.userId;
   if (!req.file) {
     return res.status(400).json({ error: "PDF file required" });
   }
@@ -62,28 +69,30 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     pdfUrl: `/uploads/${req.file.filename}`,
     description,
     tags: tagsRaw ? tagsRaw.split(",") : [],
-  });
+  }, userId);
 
   res.status(201).json({ pdf });
 });
 
 router.patch("/", async (req, res) => {
   const { id, action, ...data } = req.body;
+  const userId = (req as any).user?.userId;
   if (!id) return res.status(400).json({ error: "ID required" });
 
   if (action === "favorite") {
-    const pdf = await togglePdfFavorite(id);
+    const pdf = await togglePdfFavorite(id, userId);
     return res.json({ pdf });
   }
 
-  const pdf = await updatePdf(id, data);
+  const pdf = await updatePdf(id, data, userId);
   res.json({ pdf });
 });
 
 router.delete("/", async (req, res) => {
   const id = req.query.id as string;
+  const userId = (req as any).user?.userId;
   if (!id) return res.status(400).json({ error: "ID required" });
-  await deletePdf(id);
+  await deletePdf(id, userId);
   res.json({ success: true });
 });
 

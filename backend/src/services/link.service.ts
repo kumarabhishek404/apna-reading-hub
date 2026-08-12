@@ -28,9 +28,10 @@ function mapLink(link: {
   };
 }
 
-export async function getLinks(search?: string, tag?: string) {
+export async function getLinks(search?: string, tag?: string, userId?: string) {
   const links = await prisma.link.findMany({
     where: {
+      userId: userId ?? undefined,
       AND: [
         search
           ? {
@@ -50,12 +51,13 @@ export async function getLinks(search?: string, tag?: string) {
   return links.map(mapLink);
 }
 
-export async function getLinkById(id: string) {
+export async function getLinkById(id: string, userId?: string) {
   const link = await prisma.link.findUnique({
     where: { id },
     include: linkInclude,
   });
-  return link ? mapLink(link) : null;
+  if (!link || (userId && link.userId !== userId)) return null;
+  return mapLink(link);
 }
 
 export async function createLink(data: {
@@ -64,10 +66,11 @@ export async function createLink(data: {
   description?: string;
   tags?: string[];
   isFavorite?: boolean;
-}) {
+}, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
   const link = await prisma.link.create({
     data: {
+      userId,
       title: data.title,
       url: data.url,
       description: data.description ?? "",
@@ -89,8 +92,12 @@ export async function updateLink(
     description?: string;
     tags?: string[];
     isFavorite?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.link.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Link not found");
+
   if (data.tags) {
     const tags = await upsertTags(data.tags);
     await prisma.linkTag.deleteMany({ where: { linkId: id } });
@@ -112,12 +119,14 @@ export async function updateLink(
   return mapLink(link);
 }
 
-export async function deleteLink(id: string) {
+export async function deleteLink(id: string, userId?: string) {
+  const existing = await prisma.link.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Link not found");
   await prisma.link.delete({ where: { id } });
 }
 
-export async function toggleLinkFavorite(id: string) {
+export async function toggleLinkFavorite(id: string, userId?: string) {
   const current = await prisma.link.findUnique({ where: { id } });
-  if (!current) return null;
-  return updateLink(id, { isFavorite: !current.isFavorite });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updateLink(id, { isFavorite: !current.isFavorite }, userId);
 }

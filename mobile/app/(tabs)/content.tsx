@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, FlatList, Linking, Pressable, StyleSheet, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiClient } from '@/api/client';
 import { API_BASE_URL } from '@/config/env';
+import { BrandHeader } from '@/components/BrandHeader';
 import type { BlogItem, LinkItem, NoteItem, PdfItem } from '@/types';
 
 type ContentItem =
@@ -78,8 +79,7 @@ export default function ContentScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.title}>Library</Text>
-        <Text style={styles.subtitle}>Notes, links, blogs, and PDFs from your hub</Text>
+        <BrandHeader title="Library" subtitle="Notes, links, blogs, and PDFs" />
       </View>
       {loading ? (
         <ActivityIndicator size="large" style={{ marginTop: 24 }} />
@@ -108,13 +108,26 @@ export default function ContentScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f5f7ff' },
+  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
   header: { paddingHorizontal: 20, paddingTop: 12 },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center' },
-  cardKind: { fontSize: 11, fontWeight: '700', color: '#7c3aed', textTransform: 'uppercase' },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 4 },
-  cardMeta: { fontSize: 12, color: '#6b7280', marginTop: 6 },
-  error: { marginTop: 16, color: '#b91c1c', paddingHorizontal: 20 },
+  title: { fontSize: 26, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.4 },
+  subtitle: { fontSize: 13, color: '#64748b', marginTop: 4 },
+  card: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#edf1fa',
+    shadowColor: '#22409a',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  cardKind: { fontSize: 11, fontWeight: '800', color: '#ff8a00', textTransform: 'uppercase', letterSpacing: 0.8 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1d2f5f', marginTop: 4 },
+  cardMeta: { fontSize: 12, color: '#64748b', marginTop: 6 },
+  error: { marginTop: 16, color: '#d14f46', paddingHorizontal: 20, fontWeight: '600' },
 });

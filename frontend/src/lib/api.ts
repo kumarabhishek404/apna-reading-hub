@@ -1,3 +1,5 @@
+import { getAuthToken, readAuthSession } from "@/lib/auth";
+
 function defaultBackendUrl(): string {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
@@ -42,5 +44,16 @@ export async function apiFetch(
   path: string,
   options?: RequestInit
 ): Promise<Response> {
-  return fetch(apiUrl(path), options);
+  const session = readAuthSession();
+  const token = session?.token || getAuthToken();
+  const headers = new Headers(options?.headers || {});
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  return fetch(apiUrl(path), {
+    ...options,
+    headers,
+  });
 }

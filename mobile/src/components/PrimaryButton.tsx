@@ -10,11 +10,18 @@ export function PrimaryButton({ title, onPress }: { title: string; onPress: () =
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#7c3aed',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 999,
+    backgroundColor: '#22409a',
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    borderRadius: 18,
     alignItems: 'center',
+    shadowColor: '#22409a',
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  text: { color: '#fff', fontWeight: '700' },
+  text: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.2 },
 });

@@ -7,6 +7,7 @@ import notesRouter from "./routes/notes";
 import remindersRouter from "./routes/reminders";
 import alarmsRouter from "./routes/alarms";
 import miscRouter from "./routes/misc";
+import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
 
 const app = express();
@@ -20,10 +21,25 @@ const allowedOrigins = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
 ].filter((origin): origin is string => Boolean(origin));
 
+const isLocalExpoOrigin = (origin: string) => {
+  const normalized = origin.toLowerCase();
+
+  return (
+    normalized.startsWith("http://localhost") ||
+    normalized.startsWith("http://127.0.0.1") ||
+    normalized.startsWith("http://10.0.2.2") ||
+    normalized.startsWith("http://192.168.") ||
+    normalized.startsWith("http://172.") ||
+    normalized.startsWith("exp://") ||
+    normalized.startsWith("expo://") ||
+    normalized.startsWith("http://[::1]")
+  );
+};
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isLocalExpoOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -51,6 +67,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/blogs", blogsRouter);
 app.use("/api/links", linksRouter);
 app.use("/api/pdfs", pdfsRouter);

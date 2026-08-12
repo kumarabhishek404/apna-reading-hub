@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, User } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,9 +18,42 @@ import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/shared/motion";
 import { NotificationMonitor } from "@/components/notifications/notification-monitor";
+import { readAuthSession, clearAuthSession } from "@/lib/auth";
+
+const PUBLIC_PATHS = new Set(["/login", "/register"]);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+
+    if (PUBLIC_PATHS.has(pathname || "")) {
+      return;
+    }
+
+    const session = readAuthSession();
+    if (!session) {
+      clearAuthSession();
+      router.replace("/login");
+    }
+  }, [pathname, router]);
+
+  if (!hydrated) {
+    return null;
+  }
+
+  if (PUBLIC_PATHS.has(pathname || "")) {
+    return <>{children}</>;
+  }
+
+  const session = readAuthSession();
+  if (!session) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -51,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Apna Sathi</DropdownMenuLabel>
+                <DropdownMenuLabel>{session.user.fullName || "Apna Sathi"}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
@@ -61,6 +95,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/bookmarks">Bookmarks</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    clearAuthSession();
+                    router.replace("/login");
+                  }}
+                >
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

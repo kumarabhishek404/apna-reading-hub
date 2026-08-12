@@ -25,19 +25,21 @@ function serializeRepeatDays(days: number[]) {
   return [...new Set(days)].sort((a, b) => a - b).join(",");
 }
 
-export async function getAlarms(search?: string) {
+export async function getAlarms(search?: string, userId?: string) {
   const alarms = await prisma.alarm.findMany({
-    where: search
-      ? { title: { contains: search } }
-      : undefined,
+    where: {
+      userId: userId ?? undefined,
+      ...(search ? { title: { contains: search } } : {}),
+    },
     orderBy: [{ isEnabled: "desc" }, { time: "asc" }],
   });
   return alarms.map(mapAlarm);
 }
 
-export async function getAlarmById(id: string) {
+export async function getAlarmById(id: string, userId?: string) {
   const alarm = await prisma.alarm.findUnique({ where: { id } });
-  return alarm ? mapAlarm(alarm) : null;
+  if (!alarm || (userId && alarm.userId !== userId)) return null;
+  return mapAlarm(alarm);
 }
 
 export async function createAlarm(data: {
@@ -45,9 +47,10 @@ export async function createAlarm(data: {
   time: string;
   repeatDays?: number[];
   isEnabled?: boolean;
-}) {
+}, userId: string) {
   const alarm = await prisma.alarm.create({
     data: {
+      userId,
       title: data.title,
       time: data.time,
       repeatDays: serializeRepeatDays(data.repeatDays ?? [0, 1, 2, 3, 4, 5, 6]),
@@ -64,8 +67,12 @@ export async function updateAlarm(
     time?: string;
     repeatDays?: number[];
     isEnabled?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.alarm.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Alarm not found");
+
   const alarm = await prisma.alarm.update({
     where: { id },
     data: {
@@ -78,20 +85,22 @@ export async function updateAlarm(
   return mapAlarm(alarm);
 }
 
-export async function deleteAlarm(id: string) {
+export async function deleteAlarm(id: string, userId?: string) {
+  const existing = await prisma.alarm.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Alarm not found");
   await prisma.alarm.delete({ where: { id } });
 }
 
-export async function toggleAlarmEnabled(id: string) {
+export async function toggleAlarmEnabled(id: string, userId?: string) {
   const current = await prisma.alarm.findUnique({ where: { id } });
-  if (!current) return null;
-  return updateAlarm(id, { isEnabled: !current.isEnabled });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updateAlarm(id, { isEnabled: !current.isEnabled }, userId);
 }
 
-export async function getTodayAlarms() {
+export async function getTodayAlarms(userId?: string) {
   const day = new Date().getDay();
   const alarms = await prisma.alarm.findMany({
-    where: { isEnabled: true },
+    where: { userId: userId ?? undefined, isEnabled: true },
     orderBy: { time: "asc" },
   });
   return alarms
@@ -99,8 +108,8 @@ export async function getTodayAlarms() {
     .filter((a) => a.repeatDays.includes(day));
 }
 
-export async function getUpcomingAlarms(limit = 10) {
-  const alarms = await getAlarms();
+export async function getUpcomingAlarms(limit = 10, userId?: string) {
+  const alarms = await getAlarms(undefined, userId);
   const day = new Date().getDay();
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 

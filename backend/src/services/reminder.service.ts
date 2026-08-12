@@ -29,10 +29,12 @@ export async function getReminders(options?: {
   search?: string;
   upcoming?: boolean;
   includeCompleted?: boolean;
+  userId?: string;
 }) {
   const now = new Date();
   const reminders = await prisma.reminder.findMany({
     where: {
+      userId: options?.userId ?? undefined,
       AND: [
         options?.search
           ? {
@@ -51,9 +53,10 @@ export async function getReminders(options?: {
   return reminders.map(mapReminder);
 }
 
-export async function getReminderById(id: string) {
+export async function getReminderById(id: string, userId?: string) {
   const reminder = await prisma.reminder.findUnique({ where: { id } });
-  return reminder ? mapReminder(reminder) : null;
+  if (!reminder || (userId && reminder.userId !== userId)) return null;
+  return mapReminder(reminder);
 }
 
 export async function createReminder(data: {
@@ -62,9 +65,10 @@ export async function createReminder(data: {
   dueAt: string;
   priority?: string;
   repeat?: string;
-}) {
+}, userId: string) {
   const reminder = await prisma.reminder.create({
     data: {
+      userId,
       title: data.title,
       description: data.description ?? "",
       dueAt: new Date(data.dueAt),
@@ -84,8 +88,12 @@ export async function updateReminder(
     priority?: string;
     repeat?: string;
     isCompleted?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.reminder.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Reminder not found");
+
   const reminder = await prisma.reminder.update({
     where: { id },
     data: {
@@ -100,13 +108,15 @@ export async function updateReminder(
   return mapReminder(reminder);
 }
 
-export async function deleteReminder(id: string) {
+export async function deleteReminder(id: string, userId?: string) {
+  const existing = await prisma.reminder.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Reminder not found");
   await prisma.reminder.delete({ where: { id } });
 }
 
-export async function toggleReminderComplete(id: string) {
+export async function toggleReminderComplete(id: string, userId?: string) {
   const current = await prisma.reminder.findUnique({ where: { id } });
-  if (!current) return null;
+  if (!current || (userId && current.userId !== userId)) return null;
 
   if (!current.isCompleted) {
     if (current.repeat !== "none") {
@@ -117,18 +127,18 @@ export async function toggleReminderComplete(id: string) {
       return updateReminder(id, {
         dueAt: next.toISOString(),
         isCompleted: false,
-      });
+      }, userId);
     }
-    return updateReminder(id, { isCompleted: true });
+    return updateReminder(id, { isCompleted: true }, userId);
   }
 
-  return updateReminder(id, { isCompleted: false });
+  return updateReminder(id, { isCompleted: false }, userId);
 }
 
-export async function getUpcomingReminders(limit = 5) {
+export async function getUpcomingReminders(limit = 5, userId?: string) {
   const now = new Date();
   const reminders = await prisma.reminder.findMany({
-    where: { isCompleted: false, dueAt: { gte: now } },
+    where: { userId: userId ?? undefined, isCompleted: false, dueAt: { gte: now } },
     orderBy: { dueAt: "asc" },
     take: limit,
   });

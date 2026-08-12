@@ -28,9 +28,10 @@ function mapNote(note: {
   };
 }
 
-export async function getNotes(search?: string, tag?: string) {
+export async function getNotes(search?: string, tag?: string, userId?: string) {
   const notes = await prisma.note.findMany({
     where: {
+      userId: userId ?? undefined,
       AND: [
         search
           ? {
@@ -49,12 +50,13 @@ export async function getNotes(search?: string, tag?: string) {
   return notes.map(mapNote);
 }
 
-export async function getNoteById(id: string) {
+export async function getNoteById(id: string, userId?: string) {
   const note = await prisma.note.findUnique({
     where: { id },
     include: noteInclude,
   });
-  return note ? mapNote(note) : null;
+  if (!note || (userId && note.userId !== userId)) return null;
+  return mapNote(note);
 }
 
 export async function createNote(data: {
@@ -63,10 +65,11 @@ export async function createNote(data: {
   tags?: string[];
   isPinned?: boolean;
   isFavorite?: boolean;
-}) {
+}, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
   const note = await prisma.note.create({
     data: {
+      userId,
       title: data.title,
       content: data.content ?? "",
       isPinned: data.isPinned ?? false,
@@ -88,8 +91,12 @@ export async function updateNote(
     tags?: string[];
     isPinned?: boolean;
     isFavorite?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.note.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Note not found");
+
   if (data.tags) {
     const tags = await upsertTags(data.tags);
     await prisma.noteTag.deleteMany({ where: { noteId: id } });
@@ -111,20 +118,22 @@ export async function updateNote(
   return mapNote(note);
 }
 
-export async function deleteNote(id: string) {
+export async function deleteNote(id: string, userId?: string) {
+  const existing = await prisma.note.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Note not found");
   await prisma.note.delete({ where: { id } });
 }
 
-export async function toggleNoteFavorite(id: string) {
+export async function toggleNoteFavorite(id: string, userId?: string) {
   const current = await prisma.note.findUnique({ where: { id } });
-  if (!current) return null;
-  return updateNote(id, { isFavorite: !current.isFavorite });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updateNote(id, { isFavorite: !current.isFavorite }, userId);
 }
 
-export async function toggleNotePin(id: string) {
+export async function toggleNotePin(id: string, userId?: string) {
   const current = await prisma.note.findUnique({ where: { id } });
-  if (!current) return null;
-  return updateNote(id, { isPinned: !current.isPinned });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updateNote(id, { isPinned: !current.isPinned }, userId);
 }
 
 export function exportNoteAsMarkdown(note: NoteItem) {

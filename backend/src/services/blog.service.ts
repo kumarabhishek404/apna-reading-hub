@@ -28,9 +28,10 @@ function mapBlog(blog: {
   };
 }
 
-export async function getBlogs(search?: string, tag?: string) {
+export async function getBlogs(search?: string, tag?: string, userId?: string) {
   const blogs = await prisma.blog.findMany({
     where: {
+      userId: userId ?? undefined,
       AND: [
         search
           ? {
@@ -52,12 +53,13 @@ export async function getBlogs(search?: string, tag?: string) {
   return blogs.map(mapBlog);
 }
 
-export async function getBlogById(id: string) {
+export async function getBlogById(id: string, userId?: string) {
   const blog = await prisma.blog.findUnique({
     where: { id },
     include: blogInclude,
   });
-  return blog ? mapBlog(blog) : null;
+  if (!blog || (userId && blog.userId !== userId)) return null;
+  return mapBlog(blog);
 }
 
 export async function createBlog(data: {
@@ -66,10 +68,11 @@ export async function createBlog(data: {
   content?: string;
   tags?: string[];
   isFavorite?: boolean;
-}) {
+}, userId: string) {
   const tags = await upsertTags(data.tags ?? []);
   const blog = await prisma.blog.create({
     data: {
+      userId,
       title: data.title,
       url: data.url,
       content: data.content ?? "",
@@ -91,8 +94,12 @@ export async function updateBlog(
     content?: string;
     tags?: string[];
     isFavorite?: boolean;
-  }
+  },
+  userId?: string
 ) {
+  const existing = await prisma.blog.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Blog not found");
+
   if (data.tags) {
     const tags = await upsertTags(data.tags);
     await prisma.blogTag.deleteMany({ where: { blogId: id } });
@@ -114,12 +121,14 @@ export async function updateBlog(
   return mapBlog(blog);
 }
 
-export async function deleteBlog(id: string) {
+export async function deleteBlog(id: string, userId?: string) {
+  const existing = await prisma.blog.findUnique({ where: { id } });
+  if (!existing || (userId && existing.userId !== userId)) throw new Error("Blog not found");
   await prisma.blog.delete({ where: { id } });
 }
 
-export async function toggleBlogFavorite(id: string) {
+export async function toggleBlogFavorite(id: string, userId?: string) {
   const current = await prisma.blog.findUnique({ where: { id } });
-  if (!current) return null;
-  return updateBlog(id, { isFavorite: !current.isFavorite });
+  if (!current || (userId && current.userId !== userId)) return null;
+  return updateBlog(id, { isFavorite: !current.isFavorite }, userId);
 }
