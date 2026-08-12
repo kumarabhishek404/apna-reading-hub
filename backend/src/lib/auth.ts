@@ -3,6 +3,12 @@ import jwt from "jsonwebtoken";
 import { User } from "../models";
 
 const JWT_SECRET = process.env.JWT_SECRET || "apna-sathi-dev-secret";
+
+if (process.env.VERCEL && !process.env.JWT_SECRET) {
+  console.warn(
+    "[Auth] JWT_SECRET is not set on Vercel. Set a strong secret in Environment Variables."
+  );
+}
 const JWT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface AuthUserPayload {
@@ -43,8 +49,8 @@ export async function getCurrentUserFromRequest(req: Request) {
       fullName: user.fullName,
       title: user.title,
       mobile: user.mobile,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   } catch {
     return null;

@@ -1,49 +1,77 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/reading-hub";
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable");
-}
-
-interface MongooseCache {
+type MongooseCache = {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
-}
+};
 
 declare global {
-  var mongoose: MongooseCache | undefined;
+  // eslint-disable-next-line no-var
+  var __readingHubMongoose: MongooseCache | undefined;
 }
 
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+const cached: MongooseCache = global.__readingHubMongoose ?? {
+  conn: null,
+  promise: null,
+};
 
-if (!global.mongoose) {
-  global.mongoose = cached;
+if (!global.__readingHubMongoose) {
+  global.__readingHubMongoose = cached;
 }
 
-async function connectDB() {
-  if (cached.conn) {
+function resolveMongoUri() {
+  const uri = process.env.MONGODB_URI?.trim();
+  if (uri) return uri;
+
+  // Local/dev fallback only — never silently use localhost on Vercel.
+  if (process.env.VERCEL) {
+    throw new Error(
+      "MONGODB_URI is not set. Add it in Vercel → Project Settings → Environment Variables."
+    );
+  }
+
+  return "mongodb://localhost:27017/reading-hub";
+}
+
+/**
+ * Ensures a live mongoose connection before any model call.
+ * Safe for Vercel serverless cold starts (cached across warm invocations).
+ */
+export async function connectDB() {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
+  // If a previous attempt failed or the socket dropped, clear and reconnect.
+  if (mongoose.connection.readyState === 0) {
+    cached.conn = null;
+  }
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+  if (!cached.promise) {
+    const uri = resolveMongoUri();
+    cached.promise = mongoose
+      .connect(uri, {
+        // With buffering off, callers MUST await connectDB() first (see ensureDb middleware).
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 10_000,
+        maxPoolSize: 10,
+      })
+      .then((instance) => instance);
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
+  } catch (error) {
     cached.promise = null;
-    throw e;
+    cached.conn = null;
+    throw error;
   }
 
   return cached.conn;
+}
+
+export function getDbReadyState() {
+  return mongoose.connection.readyState;
 }
 
 export default connectDB;

@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import connectDB from "./lib/mongodb";
+import { ensureDb } from "./middleware/ensure-db";
 import blogsRouter from "./routes/blogs";
 import linksRouter from "./routes/links";
 import pdfsRouter from "./routes/pdfs";
@@ -12,17 +13,6 @@ import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
 
 const app = express();
-
-// Connect to MongoDB
-console.log('[Backend] Starting MongoDB connection...');
-connectDB()
-  .then(() => {
-    console.log('[Backend] MongoDB connected successfully');
-  })
-  .catch((err) => {
-    console.error("[Backend] Failed to connect to MongoDB:", err);
-    process.exit(1);
-  });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
@@ -78,6 +68,17 @@ app.get("/health", (_req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+// Warm the connection for long-lived servers (local/Render/Docker).
+// Do NOT process.exit on failure — that kills Vercel serverless invocations.
+if (!process.env.VERCEL) {
+  connectDB().catch((err) => {
+    console.error("[Backend] Initial MongoDB connection failed:", err);
+  });
+}
+
+// Every DB-backed API route must wait for mongoose.connect() first.
+app.use("/api", ensureDb);
 
 app.use("/api/auth", authRouter);
 app.use("/api/blogs", blogsRouter);
