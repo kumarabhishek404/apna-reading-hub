@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { getReminders, completeReminder } from '@/api/reminders';
+import { getSoundOption } from '@/constants/notificationSounds';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import type { ReminderItem } from '@/types';
 
@@ -57,6 +58,7 @@ export default function RemindersScreen() {
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardDescription}>{item.description}</Text>
                 <Text style={styles.cardTime}>{new Date(item.dueAt).toLocaleString()}</Text>
+                <Text style={styles.cardMeta}>{getSoundOption(item.sound).label}</Text>
               </View>
               <Text style={styles.badge}>{item.priority}</Text>
             </Pressable>
@@ -88,6 +90,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '600', color: '#111827' },
   cardDescription: { fontSize: 13, color: '#6b7280', marginTop: 4 },
   cardTime: { fontSize: 12, color: '#6b7280', marginTop: 6 },
+  cardMeta: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#ede9fe', color: '#6d28d9', fontSize: 12 },
   error: { marginTop: 16, color: '#b91c1c', paddingHorizontal: 20 },
 });

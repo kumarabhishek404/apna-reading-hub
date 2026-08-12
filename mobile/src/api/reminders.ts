@@ -16,6 +16,7 @@ export async function createReminder(payload: {
   dueAt: string;
   priority?: string;
   repeat?: string;
+  sound?: string;
 }) {
   return apiClient.post<{ reminder: ReminderItem }>('/api/reminders', payload);
 }

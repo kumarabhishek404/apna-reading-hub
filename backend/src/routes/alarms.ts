@@ -37,7 +37,7 @@ router.post("/", async (req, res) => {
   console.log('[Backend POST /api/alarms] Creating alarm', { userId, body: req.body });
   try {
     const alarm = await createAlarm(req.body, userId);
-    console.log('[Backend POST /api/alarms] Alarm created successfully', { alarmId: alarm._id?.toString() });
+    console.log('[Backend POST /api/alarms] Alarm created successfully', { alarmId: alarm.id });
     res.status(201).json({ alarm });
   } catch (error) {
     console.error('[Backend POST /api/alarms] Error creating alarm', error);

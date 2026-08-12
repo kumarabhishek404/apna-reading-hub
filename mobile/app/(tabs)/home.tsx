@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { getDashboard } from '@/api/dashboard';
 import { BrandHeader } from '@/components/BrandHeader';
+import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import type { DashboardStats } from '@/types';
 
 export default function HomeScreen() {
@@ -16,6 +17,7 @@ export default function HomeScreen() {
       try {
         const data = await getDashboard();
         setStats(data.stats);
+        await syncScheduledNotificationsFromBackend();
       } catch (e) {
         setError('Could not load dashboard');
       } finally {

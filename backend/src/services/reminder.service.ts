@@ -10,6 +10,7 @@ function mapReminder(r: any): ReminderItem {
     priority: r.priority as ReminderItem["priority"],
     repeat: r.repeat as ReminderItem["repeat"],
     isCompleted: r.isCompleted,
+    sound: (r.sound || "default") as ReminderItem["sound"],
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
@@ -61,6 +62,7 @@ export async function createReminder(data: {
   dueAt: string;
   priority?: string;
   repeat?: string;
+  sound?: string;
 }, userId: string) {
   const reminder = await Reminder.create({
     userId,
@@ -69,6 +71,7 @@ export async function createReminder(data: {
     dueAt: new Date(data.dueAt),
     priority: data.priority ?? "medium",
     repeat: data.repeat ?? "none",
+    sound: data.sound ?? "default",
   });
   return mapReminder(reminder);
 }
@@ -82,6 +85,7 @@ export async function updateReminder(
     priority?: string;
     repeat?: string;
     isCompleted?: boolean;
+    sound?: string;
   },
   userId?: string
 ) {
@@ -95,6 +99,7 @@ export async function updateReminder(
   if (data.priority !== undefined) updateData.priority = data.priority;
   if (data.repeat !== undefined) updateData.repeat = data.repeat;
   if (data.isCompleted !== undefined) updateData.isCompleted = data.isCompleted;
+  if (data.sound !== undefined) updateData.sound = data.sound;
 
   const reminder = await Reminder.findByIdAndUpdate(id, updateData, { new: true });
   return mapReminder(reminder);

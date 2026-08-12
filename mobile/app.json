@@ -33,23 +33,36 @@
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
       ]
     },
     "plugins": [
       "expo-router",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/ionicons.ttf"
+          ]
+        }
+      ],
       "expo-asset",
       "expo-secure-store",
       [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#7c3aed",
-          "sounds": []
+          "color": "#22409a",
+          "sounds": [
+            "./assets/sounds/apna_chime.wav",
+            "./assets/sounds/apna_alert.wav"
+          ],
+          "defaultChannel": "apna-sound-default"
         }
-      ]
+      ],
+      "./plugins/withGradleWrapperResilience.js"
     ],
     "experiments": {
       "typedRoutes": true

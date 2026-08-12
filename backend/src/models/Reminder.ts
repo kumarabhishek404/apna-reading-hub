@@ -7,6 +7,7 @@ export interface IReminder extends Document {
   priority: string;
   repeat: string;
   isCompleted: boolean;
+  sound: string;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,11 @@ const ReminderSchema = new Schema<IReminder>(
       default: "none" 
     },
     isCompleted: { type: Boolean, default: false },
+    sound: {
+      type: String,
+      enum: ["default", "apna_chime", "apna_alert"],
+      default: "default",
+    },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   {

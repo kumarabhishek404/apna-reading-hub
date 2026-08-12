@@ -1,17 +1,20 @@
-import type { ComponentProps } from 'react';
 import { Pressable, View } from 'react-native';
 import { Tabs } from 'expo-router';
+import { AppIcon } from '@/components/AppIcon';
+import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+
 const tabIcon = (
-  name: ComponentProps<typeof Ionicons>['name'],
-  activeName: ComponentProps<typeof Ionicons>['name'],
+  name: IoniconName,
+  activeName: IoniconName,
   focused: boolean,
   color: string,
   size: number,
 ) => (
   <View style={{ width: size + 8, height: size + 8, justifyContent: 'center', alignItems: 'center' }}>
-    <Ionicons name={focused ? activeName : name} color={color} size={size} />
+    <AppIcon name={focused ? activeName : name} color={color} size={size} />
   </View>
 );
 
@@ -97,7 +100,8 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarButton: tabButton,
-          tabBarIcon: ({ color, focused, size }) => tabIcon('home-outline', 'home', focused, color, size),
+          tabBarIcon: ({ color, focused, size }) =>
+            tabIcon('home-outline', 'home', focused, color, size),
         }}
       />
       <Tabs.Screen
@@ -105,7 +109,8 @@ export default function TabsLayout() {
         options={{
           title: 'Alarms',
           tabBarButton: tabButton,
-          tabBarIcon: ({ color, focused, size }) => tabIcon('alarm-outline', 'alarm', focused, color, size),
+          tabBarIcon: ({ color, focused, size }) =>
+            tabIcon('alarm-outline', 'alarm', focused, color, size),
         }}
       />
       <Tabs.Screen
@@ -113,7 +118,8 @@ export default function TabsLayout() {
         options={{
           title: 'Reminders',
           tabBarButton: tabButton,
-          tabBarIcon: ({ color, focused, size }) => tabIcon('time-outline', 'time', focused, color, size),
+          tabBarIcon: ({ color, focused, size }) =>
+            tabIcon('notifications-outline', 'notifications', focused, color, size),
         }}
       />
       <Tabs.Screen
@@ -121,7 +127,8 @@ export default function TabsLayout() {
         options={{
           title: 'Library',
           tabBarButton: tabButton,
-          tabBarIcon: ({ color, focused, size }) => tabIcon('book-outline', 'book', focused, color, size),
+          tabBarIcon: ({ color, focused, size }) =>
+            tabIcon('book-outline', 'book', focused, color, size),
         }}
       />
       <Tabs.Screen
@@ -129,7 +136,8 @@ export default function TabsLayout() {
         options={{
           title: 'Settings',
           tabBarButton: tabButton,
-          tabBarIcon: ({ color, focused, size }) => tabIcon('settings-outline', 'settings', focused, color, size),
+          tabBarIcon: ({ color, focused, size }) =>
+            tabIcon('settings-outline', 'settings', focused, color, size),
         }}
       />
     </Tabs>

@@ -67,6 +67,7 @@ export interface TagWithCount {
 
 export type ReminderPriority = "low" | "medium" | "high";
 export type ReminderRepeat = "none" | "daily" | "weekly" | "monthly";
+export type NotificationSoundId = "default" | "apna_chime" | "apna_alert";
 
 export interface ReminderItem {
   id: string;
@@ -76,6 +77,7 @@ export interface ReminderItem {
   priority: ReminderPriority;
   repeat: ReminderRepeat;
   isCompleted: boolean;
+  sound: NotificationSoundId;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +88,7 @@ export interface AlarmItem {
   time: string;
   repeatDays: number[];
   isEnabled: boolean;
+  sound: NotificationSoundId;
   createdAt: string;
   updatedAt: string;
 }

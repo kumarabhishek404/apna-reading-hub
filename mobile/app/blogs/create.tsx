@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { createBlog } from '@/api/blogs';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -51,7 +51,7 @@ export default function CreateBlogScreen() {
       <View style={styles.container}>
         <View style={styles.headerRow}>
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={22} color="#1d2f5f" />
+            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
         <Text style={styles.title}>New Blog</Text>

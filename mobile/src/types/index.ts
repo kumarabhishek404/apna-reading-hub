@@ -52,6 +52,7 @@ export interface ReminderItem {
   priority: 'low' | 'medium' | 'high';
   repeat: 'none' | 'daily' | 'weekly' | 'monthly';
   isCompleted: boolean;
+  sound: 'default' | 'apna_chime' | 'apna_alert';
   createdAt: string;
   updatedAt: string;
 }
@@ -62,6 +63,7 @@ export interface AlarmItem {
   time: string;
   repeatDays: number[];
   isEnabled: boolean;
+  sound: 'default' | 'apna_chime' | 'apna_alert';
   createdAt: string;
   updatedAt: string;
 }

@@ -1,52 +1,94 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { createAlarm } from '@/api/alarms';
+import { AppIcon } from '@/components/AppIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
+import { SoundPicker } from '@/components/SoundPicker';
+import {
+  DEFAULT_NOTIFICATION_SOUND,
+  type NotificationSoundId,
+} from '@/constants/notificationSounds';
+import {
+  ensureNotificationSetup,
+  scheduleAlarmNotifications,
+} from '@/services/notifications';
+
+const DAY_OPTIONS = [
+  { label: 'S', value: 0 },
+  { label: 'M', value: 1 },
+  { label: 'T', value: 2 },
+  { label: 'W', value: 3 },
+  { label: 'T', value: 4 },
+  { label: 'F', value: 5 },
+  { label: 'S', value: 6 },
+];
+
+function isValidTime(value: string) {
+  return /^([01]?\d|2[0-3]):([0-5]\d)$/.test(value.trim());
+}
 
 export default function CreateAlarmScreen() {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('07:00');
+  const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
 
-  console.log('[Alarm Create Screen] Component mounted', { loading });
+  const allDaysSelected = useMemo(() => repeatDays.length === 7, [repeatDays]);
 
   const goBack = () => {
-    console.log('[Alarm Create Screen] Navigating back');
     if (router.canGoBack()) {
       router.back();
       return;
     }
-    router.replace('/(tabs)/home');
+    router.replace('/(tabs)/alarms');
   };
+
+  function toggleDay(day: number) {
+    setRepeatDays((current) => {
+      if (current.includes(day)) {
+        if (current.length === 1) return current;
+        return current.filter((item) => item !== day).sort((a, b) => a - b);
+      }
+      return [...current, day].sort((a, b) => a - b);
+    });
+  }
 
   async function submit() {
     if (!title.trim()) {
-      Alert.alert('Title required');
+      Alert.alert('Title required', 'Give this alarm a short label.');
       return;
     }
-    console.log('[Alarm Create] Starting submission', { title, time });
+    if (!isValidTime(time)) {
+      Alert.alert('Invalid time', 'Use 24-hour time like 07:30 or 18:05.');
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log('[Alarm Create] Calling createAlarm API');
-      const result = await createAlarm({ title, time, repeatDays: [1, 2, 3, 4, 5], isEnabled: true });
-      console.log('[Alarm Create] API call successful', { result });
-      
-      // Clear loading state
+      const permissionGranted = await ensureNotificationSetup();
+      if (!permissionGranted) {
+        Alert.alert(
+          'Notifications disabled',
+          'Enable notifications in system settings so this alarm can ring on time.',
+        );
+      }
+
+      const result = await createAlarm({
+        title: title.trim(),
+        time: time.trim(),
+        repeatDays,
+        isEnabled: true,
+        sound,
+      });
+
+      await scheduleAlarmNotifications(result.alarm);
       setLoading(false);
-      console.log('[Alarm Create] Loading state cleared');
-      
-      // Navigate back
       router.back();
-      console.log('[Alarm Create] Navigation executed');
-      
-      // Sync notifications in background
-      syncScheduledNotificationsFromBackend().catch(console.error);
     } catch (error) {
-      console.error('[Alarm Create] API call failed', error);
+      console.error('[Alarm Create] Failed', error);
       setLoading(false);
       Alert.alert('Could not create alarm');
     }
@@ -54,24 +96,62 @@ export default function CreateAlarmScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.headerRow}>
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={22} color="#1d2f5f" />
+            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
         <Text style={styles.title}>New Alarm</Text>
-        <TextInput style={styles.input} placeholder="Alarm label" placeholderTextColor="#7b8798" value={title} onChangeText={setTitle} />
-        <TextInput style={styles.input} placeholder="Time (HH:MM)" placeholderTextColor="#7b8798" value={time} onChangeText={setTime} />
+        <Text style={styles.hint}>
+          Scheduled on this device with your chosen sound. Keep notifications allowed for reliable ringing.
+        </Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Alarm label"
+          placeholderTextColor="#7b8798"
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Time (HH:MM)"
+          placeholderTextColor="#7b8798"
+          value={time}
+          onChangeText={setTime}
+          autoCapitalize="none"
+          keyboardType="numbers-and-punctuation"
+        />
+
+        <Text style={styles.sectionLabel}>Repeat</Text>
+        <View style={styles.daysRow}>
+          {DAY_OPTIONS.map((day) => {
+            const selected = repeatDays.includes(day.value);
+            return (
+              <Pressable
+                key={day.value}
+                onPress={() => toggleDay(day.value)}
+                style={[styles.dayChip, selected && styles.dayChipSelected]}
+              >
+                <Text style={[styles.dayChipText, selected && styles.dayChipTextSelected]}>{day.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.meta}>{allDaysSelected ? 'Every day' : `${repeatDays.length} day(s) selected`}</Text>
+
+        <SoundPicker value={sound} onChange={setSound} />
+
         <PrimaryButton title={loading ? 'Saving...' : 'Create Alarm'} onPress={submit} disabled={loading} />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { flex: 1, padding: 20, gap: 14 },
+  container: { padding: 20, gap: 14, paddingBottom: 40 },
   headerRow: { marginBottom: 4 },
   backButton: {
     width: 38,
@@ -85,6 +165,8 @@ const styles = StyleSheet.create({
     borderColor: '#dfe9ff',
   },
   title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  hint: { fontSize: 13, color: '#64748b', lineHeight: 18, marginTop: -4 },
+  sectionLabel: { fontSize: 14, fontWeight: '700', color: '#1d2f5f' },
   input: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -94,4 +176,19 @@ const styles = StyleSheet.create({
     color: '#1d2f5f',
     fontSize: 16,
   },
+  daysRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  dayChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e3ebf7',
+  },
+  dayChipSelected: { backgroundColor: '#22409a', borderColor: '#22409a' },
+  dayChipText: { fontWeight: '700', color: '#64748b' },
+  dayChipTextSelected: { color: '#fff' },
+  meta: { fontSize: 12, color: '#64748b', marginTop: -6 },
 });

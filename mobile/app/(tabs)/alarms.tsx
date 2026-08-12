@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { getAlarms, toggleAlarm } from '@/api/alarms';
 import { BrandHeader } from '@/components/BrandHeader';
+import { getSoundOption } from '@/constants/notificationSounds';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import type { AlarmItem } from '@/types';
 
@@ -57,6 +58,7 @@ export default function AlarmsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardTime}>{item.time}</Text>
+                <Text style={styles.cardMeta}>{getSoundOption(item.sound).label}</Text>
               </View>
               <Text style={[styles.badge, item.isEnabled ? styles.enabled : styles.disabled]}>{item.isEnabled ? 'On' : 'Off'}</Text>
             </Pressable>
@@ -101,6 +103,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#1d2f5f' },
   cardTime: { fontSize: 13, color: '#64748b', marginTop: 4 },
+  cardMeta: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, fontWeight: '700', overflow: 'hidden' },
   enabled: { backgroundColor: '#e8f7ee', color: '#0f8b52' },
   disabled: { backgroundColor: '#eef3ff', color: '#22409a' },

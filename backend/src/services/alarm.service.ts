@@ -8,6 +8,7 @@ function mapAlarm(a: any): AlarmItem {
     time: a.time,
     repeatDays: a.repeatDays.split(",").map((d: string) => parseInt(d.trim(), 10)).filter((n: number) => !Number.isNaN(n)),
     isEnabled: a.isEnabled,
+    sound: (a.sound || "default") as AlarmItem["sound"],
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
   };
@@ -45,6 +46,7 @@ export async function createAlarm(data: {
   time: string;
   repeatDays?: number[];
   isEnabled?: boolean;
+  sound?: string;
 }, userId: string) {
   console.log('[Alarm Service] Creating alarm', { userId, data });
   const alarm = await Alarm.create({
@@ -53,6 +55,7 @@ export async function createAlarm(data: {
     time: data.time,
     repeatDays: serializeRepeatDays(data.repeatDays ?? [0, 1, 2, 3, 4, 5, 6]),
     isEnabled: data.isEnabled ?? true,
+    sound: data.sound ?? "default",
   });
   console.log('[Alarm Service] Alarm created in MongoDB', { alarmId: alarm._id?.toString() });
   const mappedAlarm = mapAlarm(alarm);
@@ -67,6 +70,7 @@ export async function updateAlarm(
     time?: string;
     repeatDays?: number[];
     isEnabled?: boolean;
+    sound?: string;
   },
   userId?: string
 ) {
@@ -78,6 +82,7 @@ export async function updateAlarm(
   if (data.time !== undefined) updateData.time = data.time;
   if (data.repeatDays !== undefined) updateData.repeatDays = serializeRepeatDays(data.repeatDays);
   if (data.isEnabled !== undefined) updateData.isEnabled = data.isEnabled;
+  if (data.sound !== undefined) updateData.sound = data.sound;
 
   const alarm = await Alarm.findByIdAndUpdate(id, updateData, { new: true });
   return mapAlarm(alarm);
