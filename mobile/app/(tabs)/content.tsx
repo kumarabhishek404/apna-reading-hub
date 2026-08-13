@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { deleteNote, getNotes } from '@/api/notes';
 import { deleteBlog, getBlogs } from '@/api/blogs';
 import { deleteLink, getLinks } from '@/api/links';
 import { deletePdf, getPdfs } from '@/api/pdfs';
+import { getTags } from '@/api/tags';
 import { API_BASE_URL } from '@/config/env';
 import { ActionMenu } from '@/components/ActionMenu';
 import { AppIcon } from '@/components/AppIcon';
@@ -30,6 +31,9 @@ export default function ContentScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tagsModalVisible, setTagsModalVisible] = useState(false);
+  const [tags, setTags] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
   const { showInfo, showSuccess, showError } = useToast();
 
   async function load() {
@@ -65,6 +69,18 @@ export default function ContentScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function loadTags() {
+    setTagsLoading(true);
+    try {
+      const res = await getTags();
+      setTags(res.tags || []);
+    } catch (err) {
+      console.error('[Content] Failed to load tags', err);
+    } finally {
+      setTagsLoading(false);
     }
   }
 
@@ -190,9 +206,15 @@ export default function ContentScreen() {
         <Link href="/pdfs/create" asChild>
           <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
         </Link>
-        <Link href="/tags" asChild>
-          <Pressable style={styles.tagsButton}><AppIcon name="pricetag" size={18} color="#fff" /></Pressable>
-        </Link>
+        <Pressable 
+          style={styles.tagsButton}
+          onPress={() => {
+            loadTags();
+            setTagsModalVisible(true);
+          }}
+        >
+          <AppIcon name="pricetag" size={18} color="#fff" />
+        </Pressable>
       </View>
       
       {loading ? (
@@ -241,15 +263,72 @@ export default function ContentScreen() {
           )}
         />
       )}
+
+      {/* Tags Modal */}
+      <Modal
+        visible={tagsModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setTagsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>All Tags</Text>
+              <Pressable onPress={() => setTagsModalVisible(false)}>
+                <AppIcon name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            
+            {tagsLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+            ) : tags.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <AppIcon name="pricetag-outline" size={48} color={colors.textMuted} />
+                <Text style={styles.emptyText}>No tags yet</Text>
+                <Text style={styles.emptySubtext}>Add tags when creating content</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.tagsList}>
+                {tags.map((tag) => (
+                  <Pressable
+                    key={tag.id}
+                    style={styles.tagItem}
+                    onPress={() => {
+                      setTagsModalVisible(false);
+                      router.push(`/tags/content?name=${encodeURIComponent(tag.name)}`);
+                    }}
+                  >
+                    <Text style={styles.tagName}>{tag.name}</Text>
+                    <Text style={styles.tagCount}>{tag.count} items</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={styles.manageTagsButton}
+                onPress={() => {
+                  setTagsModalVisible(false);
+                  router.push('/tags');
+                }}
+              >
+                <Text style={styles.manageTagsButtonText}>Manage All Tags</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   header: { paddingHorizontal: 20, paddingTop: 12 },
-  title: { fontSize: 26, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.4 },
-  subtitle: { fontSize: 13, color: '#64748b', marginTop: 4 },
+  title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
+  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
   createButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -271,14 +350,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#edf1fa',
-    shadowColor: '#22409a',
+    borderColor: colors.borderLight,
+    shadowColor: colors.text,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -292,7 +371,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingLeft: 8,
     borderLeftWidth: 1,
-    borderLeftColor: '#edf1fa',
+    borderLeftColor: colors.borderLight,
   },
   actionButton: {
     width: 32,
@@ -300,7 +379,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.surfaceLight,
   },
   tagsButton: {
     width: 40,
@@ -310,5 +389,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.secondary,
   },
-  error: { marginTop: 16, color: '#d14f46', paddingHorizontal: 20, fontWeight: '600' },
+  error: { marginTop: 16, color: colors.error, paddingHorizontal: 20, fontWeight: '600' },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  tagsList: {
+    flex: 1,
+  },
+  tagItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  tagName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  tagCount: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  modalFooter: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  manageTagsButton: {
+    backgroundColor: colors.primary,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  manageTagsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

@@ -14,10 +14,15 @@ import {
   StickyNote,
   User,
   X,
+  Tag,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -38,6 +43,15 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname() ?? "";
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [tags, setTags] = useState<{ id: string; name: string; count: number }[]>([]);
+
+  useEffect(() => {
+    apiFetch("/api/tags")
+      .then((r) => r.json())
+      .then((d) => setTags(d.tags ?? []))
+      .catch(() => setTags([]));
+  }, []);
 
   const content = (
     <div className="flex h-full flex-col bg-white">
@@ -50,7 +64,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =
@@ -82,6 +96,51 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* Tags Section */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <button
+            onClick={() => setTagsOpen(!tagsOpen)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-brand/80 hover:bg-brand/5 hover:text-brand rounded-xl transition-all duration-200"
+          >
+            <div className="flex items-center gap-3">
+              <Tag className="h-4 w-4" />
+              <span>Tags</span>
+            </div>
+            {tagsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          
+          {tagsOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="pl-8 mt-1 space-y-1"
+            >
+              {tags.length === 0 ? (
+                <p className="text-xs text-muted py-2">No tags yet</p>
+              ) : (
+                tags.map((tag) => (
+                  <Link
+                    key={tag.id}
+                    href={`/tags?name=${encodeURIComponent(tag.name)}`}
+                    onClick={onMobileClose}
+                    className="block px-3 py-1.5 text-xs text-brand/70 hover:text-brand hover:bg-brand/5 rounded-lg transition-colors"
+                  >
+                    {tag.name} <span className="text-muted/60">({tag.count})</span>
+                  </Link>
+                ))
+              )}
+              <Link
+                href="/tags"
+                onClick={onMobileClose}
+                className="block px-3 py-1.5 text-xs text-brand-orange hover:text-brand-orange/80 hover:bg-brand-orange/5 rounded-lg transition-colors font-medium"
+              >
+                Manage all tags →
+              </Link>
+            </motion.div>
+          )}
+        </div>
       </nav>
 
       <div className="border-t border-border p-4">
