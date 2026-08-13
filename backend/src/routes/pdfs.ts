@@ -86,7 +86,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     tags,
   }, userId);
 
-  console.log('[PDF Upload] PDF created', { id: pdf._id.toString() });
+  console.log('[PDF Upload] PDF created', { id: (pdf as any)._id.toString() });
   res.status(201).json({ pdf });
 });
 

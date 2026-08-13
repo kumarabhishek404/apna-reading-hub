@@ -32,7 +32,7 @@ export async function getAllTagsWithCounts(userId?: string) {
             Pdf.countDocuments({ tags: tag.name, userId }),
             Note.countDocuments({ tags: tag.name, userId }),
           ]);
-          return { id: tag._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
+          return { id: (tag as any)._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
         })
       )
     : await Promise.all(
@@ -43,7 +43,7 @@ export async function getAllTagsWithCounts(userId?: string) {
             Pdf.countDocuments({ tags: tag.name }),
             Note.countDocuments({ tags: tag.name }),
           ]);
-          return { id: tag._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
+          return { id: (tag as any)._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
         })
       );
 
@@ -60,7 +60,7 @@ export async function getTagByName(name: string) {
 export async function createTag(name: string) {
   console.log('[Tag Service] Creating tag', { name });
   const tag = await Tag.create({ name });
-  console.log('[Tag Service] Tag created', { id: tag._id.toString() });
+  console.log('[Tag Service] Tag created', { id: (tag as any)._id.toString() });
   return tag;
 }
 
