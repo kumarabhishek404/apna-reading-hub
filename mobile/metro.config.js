@@ -22,4 +22,9 @@ config.resolver.extraNodeModules = {
   'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
 };
 
+// Remove invalid watcher configuration
+if (config.watcher) {
+  delete config.watcher.unstable_workerThreads;
+}
+
 module.exports = config;

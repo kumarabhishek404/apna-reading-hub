@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { createAlarm } from '@/api/alarms';
+import { router, useLocalSearchParams } from 'expo-router';
+import { getAlarms, updateAlarm } from '@/api/alarms';
 import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -16,6 +16,7 @@ import {
   ensureNotificationSetup,
   scheduleAlarmNotifications,
 } from '@/services/notifications';
+import type { AlarmItem } from '@/types';
 
 const DAY_OPTIONS = [
   { label: 'S', value: 0 },
@@ -31,16 +32,42 @@ function isValidTime(value: string) {
   return /^([01]?\d|2[0-3]):([0-5]\d)$/.test(value.trim());
 }
 
-export default function CreateAlarmScreen() {
+export default function EditAlarmScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('07:00');
   const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
+  const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
   const allDaysSelected = useMemo(() => repeatDays.length === 7, [repeatDays]);
+
+  useMemo(() => {
+    async function loadAlarm() {
+      if (!id) return;
+      try {
+        const data = await getAlarms();
+        const alarm = data.alarms.find((a) => a.id === id);
+        if (alarm) {
+          setTitle(alarm.title);
+          setTime(alarm.time);
+          setRepeatDays(alarm.repeatDays);
+          setSound(alarm.sound);
+          setIsEnabled(alarm.isEnabled);
+        }
+      } catch (error) {
+        showError('Could not load alarm');
+        router.back();
+      } finally {
+        setInitialLoading(false);
+      }
+    }
+    loadAlarm();
+  }, [id]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -61,6 +88,8 @@ export default function CreateAlarmScreen() {
   }
 
   async function submit() {
+    if (!id) return;
+    
     const newErrors: { title?: string; time?: string } = {};
     
     if (!title.trim()) {
@@ -84,23 +113,33 @@ export default function CreateAlarmScreen() {
         showWarning('Enable notifications in system settings for reliable alarms');
       }
 
-      const result = await createAlarm({
+      const result = await updateAlarm(id, {
         title: title.trim(),
         time: time.trim(),
         repeatDays,
-        isEnabled: true,
+        isEnabled,
         sound,
       });
 
       await scheduleAlarmNotifications(result.alarm);
       setLoading(false);
-      showSuccess('Alarm created successfully');
+      showSuccess('Alarm updated successfully');
       router.back();
     } catch (error) {
-      console.error('[Alarm Create] Failed', error);
+      console.error('[Alarm Edit] Failed', error);
       setLoading(false);
-      showError('Could not create alarm. Please try again.');
+      showError('Could not update alarm. Please try again.');
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -111,9 +150,9 @@ export default function CreateAlarmScreen() {
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
-        <Text style={styles.title}>New Alarm</Text>
+        <Text style={styles.title}>Edit Alarm</Text>
         <Text style={styles.hint}>
-          Scheduled on this device with your chosen sound. Keep notifications allowed for reliable ringing.
+          Update your alarm settings. Keep notifications allowed for reliable ringing.
         </Text>
 
         <Input
@@ -152,7 +191,7 @@ export default function CreateAlarmScreen() {
 
         <SoundPicker value={sound} onChange={setSound} />
 
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Alarm'} onPress={submit} disabled={loading} />
+        <PrimaryButton title={loading ? 'Saving...' : 'Update Alarm'} onPress={submit} disabled={loading} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -191,4 +230,13 @@ const styles = StyleSheet.create({
   dayChipText: { fontWeight: '700', color: '#64748b' },
   dayChipTextSelected: { color: '#fff' },
   meta: { fontSize: 12, color: '#64748b', marginTop: -6 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
 });

@@ -3,7 +3,7 @@
  * Custom WAV files must also be listed in app.json expo-notifications plugin.
  * After changing sounds, rebuild the native app (EAS / expo run).
  */
-export type NotificationSoundId = 'default' | 'apna_chime' | 'apna_alert';
+export type NotificationSoundId = 'default' | 'apna_chime' | 'apna_alert' | 'apna_melody' | 'apna_rise';
 
 export type NotificationSoundOption = {
   id: NotificationSoundId;
@@ -26,15 +26,29 @@ export const NOTIFICATION_SOUNDS: NotificationSoundOption[] = [
     id: 'apna_chime',
     label: 'Apna Chime',
     description: 'Soft app chime',
-    fileName: 'apna_chime.wav',
+    fileName: '../../assets/sounds/apna_chime.wav',
     channelId: 'apna-sound-chime',
   },
   {
     id: 'apna_alert',
     label: 'Apna Alert',
     description: 'Louder app alert',
-    fileName: 'apna_alert.wav',
+    fileName: '../../assets/sounds/apna_alert.wav',
     channelId: 'apna-sound-alert',
+  },
+  {
+    id: 'apna_melody',
+    label: 'Apna Melody',
+    description: 'Melodic alarm tone',
+    fileName: '../../assets/sounds/apna_alert.wav', // Using existing file as placeholder
+    channelId: 'apna-sound-melody',
+  },
+  {
+    id: 'apna_rise',
+    label: 'Apna Rise',
+    description: 'Gradually rising tone',
+    fileName: '../../assets/sounds/apna_chime.wav', // Using existing file as placeholder
+    channelId: 'apna-sound-rise',
   },
 ];
 

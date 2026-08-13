@@ -1,22 +1,44 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
-import { router } from 'expo-router';
-import { createLink } from '@/api/links';
+import { router, useLocalSearchParams } from 'expo-router';
+import { getBlogById, updateBlog } from '@/api/blogs';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import type { BlogItem } from '@/types';
 
-export default function CreateLinkScreen() {
+export default function EditBlogScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
+  const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError } = useToast();
+
+  useEffect(() => {
+    async function loadBlog() {
+      if (!id) return;
+      try {
+        const data = await getBlogById(id);
+        setTitle(data.blog.title);
+        setUrl(data.blog.url || '');
+        setContent(data.blog.content || '');
+        setTags(data.blog.tags || []);
+      } catch (error) {
+        showError('Could not load blog');
+        router.back();
+      } finally {
+        setInitialLoading(false);
+      }
+    }
+    loadBlog();
+  }, [id]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -27,15 +49,15 @@ export default function CreateLinkScreen() {
   };
 
   async function submit() {
+    if (!id) return;
+    
     const newErrors: { title?: string; url?: string } = {};
     
     if (!title.trim()) {
-      newErrors.title = 'Link title is required';
+      newErrors.title = 'Blog title is required';
     }
 
-    if (!url.trim()) {
-      newErrors.url = 'Link URL is required';
-    } else if (!url.trim().match(/^https?:\/\/.+/)) {
+    if (url.trim() && !url.trim().match(/^https?:\/\/.+/)) {
       newErrors.url = 'Enter a valid URL (http:// or https://)';
     }
 
@@ -47,36 +69,46 @@ export default function CreateLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await createLink({ title, url, description, tags, isFavorite: false });
+      const result = await updateBlog(id, { title, url, content, tags });
       setLoading(false);
-      showSuccess('Link created successfully');
+      showSuccess('Blog updated successfully');
       router.back();
     } catch (error) {
-      console.error('[Link Create] API call failed', error);
+      console.error('[Blog Edit] API call failed', error);
       setLoading(false);
-      showError('Could not create link. Please try again.');
+      showError('Could not update blog. Please try again.');
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.headerRow}>
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
-        <Text style={styles.title}>New Link</Text>
+        <Text style={styles.title}>Edit Blog</Text>
         <Input
-          label="Link Title"
-          placeholder="Enter link title"
+          label="Blog Title"
+          placeholder="Enter blog title"
           value={title}
           onChangeText={setTitle}
           error={errors.title}
         />
         <Input
-          label="Link URL"
-          placeholder="https://example.com"
+          label="Blog URL"
+          placeholder="https://example.com (optional)"
           value={url}
           onChangeText={setUrl}
           error={errors.url}
@@ -84,12 +116,12 @@ export default function CreateLinkScreen() {
           keyboardType="url"
         />
         <Input
-          label="Description"
-          placeholder="Enter description (optional)"
-          value={description}
-          onChangeText={setDescription}
+          label="Content"
+          placeholder="Enter blog content (optional)"
+          value={content}
+          onChangeText={setContent}
           multiline
-          numberOfLines={3}
+          numberOfLines={4}
         />
         <TagSelector
           label="Tags"
@@ -97,21 +129,15 @@ export default function CreateLinkScreen() {
           selectedTags={tags}
           onTagsChange={setTags}
         />
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Link'} onPress={submit} disabled={loading} />
-      </View>
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Saving link...</Text>
-        </View>
-      )}
+        <PrimaryButton title={loading ? 'Saving...' : 'Update Blog'} onPress={submit} disabled={loading} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { flex: 1, padding: 20, gap: 14 },
+  container: { padding: 20, gap: 14, paddingBottom: 40 },
   headerRow: { marginBottom: 4 },
   backButton: {
     width: 38,
@@ -125,20 +151,13 @@ const styles = StyleSheet.create({
     borderColor: '#dfe9ff',
   },
   title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1d2f5f',
+    color: '#64748b',
   },
 });

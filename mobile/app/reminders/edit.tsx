@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useLocalSearchParams } from 'expo-router';
-import { createReminder } from '@/api/reminders';
+import { getReminders, updateReminder } from '@/api/reminders';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
@@ -16,6 +16,7 @@ import {
   ensureNotificationSetup,
   scheduleReminderNotifications,
 } from '@/services/notifications';
+import type { ReminderItem } from '@/types';
 
 const REPEAT_OPTIONS: Array<{ id: 'none' | 'daily' | 'weekly' | 'monthly'; label: string }> = [
   { id: 'none', label: 'Once' },
@@ -54,8 +55,8 @@ function combineLocalDateTime(date: string, time: string) {
   return due;
 }
 
-export default function CreateReminderScreen() {
-  const { linkedId, linkedType } = useLocalSearchParams<{ linkedId?: string; linkedType?: string }>();
+export default function EditReminderScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const initial = useMemo(() => {
     const d = new Date();
     d.setMinutes(d.getMinutes() + 5);
@@ -69,23 +70,34 @@ export default function CreateReminderScreen() {
   const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; date?: string; time?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
-  // Pre-fill reminder details when linked to content
   useMemo(() => {
-    if (linkedId && linkedType) {
-      const typeLabels = {
-        note: 'Note',
-        blog: 'Blog',
-        pdf: 'PDF',
-        link: 'Link',
-      };
-      const label = typeLabels[linkedType as keyof typeof typeLabels] || 'Item';
-      setTitle(`Reminder for ${label}`);
-      setDescription(`Don't forget to check this ${label.toLowerCase()}`);
+    async function loadReminder() {
+      if (!id) return;
+      try {
+        const data = await getReminders();
+        const reminder = data.reminders.find((r) => r.id === id);
+        if (reminder) {
+          setTitle(reminder.title);
+          setDescription(reminder.description || '');
+          const dueDate = new Date(reminder.dueAt);
+          setDate(toLocalDateInput(dueDate));
+          setTime(toLocalTimeInput(dueDate));
+          setRepeat((reminder.repeat as any) || 'none');
+          setSound(reminder.sound);
+        }
+      } catch (error) {
+        showError('Could not load reminder');
+        router.back();
+      } finally {
+        setInitialLoading(false);
+      }
     }
-  }, [linkedId, linkedType]);
+    loadReminder();
+  }, [id]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -96,6 +108,8 @@ export default function CreateReminderScreen() {
   };
 
   async function submit() {
+    if (!id) return;
+    
     const newErrors: { title?: string; date?: string; time?: string } = {};
     
     if (!title.trim()) {
@@ -125,7 +139,7 @@ export default function CreateReminderScreen() {
         showWarning('Enable notifications in system settings for reliable reminders');
       }
 
-      const result = await createReminder({
+      const result = await updateReminder(id, {
         title: title.trim(),
         description: description.trim(),
         dueAt: dueAt!.toISOString(),
@@ -136,13 +150,23 @@ export default function CreateReminderScreen() {
 
       await scheduleReminderNotifications(result.reminder);
       setLoading(false);
-      showSuccess('Reminder created successfully');
+      showSuccess('Reminder updated successfully');
       router.back();
     } catch (error) {
-      console.error('[Reminder Create] Failed', error);
+      console.error('[Reminder Edit] Failed', error);
       setLoading(false);
-      showError('Could not create reminder. Please try again.');
+      showError('Could not update reminder. Please try again.');
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -153,9 +177,9 @@ export default function CreateReminderScreen() {
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
-        <Text style={styles.title}>New Reminder</Text>
+        <Text style={styles.title}>Edit Reminder</Text>
         <Text style={styles.hint}>
-          Fires on this device at the due time with your selected sound.
+          Update your reminder settings.
         </Text>
 
         <Input
@@ -209,7 +233,7 @@ export default function CreateReminderScreen() {
 
         <SoundPicker value={sound} onChange={setSound} />
 
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Reminder'} onPress={submit} disabled={loading} />
+        <PrimaryButton title={loading ? 'Saving...' : 'Update Reminder'} onPress={submit} disabled={loading} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -245,4 +269,13 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#22409a', borderColor: '#22409a' },
   chipText: { fontWeight: '700', color: '#64748b', fontSize: 13 },
   chipTextSelected: { color: '#fff' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
 });

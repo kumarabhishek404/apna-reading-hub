@@ -3,40 +3,34 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
-import { createLink } from '@/api/links';
+import { createTag, updateTag } from '@/api/tags';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import { useLocalSearchParams } from 'expo-router';
 
-export default function CreateLinkScreen() {
-  const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+export default function CreateTagScreen() {
+  const { id, name: initialName } = useLocalSearchParams<{ id?: string; name?: string }>();
+  const [name, setName] = useState(initialName || '');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string }>({});
   const { showSuccess, showError } = useToast();
+
+  const isEditing = !!id;
 
   const goBack = () => {
     if (router.canGoBack()) {
       router.back();
       return;
     }
-    router.replace('/(tabs)/content');
+    router.replace('/tags');
   };
 
   async function submit() {
-    const newErrors: { title?: string; url?: string } = {};
+    const newErrors: { name?: string } = {};
     
-    if (!title.trim()) {
-      newErrors.title = 'Link title is required';
-    }
-
-    if (!url.trim()) {
-      newErrors.url = 'Link URL is required';
-    } else if (!url.trim().match(/^https?:\/\/.+/)) {
-      newErrors.url = 'Enter a valid URL (http:// or https://)';
+    if (!name.trim()) {
+      newErrors.name = 'Tag name is required';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -47,14 +41,19 @@ export default function CreateLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await createLink({ title, url, description, tags, isFavorite: false });
+      if (isEditing && id) {
+        await updateTag(id, name.trim());
+        showSuccess('Tag updated successfully');
+      } else {
+        await createTag(name.trim());
+        showSuccess('Tag created successfully');
+      }
       setLoading(false);
-      showSuccess('Link created successfully');
       router.back();
     } catch (error) {
-      console.error('[Link Create] API call failed', error);
+      console.error('[Tag Create] API call failed', error);
       setLoading(false);
-      showError('Could not create link. Please try again.');
+      showError(isEditing ? 'Could not update tag. Please try again.' : 'Could not create tag. Please try again.');
     }
   }
 
@@ -66,43 +65,20 @@ export default function CreateLinkScreen() {
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
         </View>
-        <Text style={styles.title}>New Link</Text>
+        <Text style={styles.title}>{isEditing ? 'Edit Tag' : 'New Tag'}</Text>
         <Input
-          label="Link Title"
-          placeholder="Enter link title"
-          value={title}
-          onChangeText={setTitle}
-          error={errors.title}
+          label="Tag Name"
+          placeholder="Enter tag name"
+          value={name}
+          onChangeText={setName}
+          error={errors.name}
         />
-        <Input
-          label="Link URL"
-          placeholder="https://example.com"
-          value={url}
-          onChangeText={setUrl}
-          error={errors.url}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <Input
-          label="Description"
-          placeholder="Enter description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-        />
-        <TagSelector
-          label="Tags"
-          placeholder="Select tags (optional)"
-          selectedTags={tags}
-          onTagsChange={setTags}
-        />
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Link'} onPress={submit} disabled={loading} />
+        <PrimaryButton title={loading ? 'Saving...' : isEditing ? 'Update Tag' : 'Create Tag'} onPress={submit} disabled={loading} />
       </View>
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Saving link...</Text>
+          <Text style={styles.loadingText}>{isEditing ? 'Updating tag...' : 'Creating tag...'}</Text>
         </View>
       )}
     </SafeAreaView>

@@ -19,7 +19,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
     ...(init?.headers as Record<string, string> || {}),
   };
 
@@ -27,7 +26,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  // Don't set Content-Type for FormData (let the browser set it with boundary)
+  if (!(init?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const url = `${API_BASE_URL}${path}`;
+
+  console.log('[API Client] Request', {
+    method: init?.method || 'GET',
+    url,
+    hasBody: !!init?.body,
+    isFormData: init?.body instanceof FormData,
+    headers: {
+      ...headers,
+      Authorization: token ? 'Bearer ***' : undefined,
+    },
+  });
 
   let response: Response;
   try {
@@ -39,6 +54,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     console.error('[API Client] Network failure', { url, error });
     throw new Error(networkErrorMessage(error, url));
   }
+
+  console.log('[API Client] Response', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+  });
 
   if (!response.ok) {
     const responseText = await response.text();
@@ -63,13 +84,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const text = await response.text();
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  const result = text ? (JSON.parse(text) as T) : ({} as T);
+  
+  console.log('[API Client] Success', {
+    url,
+    hasData: !!text,
+    dataType: typeof result,
+  });
+  
+  return result;
 }
 
 export const apiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
+    request<T>(path, { 
+      method: 'POST', 
+      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+      headers: body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
+    }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body ?? {}) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

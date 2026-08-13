@@ -15,11 +15,16 @@ export async function getPdfById(id: string) {
 
 export async function createPdf(payload: {
   title: string;
-  pdfUrl: string;
+  pdfUrl?: string;
   description?: string;
   tags?: string[];
   isFavorite?: boolean;
-}) {
+} | FormData) {
+  // If FormData, use the upload endpoint
+  if (payload instanceof FormData) {
+    return apiClient.post<{ pdf: PdfItem }>('/api/pdfs/upload', payload);
+  }
+  // Otherwise use the regular endpoint
   return apiClient.post<{ pdf: PdfItem }>('/api/pdfs', payload);
 }
 

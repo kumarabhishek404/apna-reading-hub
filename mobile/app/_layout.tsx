@@ -6,6 +6,8 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { IoniconsReadyProvider } from '@/components/IoniconsReadyContext';
+import { ToastProvider } from '@/components/ToastContext';
+import { screenTransitions } from '@/lib/transitions';
 
 // Keep splash visible until icon fonts are ready.
 // @expo/vector-icons renders an empty <Text /> until the font is loaded.
@@ -30,8 +32,15 @@ export default function RootLayout() {
   return (
     <IoniconsReadyProvider ready={!!fontsLoaded && !fontError}>
       <SafeAreaProvider>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <ToastProvider>
+          <StatusBar style="auto" />
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              ...screenTransitions
+            }} 
+          />
+        </ToastProvider>
       </SafeAreaProvider>
     </IoniconsReadyProvider>
   );

@@ -30,14 +30,14 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f5f7ff"
       },
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "plugins": [
@@ -52,6 +52,8 @@
       ],
       "expo-asset",
       "expo-secure-store",
+      "expo-av",
+      "expo-document-picker",
       [
         "expo-notifications",
         {
@@ -64,7 +66,8 @@
           "defaultChannel": "apna-sound-default"
         }
       ],
-      "./plugins/withGradleWrapperResilience.js"
+      "./plugins/withGradleWrapperResilience.js",
+      "./plugins/withCleartextTraffic.js"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,34 +1,58 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
-import { getAlarms, toggleAlarm } from '@/api/alarms';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { deleteAlarm, getAlarms, toggleAlarm } from '@/api/alarms';
+import { ActionMenu } from '@/components/ActionMenu';
+import { AppIcon } from '@/components/AppIcon';
 import { BrandHeader } from '@/components/BrandHeader';
+import { useToast } from '@/components/ToastContext';
 import { getSoundOption } from '@/constants/notificationSounds';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
+import { useDataSync } from '@/lib/dataSync';
 import type { AlarmItem } from '@/types';
 
 export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState<AlarmItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   async function load() {
+    console.log('[Alarms] Loading alarms from database');
     try {
       const data = await getAlarms();
       setAlarms(data.alarms);
       setError(null);
+      console.log('[Alarms] Alarms loaded successfully', { count: data.alarms.length });
     } catch {
+      console.error('[Alarms] Failed to load alarms');
       setError('Could not load alarms');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void load();
+  }, []);
 
   useEffect(() => {
     void load();
     void syncScheduledNotificationsFromBackend();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [])
+  );
+
+  // Auto-sync data for database consistency
+  useDataSync(load, { immediate: false, interval: 45000 });
 
   async function onToggle(id: string) {
     try {
@@ -37,6 +61,17 @@ export default function AlarmsScreen() {
       await syncScheduledNotificationsFromBackend();
     } catch {
       setError('Could not update alarm');
+    }
+  }
+
+  async function onDelete(id: string) {
+    try {
+      await deleteAlarm(id);
+      setAlarms((current) => current.filter((item) => item.id !== id));
+      await syncScheduledNotificationsFromBackend();
+      showSuccess('Alarm deleted successfully');
+    } catch {
+      showError('Could not delete alarm');
     }
   }
 
@@ -53,15 +88,51 @@ export default function AlarmsScreen() {
           data={alarms}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, gap: 12 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#22409a"
+              colors={['#22409a']}
+            />
+          }
           renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => onToggle(item.id)}>
-              <View style={{ flex: 1 }}>
+            <View style={styles.card}>
+              <Pressable 
+                style={{ flex: 1 }} 
+                onPress={() => onToggle(item.id)}
+              >
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardTime}>{item.time}</Text>
                 <Text style={styles.cardMeta}>{getSoundOption(item.sound).label}</Text>
+              </Pressable>
+              <View style={styles.actions}>
+                <Pressable 
+                  style={styles.actionButton} 
+                  onPress={() => router.push(`/alarms/edit?id=${item.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit alarm"
+                >
+                  <AppIcon name="create-outline" size={18} color="#22409a" />
+                </Pressable>
+                <Pressable 
+                  style={styles.actionButton} 
+                  onPress={() => onToggle(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
+                >
+                  <AppIcon name={item.isEnabled ? "power" : "power-outline"} size={18} color="#22409a" />
+                </Pressable>
+                <Pressable 
+                  style={styles.actionButton} 
+                  onPress={() => onDelete(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete alarm"
+                >
+                  <AppIcon name="trash-outline" size={18} color="#ef4444" />
+                </Pressable>
               </View>
-              <Text style={[styles.badge, item.isEnabled ? styles.enabled : styles.disabled]}>{item.isEnabled ? 'On' : 'Off'}</Text>
-            </Pressable>
+            </View>
           )}
         />
       )}
@@ -104,8 +175,20 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#1d2f5f' },
   cardTime: { fontSize: 13, color: '#64748b', marginTop: 4 },
   cardMeta: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, fontWeight: '700', overflow: 'hidden' },
-  enabled: { backgroundColor: '#e8f7ee', color: '#0f8b52' },
-  disabled: { backgroundColor: '#eef3ff', color: '#22409a' },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingLeft: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: '#edf1fa',
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
   error: { marginTop: 16, color: '#d14f46', paddingHorizontal: 20, fontWeight: '600' },
 });
