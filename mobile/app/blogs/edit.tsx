@@ -29,7 +29,7 @@ export default function EditBlogScreen() {
         setTitle(data.blog.title);
         setUrl(data.blog.url || '');
         setContent(data.blog.content || '');
-        setTags(data.blog.tags || []);
+        setTags(Array.isArray(data.blog.tags) ? data.blog.tags.map((t: any) => typeof t === 'string' ? t : t.name) : []);
       } catch (error) {
         showError('Could not load blog');
         router.back();
@@ -69,7 +69,7 @@ export default function EditBlogScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updateBlog(id, { title, url, content, tags });
+      const result = await updateBlog(id, { title, url, content, tags: tags as any });
       setLoading(false);
       showSuccess('Blog updated successfully');
       router.back();

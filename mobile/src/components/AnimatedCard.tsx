@@ -20,7 +20,7 @@ export function AnimatedCard({
   style,
   containerStyle,
   gradient = false,
-  gradientColors = [colors.gradientStart, colors.gradientEnd],
+  gradientColors = [colors.gradientStart, colors.gradientEnd] as const,
   shadow = 'md',
   scaleOnPress = true,
 }: AnimatedCardProps) {
@@ -76,14 +76,22 @@ export function AnimatedCard({
           style,
         ]}
       >
-        <CardComponent
-          colors={gradient ? gradientColors : undefined}
-          style={styles.cardContent}
-        >
-          <Animated.View style={{ opacity: opacityAnim }}>
-            {children}
-          </Animated.View>
-        </CardComponent>
+        {gradient ? (
+          <LinearGradient
+            colors={gradientColors as any}
+            style={styles.cardContent}
+          >
+            <Animated.View style={{ opacity: opacityAnim }}>
+              {children}
+            </Animated.View>
+          </LinearGradient>
+        ) : (
+          <View style={styles.cardContent}>
+            <Animated.View style={{ opacity: opacityAnim }}>
+              {children}
+            </Animated.View>
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );

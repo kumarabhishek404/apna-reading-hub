@@ -233,7 +233,7 @@ export default function ContentScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={action.accessibilityLabel}
                   >
-                    <AppIcon name={action.icon} size={16} color={action.color} />
+                    <AppIcon name={action.icon as any} size={16} color={action.color} />
                   </Pressable>
                 ))}
               </View>

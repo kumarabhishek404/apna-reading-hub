@@ -27,7 +27,7 @@ export default function EditNoteScreen() {
         const data = await getNoteById(id);
         setTitle(data.note.title);
         setContent(data.note.content || '');
-        setTags(data.note.tags || []);
+        setTags(Array.isArray(data.note.tags) ? data.note.tags.map((t: any) => typeof t === 'string' ? t : t.name) : []);
       } catch (error) {
         showError('Could not load note');
         router.back();
@@ -63,7 +63,7 @@ export default function EditNoteScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updateNote(id, { title, content, tags });
+      const result = await updateNote(id, { title, content, tags: tags as any });
       setLoading(false);
       showSuccess('Note updated successfully');
       router.back();

@@ -13,17 +13,15 @@ import {
 import type { AlarmItem, ReminderItem } from '@/types';
 
 // Audio playback for continuous alarm sounds
-let activeSound: Audio.Sound | null = null;
+let activeSound: any = null;
 let playbackTimeout: NodeJS.Timeout | null = null;
 let isPlaying = false;
 
 async function initializeAudio() {
   try {
-    await Audio.setAudioModeAsync({
+    await Audio.Audio.setAudioModeAsync({
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
-      interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-      interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
     });
@@ -41,7 +39,7 @@ async function getSoundUri(fileName: string | null): Promise<string | null> {
   
   try {
     // Try to load from assets folder
-    const asset = Asset.fromModule(fileName);
+    const asset = Asset.Asset.fromModule(fileName);
     console.log('[Audio] Loading sound asset', { fileName, asset });
     const download = await asset.downloadAsync();
     console.log('[Audio] Sound asset downloaded', { localUri: download.localUri });
@@ -69,7 +67,7 @@ async function playAlarmSound(soundId: NotificationSoundId, duration: number = 3
         
         if (soundUri) {
           console.log('[Audio] Creating sound with URI', soundUri);
-          const { sound } = await Audio.Sound.createAsync(
+          const { sound } = await Audio.Audio.Sound.createAsync(
             { uri: soundUri },
             { 
               shouldPlay: true, 
@@ -234,25 +232,21 @@ export async function requestNotificationPermissions() {
 
   // Set up iOS notification categories with stop buttons
   if (Platform.OS === 'ios') {
-    await Notifications.setNotificationCategoryAsync('alarm_category', {
-      actions: [
-        {
-          identifier: 'stop_alarm',
-          title: 'Stop Alarm',
-          options: { destructive: true },
-        },
-      ],
-    });
+    await Notifications.setNotificationCategoryAsync('alarm_category', [
+      {
+        identifier: 'stop_alarm',
+        buttonTitle: 'Stop Alarm',
+        options: { isDestructive: true },
+      },
+    ]);
 
-    await Notifications.setNotificationCategoryAsync('reminder_category', {
-      actions: [
-        {
-          identifier: 'stop_reminder',
-          title: 'Stop Reminder',
-          options: { destructive: true },
-        },
-      ],
-    });
+    await Notifications.setNotificationCategoryAsync('reminder_category', [
+      {
+        identifier: 'stop_reminder',
+        buttonTitle: 'Stop Reminder',
+        options: { isDestructive: true },
+      },
+    ]);
   }
 
   const current = await Notifications.getPermissionsAsync();
@@ -376,7 +370,6 @@ export async function scheduleAlarmNotifications(alarm: AlarmItem) {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: parsed.hour,
         minute: parsed.minute,
-        repeats: true,
       },
       data: { kind: 'alarm', id: alarm.id, soundId },
       kind: 'alarm',
@@ -395,7 +388,6 @@ export async function scheduleAlarmNotifications(alarm: AlarmItem) {
         weekday: toExpoWeekday(day),
         hour: parsed.hour,
         minute: parsed.minute,
-        repeats: true,
       },
       data: { kind: 'alarm', id: alarm.id, soundId, day },
       kind: 'alarm',

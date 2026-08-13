@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Text, Pressable, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { AppIcon } from './AppIcon';
 import { colors, borderRadius, typography } from '@/theme/colors';
@@ -83,11 +83,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    ...typography.heading.h3,
+    fontSize: 24,
+    fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
-    ...typography.body.small,
+    fontSize: 13,
     color: colors.textMuted,
     marginTop: 2,
   },

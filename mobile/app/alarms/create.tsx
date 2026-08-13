@@ -130,7 +130,7 @@ export default function CreateAlarmScreen() {
           onChangeText={setTime}
           error={errors.time}
           autoCapitalize="none"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="numeric"
         />
 
         <Text style={styles.sectionLabel}>Repeat</Text>

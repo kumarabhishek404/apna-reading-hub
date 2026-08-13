@@ -26,10 +26,11 @@ export default function ViewPdfScreen() {
         setPdf(data.pdf);
         
         // Set up PDF URI for in-app viewing
-        if (data.pdf.pdfUrl.startsWith('http')) {
-          setPdfUri(data.pdfUrl);
-        } else {
-          setPdfUri(`${API_BASE_URL}${data.pdf.pdfUrl}`);
+        const pdfUrl = (data.pdf as any).url || (data.pdf as any).pdfUrl;
+        if (pdfUrl && pdfUrl.startsWith('http')) {
+          setPdfUri(pdfUrl);
+        } else if (pdfUrl) {
+          setPdfUri(`${API_BASE_URL}${pdfUrl}`);
         }
       } catch (error) {
         showError('Could not load PDF');

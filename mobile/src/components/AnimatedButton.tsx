@@ -102,13 +102,13 @@ export function AnimatedButton({
     }
   };
 
-  const ButtonContent = variant === 'primary' || variant === 'secondary' 
+  const ButtonComponent = variant === 'primary' || variant === 'secondary' 
     ? LinearGradient 
     : View;
 
   const gradientColors = variant === 'primary' 
-    ? [colors.primary, colors.primaryLight]
-    : [colors.secondary, colors.secondaryLight];
+    ? [colors.primary, colors.primaryLight] as const
+    : [colors.secondary, colors.secondaryLight] as const;
 
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
@@ -118,21 +118,36 @@ export function AnimatedButton({
         onPressOut={handlePressOut}
         disabled={disabled || loading}
       >
-        <ButtonContent
-          colors={variant === 'primary' || variant === 'secondary' ? gradientColors : undefined}
-          style={getButtonStyle()}
-        >
-          <Animated.View style={{ opacity: opacityAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            {loading ? (
-              <Text style={getTextStyle()}>...</Text>
-            ) : (
-              <>
-                {icon && <Text style={getTextStyle()}>{icon}</Text>}
-                <Text style={getTextStyle()}>{title}</Text>
-              </>
-            )}
-          </Animated.View>
-        </ButtonContent>
+        {variant === 'primary' || variant === 'secondary' ? (
+          <LinearGradient
+            colors={gradientColors}
+            style={getButtonStyle()}
+          >
+            <Animated.View style={{ opacity: opacityAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {loading ? (
+                <Text style={getTextStyle()}>...</Text>
+              ) : (
+                <>
+                  {icon && <Text style={getTextStyle()}>{icon}</Text>}
+                  <Text style={getTextStyle()}>{title}</Text>
+                </>
+              )}
+            </Animated.View>
+          </LinearGradient>
+        ) : (
+          <View style={getButtonStyle()}>
+            <Animated.View style={{ opacity: opacityAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {loading ? (
+                <Text style={getTextStyle()}>...</Text>
+              ) : (
+                <>
+                  {icon && <Text style={getTextStyle()}>{icon}</Text>}
+                  <Text style={getTextStyle()}>{title}</Text>
+                </>
+              )}
+            </Animated.View>
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );

@@ -87,7 +87,7 @@ export default function EditReminderScreen() {
           setDate(toLocalDateInput(dueDate));
           setTime(toLocalTimeInput(dueDate));
           setRepeat((reminder.repeat as any) || 'none');
-          setSound(reminder.sound);
+          setSound((reminder.sound || DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId);
         }
       } catch (error) {
         showError('Could not load reminder');
@@ -212,7 +212,7 @@ export default function EditReminderScreen() {
           onChangeText={setTime}
           error={errors.time}
           autoCapitalize="none"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="numeric"
         />
 
         <Text style={styles.sectionLabel}>Repeat</Text>

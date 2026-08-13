@@ -1,4 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
+import { useEffect } from 'react';
 
 // Data sync manager to ensure mobile and web apps stay in sync
 type DataChangeListener = () => void;

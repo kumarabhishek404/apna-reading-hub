@@ -56,7 +56,7 @@ export default function EditAlarmScreen() {
           setTitle(alarm.title);
           setTime(alarm.time);
           setRepeatDays(alarm.repeatDays);
-          setSound(alarm.sound);
+          setSound((alarm.sound || DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId);
           setIsEnabled(alarm.isEnabled);
         }
       } catch (error) {
@@ -169,7 +169,7 @@ export default function EditAlarmScreen() {
           onChangeText={setTime}
           error={errors.time}
           autoCapitalize="none"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="numeric"
         />
 
         <Text style={styles.sectionLabel}>Repeat</Text>

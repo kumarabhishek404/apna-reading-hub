@@ -27,7 +27,7 @@ export default function EditPdfScreen() {
         const data = await getPdfById(id);
         setTitle(data.pdf.title);
         setDescription(data.pdf.description || '');
-        setTags(data.pdf.tags || []);
+        setTags(Array.isArray(data.pdf.tags) ? data.pdf.tags.map((t: any) => typeof t === 'string' ? t : t.name) : []);
       } catch (error) {
         showError('Could not load PDF');
         router.back();
@@ -63,7 +63,7 @@ export default function EditPdfScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updatePdf(id, { title, description, tags });
+      const result = await updatePdf(id, { title, description, tags: tags as any });
       setLoading(false);
       showSuccess('PDF updated successfully');
       router.back();

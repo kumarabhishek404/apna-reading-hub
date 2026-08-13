@@ -94,6 +94,11 @@ export default function CreatePdfScreen() {
     setErrors({});
     setLoading(true);
     try {
+      if (!pdfFile) {
+        showError('Please select a PDF file');
+        setLoading(false);
+        return;
+      }
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('title', title.trim());

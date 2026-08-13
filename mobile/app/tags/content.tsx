@@ -13,7 +13,7 @@ import { useDataSync } from '@/lib/dataSync';
 
 type ContentItem = {
   kind: 'blog' | 'link' | 'pdf' | 'note';
-  item: BlogItem | LinkItem | PdfItem | NoteItem;
+  item: any;
 };
 
 export default function TagContentScreen() {
@@ -36,30 +36,9 @@ export default function TagContentScreen() {
       const allItems: ContentItem[] = [];
 
       // Add blogs
-      if (content.blogs && Array.isArray(content.blogs)) {
-        content.blogs.forEach((blog: any) => {
-          allItems.push({ kind: 'blog', item: blog });
-        });
-      }
-
-      // Add links
-      if (content.links && Array.isArray(content.links)) {
-        content.links.forEach((link: any) => {
-          allItems.push({ kind: 'link', item: link });
-        });
-      }
-
-      // Add PDFs
-      if (content.pdfs && Array.isArray(content.pdfs)) {
-        content.pdfs.forEach((pdf: any) => {
-          allItems.push({ kind: 'pdf', item: pdf });
-        });
-      }
-
-      // Add notes
-      if (content.notes && Array.isArray(content.notes)) {
-        content.notes.forEach((note: any) => {
-          allItems.push({ kind: 'note', item: note });
+      if (content.items && Array.isArray(content.items)) {
+        content.items.forEach((item: any) => {
+          allItems.push({ kind: item.kind || 'blog', item });
         });
       }
 
@@ -96,18 +75,18 @@ export default function TagContentScreen() {
 
   const openItem = async (entry: ContentItem) => {
     if (entry.kind === 'link') {
-      const url = (entry.item as LinkItem).url.startsWith('http') 
-        ? (entry.item as LinkItem).url 
-        : `https://${(entry.item as LinkItem).url}`;
+      const url = entry.item.url.startsWith('http') 
+        ? entry.item.url 
+        : `https://${entry.item.url}`;
       await Linking.openURL(url);
       return;
     }
 
     if (entry.kind === 'blog') {
-      if ((entry.item as BlogItem).url) {
-        const url = (entry.item as BlogItem).url.startsWith('http') 
-          ? (entry.item as BlogItem).url 
-          : `https://${(entry.item as BlogItem).url}`;
+      if (entry.item.url) {
+        const url = entry.item.url.startsWith('http') 
+          ? entry.item.url 
+          : `https://${entry.item.url}`;
         await Linking.openURL(url);
       } else {
         router.push(`/blogs/read?id=${entry.item.id}`);
@@ -117,6 +96,11 @@ export default function TagContentScreen() {
 
     if (entry.kind === 'pdf') {
       router.push(`/pdfs/view?id=${entry.item.id}`);
+      return;
+    }
+
+    if (entry.kind === 'note') {
+      router.push(`/notes/edit?id=${entry.item.id}`);
       return;
     }
   };
@@ -188,8 +172,8 @@ export default function TagContentScreen() {
                 <Text style={styles.cardKind}>{renderLabel(item.kind)}</Text>
                 <Text style={styles.cardTitle}>{item.item.title}</Text>
                 <Text style={styles.cardMeta}>
-                  {item.kind === 'link' ? (item.item as LinkItem).url : 
-                   item.kind === 'pdf' ? (item.item as PdfItem).description || 'Uploaded PDF' : 
+                  {item.kind === 'link' ? item.item.url : 
+                   item.kind === 'pdf' ? item.item.description || 'Uploaded PDF' : 
                    'Saved to your library'}
                 </Text>
               </Pressable>

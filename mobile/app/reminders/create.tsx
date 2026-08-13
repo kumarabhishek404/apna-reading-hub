@@ -188,7 +188,7 @@ export default function CreateReminderScreen() {
           onChangeText={setTime}
           error={errors.time}
           autoCapitalize="none"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="numeric"
         />
 
         <Text style={styles.sectionLabel}>Repeat</Text>

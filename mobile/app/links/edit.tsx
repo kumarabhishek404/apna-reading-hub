@@ -29,7 +29,7 @@ export default function EditLinkScreen() {
         setTitle(data.link.title);
         setUrl(data.link.url);
         setDescription(data.link.description || '');
-        setTags(data.link.tags || []);
+        setTags(Array.isArray(data.link.tags) ? data.link.tags.map((t: any) => typeof t === 'string' ? t : t.name) : []);
       } catch (error) {
         showError('Could not load link');
         router.back();
@@ -71,7 +71,7 @@ export default function EditLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updateLink(id, { title, url, description, tags });
+      const result = await updateLink(id, { title, url, description, tags: tags as any });
       setLoading(false);
       showSuccess('Link updated successfully');
       router.back();

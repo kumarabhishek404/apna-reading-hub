@@ -1,7 +1,7 @@
-import { StackTransitionConfig } from 'expo-router';
+// Screen transitions configuration for Expo Router
+// Note: Transitions are configured per-screen in app.config for Expo Router
 
-// Modern screen transitions with blur and slide effects
-export const screenTransitions: StackTransitionConfig = {
+export const screenOptions = {
   animation: 'slide_from_right',
   animationDuration: 300,
   gestureEnabled: true,
@@ -9,31 +9,15 @@ export const screenTransitions: StackTransitionConfig = {
   animationTypeForReplace: 'push',
 };
 
-// Fade transition for modal-like screens
-export const fadeTransition: StackTransitionConfig = {
+export const fadeOptions = {
   animation: 'fade',
   animationDuration: 300,
   gestureEnabled: true,
 };
 
-// Custom slide-up transition for bottom sheets
-export const slideUpTransition: StackTransitionConfig = {
+export const slideUpOptions = {
   animation: 'slide_from_bottom',
   animationDuration: 300,
   gestureEnabled: true,
   gestureDirection: 'vertical',
-};
-
-// Flip transition for special screens
-export const flipTransition: StackTransitionConfig = {
-  animation: 'flip',
-  animationDuration: 500,
-  gestureEnabled: false,
-};
-
-// Fade-through transition for content switching
-export const fadeThroughTransition: StackTransitionConfig = {
-  animation: 'fade',
-  animationDuration: 250,
-  gestureEnabled: false,
 };

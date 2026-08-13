@@ -34,7 +34,7 @@ export function ActionMenu({ visible, onClose, actions }: ActionMenuProps) {
                 onClose();
               }}
             >
-              <AppIcon name={action.icon} size={20} color={action.color} />
+              <AppIcon name={action.icon as any} size={20} color={action.color} />
               <Text style={[styles.actionText, { color: action.color }]}>{action.label}</Text>
             </Pressable>
           ))}
