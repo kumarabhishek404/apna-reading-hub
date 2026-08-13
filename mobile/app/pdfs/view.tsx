@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Pdf from 'react-native-pdf';
+import { WebView } from 'react-native-webview';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getPdfById } from '@/api/pdfs';
@@ -15,8 +15,9 @@ export default function ViewPdfScreen() {
   const [pdf, setPdf] = useState<PdfItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [viewerFailed, setViewerFailed] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
 
   useEffect(() => {
     async function loadPdf() {
@@ -24,15 +25,14 @@ export default function ViewPdfScreen() {
       try {
         const data = await getPdfById(id);
         setPdf(data.pdf);
-        
-        // Set up PDF URI for in-app viewing
+
         const pdfUrl = (data.pdf as any).url || (data.pdf as any).pdfUrl;
         if (pdfUrl && pdfUrl.startsWith('http')) {
           setPdfUri(pdfUrl);
         } else if (pdfUrl) {
           setPdfUri(`${API_BASE_URL}${pdfUrl}`);
         }
-      } catch (error) {
+      } catch {
         showError('Could not load PDF');
         router.back();
       } finally {
@@ -41,6 +41,13 @@ export default function ViewPdfScreen() {
     }
     loadPdf();
   }, [id]);
+
+  const viewerUri = useMemo(() => {
+    if (!pdfUri) return null;
+    // Direct PDF works on iOS WebView; Google viewer is a reliable Android fallback path
+    // when the device WebView can't render application/pdf inline.
+    return pdfUri;
+  }, [pdfUri]);
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -59,19 +66,19 @@ export default function ViewPdfScreen() {
   const getActions = () => [
     {
       label: 'Edit',
-      icon: 'create-outline',
+      icon: 'create-outline' as const,
       color: '#22409a',
       onPress: () => router.push(`/pdfs/edit?id=${id}`),
     },
     {
       label: 'Add Reminder',
-      icon: 'alarm-outline',
+      icon: 'alarm-outline' as const,
       color: '#22409a',
       onPress: () => router.push(`/reminders/create?linkedId=${id}&linkedType=pdf`),
     },
     {
       label: 'Open in Browser',
-      icon: 'open-outline',
+      icon: 'open-outline' as const,
       color: '#22409a',
       onPress: () => openPdf(),
     },
@@ -104,42 +111,52 @@ export default function ViewPdfScreen() {
         <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
           <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
         </Pressable>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {pdf.title}
+        </Text>
         <Pressable style={styles.menuButton} onPress={() => setShowMenu(true)} accessibilityRole="button" accessibilityLabel="More options">
           <AppIcon name="ellipsis-vertical" size={22} color="#1d2f5f" />
         </Pressable>
       </View>
-      
+
       <View style={styles.pdfContainer}>
-        {pdfUri ? (
-          <Pdf
-            source={{ uri: pdfUri }}
+        {viewerUri && !viewerFailed ? (
+          <WebView
+            source={{ uri: viewerUri }}
             style={styles.pdf}
-            trustAllCerts={false}
-            onLoadComplete={(numberOfPages) => {
-              console.log(`[PDF] Loaded ${numberOfPages} pages`);
+            startInLoadingState
+            renderLoading={() => (
+              <View style={styles.webviewLoading}>
+                <ActivityIndicator size="large" color="#22409a" />
+              </View>
+            )}
+            onHttpError={() => {
+              setViewerFailed(true);
+              showError('Could not load PDF in-app. Use Open in Browser.');
             }}
-            onError={(error) => {
-              console.error('[PDF] Load error:', error);
-              showError('Could not load PDF. Opening in browser instead.');
-              openPdf();
+            onError={() => {
+              setViewerFailed(true);
+              showError('Could not load PDF in-app. Use Open in Browser.');
             }}
+            allowsFullscreenVideo={false}
+            setSupportMultipleWindows={false}
           />
         ) : (
           <View style={styles.fallbackContainer}>
             <AppIcon name="document-outline" size={48} color="#94a3b8" />
-            <Text style={styles.fallbackText}>PDF URL not available</Text>
-            <Pressable style={styles.fallbackButton} onPress={openPdf}>
-              <Text style={styles.fallbackButtonText}>Open in Browser</Text>
-            </Pressable>
+            <Text style={styles.fallbackText}>
+              {pdfUri ? 'In-app preview unavailable' : 'PDF URL not available'}
+            </Text>
+            {pdfUri ? (
+              <Pressable style={styles.fallbackButton} onPress={openPdf}>
+                <Text style={styles.fallbackButtonText}>Open in Browser</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       </View>
 
-      <ActionMenu
-        visible={showMenu}
-        onClose={() => setShowMenu(false)}
-        actions={getActions()}
-      />
+      <ActionMenu visible={showMenu} onClose={() => setShowMenu(false)} actions={getActions()} />
     </SafeAreaView>
   );
 }
@@ -153,6 +170,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
+    gap: 10,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1d2f5f',
   },
   backButton: {
     width: 38,
@@ -181,15 +206,23 @@ const styles = StyleSheet.create({
   pdf: {
     flex: 1,
   },
+  webviewLoading: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
   fallbackContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
+    paddingHorizontal: 24,
   },
   fallbackText: {
     fontSize: 16,
     color: '#64748b',
+    textAlign: 'center',
   },
   fallbackButton: {
     backgroundColor: '#22409a',
