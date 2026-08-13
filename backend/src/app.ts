@@ -8,6 +8,7 @@ import pdfsRouter from "./routes/pdfs";
 import notesRouter from "./routes/notes";
 import remindersRouter from "./routes/reminders";
 import alarmsRouter from "./routes/alarms";
+import tagsRouter from "./routes/tags";
 import miscRouter from "./routes/misc";
 import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
@@ -87,6 +88,7 @@ app.use("/api/pdfs", pdfsRouter);
 app.use("/api/notes", notesRouter);
 app.use("/api/reminders", remindersRouter);
 app.use("/api/alarms", alarmsRouter);
+app.use("/api/tags", tagsRouter);
 app.use("/api", miscRouter);
 
 app.use(

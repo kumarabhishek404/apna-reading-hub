@@ -56,21 +56,37 @@ router.post("/", async (req, res) => {
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   const userId = (req as any).user?.userId;
+  console.log('[PDF Upload] Starting upload', { userId, hasFile: !!req.file });
+  
   if (!req.file) {
+    console.log('[PDF Upload] No file provided');
     return res.status(400).json({ error: "PDF file required" });
   }
+
+  console.log('[PDF Upload] File received', {
+    originalName: req.file.originalname,
+    filename: req.file.filename,
+    size: req.file.size,
+    mimetype: req.file.mimetype,
+  });
 
   const title = (req.body.title as string) || req.file.originalname;
   const description = (req.body.description as string) || "";
   const tagsRaw = (req.body.tags as string) || "";
 
+  console.log('[PDF Upload] Metadata', { title, description, tagsRaw });
+
+  const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  console.log('[PDF Upload] Parsed tags', tags);
+
   const pdf = await createPdf({
     title,
     pdfUrl: `/uploads/${req.file.filename}`,
     description,
-    tags: tagsRaw ? tagsRaw.split(",") : [],
+    tags,
   }, userId);
 
+  console.log('[PDF Upload] PDF created', { id: pdf._id.toString() });
   res.status(201).json({ pdf });
 });
 
