@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
-    alignItems: center',
+    alignItems: 'center',
     gap: 12,
   },
   loadingText: {
