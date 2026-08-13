@@ -4,10 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
 import { getContentByTag, type TagItem } from '@/api/tags';
-import { getBlogs, type BlogItem } from '@/api/blogs';
-import { getLinks, type LinkItem } from '@/api/links';
-import { getPdfs, type PdfItem } from '@/api/pdfs';
-import { getNotes, type NoteItem } from '@/api/notes';
+import { getBlogs } from '@/api/blogs';
+import { getLinks } from '@/api/links';
+import { getPdfs } from '@/api/pdfs';
+import { getNotes } from '@/api/notes';
 import { useToast } from '@/components/ToastContext';
 import { useDataSync } from '@/lib/dataSync';
 
