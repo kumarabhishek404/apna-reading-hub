@@ -169,7 +169,6 @@ export default function TagContentScreen() {
                       ? item.item.description || 'Uploaded PDF'
                       : 'Saved to your library'
                 }
-                onPress={() => void openItem(item)}
               />
             )}
           />

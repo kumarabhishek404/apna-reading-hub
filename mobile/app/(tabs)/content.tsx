@@ -428,7 +428,6 @@ export default function ContentScreen() {
                 type={item.kind}
                 title={item.item.title}
                 meta={meta}
-                onPress={() => void openItem(item)}
                 actions={getItemActions(item).map((action, index) => (
                   <Pressable
                     key={index}
