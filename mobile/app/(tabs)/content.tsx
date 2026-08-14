@@ -74,7 +74,12 @@ export default function ContentScreen() {
       });
 
       setItems(combined);
-      applyFilter(combined, filterType);
+      // Apply current filter to the loaded items
+      if (filterType === 'all') {
+        setFilteredItems(combined);
+      } else {
+        setFilteredItems(combined.filter((item) => item.kind === filterType));
+      }
       setError(null);
       console.log('[Content] Data loaded successfully from server', { total: combined.length });
     } catch (err) {
@@ -87,9 +92,13 @@ export default function ContentScreen() {
           ...offlineNotes.map((item) => ({ kind: 'note' as const, item: item as any })),
         ];
 
-        // Add other entity types when their repositories are implemented
+        // Apply current filter to the loaded items
+        if (filterType === 'all') {
+          setFilteredItems(offlineItems);
+        } else {
+          setFilteredItems(offlineItems.filter((item) => item.kind === filterType));
+        }
         setItems(offlineItems);
-        applyFilter(offlineItems, filterType);
         setError(null);
         console.log('[Content] Data loaded from offline storage', { total: offlineItems.length });
       } catch (offlineErr) {
@@ -102,17 +111,14 @@ export default function ContentScreen() {
     }
   }
 
-  function applyFilter(items: ContentItem[], filter: FilterType) {
-    if (filter === 'all') {
-      setFilteredItems(items);
-    } else {
-      setFilteredItems(items.filter((item) => item.kind === filter));
-    }
-  }
-
   function handleFilterChange(newFilter: FilterType) {
     setFilterType(newFilter);
-    applyFilter(items, newFilter);
+    // Apply filter immediately with current items
+    if (newFilter === 'all') {
+      setFilteredItems(items);
+    } else {
+      setFilteredItems(items.filter((item) => item.kind === newFilter));
+    }
     setFilterModalVisible(false);
   }
 
@@ -462,7 +468,7 @@ export default function ContentScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  header: { paddingHorizontal: 20, paddingTop: 8, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   headerText: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   screenTitle: {

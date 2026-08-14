@@ -7,6 +7,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
+import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/ToastContext';
 import {
   DEFAULT_NOTIFICATION_SOUND,
@@ -37,7 +38,7 @@ export default function CreateAlarmScreen() {
   const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
   const allDaysSelected = useMemo(() => repeatDays.length === 7, [repeatDays]);
@@ -61,14 +62,10 @@ export default function CreateAlarmScreen() {
   }
 
   async function submit() {
-    const newErrors: { title?: string; time?: string } = {};
+    const newErrors: { title?: string } = {};
     
     if (!title.trim()) {
       newErrors.title = 'Alarm title is required';
-    }
-    
-    if (!isValidTime(time)) {
-      newErrors.time = 'Use 24-hour time format (HH:MM)';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -123,15 +120,7 @@ export default function CreateAlarmScreen() {
           onChangeText={setTitle}
           error={errors.title}
         />
-        <Input
-          label="Time"
-          placeholder="HH:MM"
-          value={time}
-          onChangeText={setTime}
-          error={errors.time}
-          autoCapitalize="none"
-          keyboardType="numeric"
-        />
+        <TimePicker value={time} onChange={setTime} label="Time" />
 
         <Text style={styles.sectionLabel}>Repeat</Text>
         <View style={styles.daysRow}>

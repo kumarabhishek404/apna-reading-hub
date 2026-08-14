@@ -7,6 +7,7 @@ import { getReminders, updateReminder } from '@/api/reminders';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
+import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/ToastContext';
 import {
   DEFAULT_NOTIFICATION_SOUND,
@@ -71,7 +72,7 @@ export default function EditReminderScreen() {
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [errors, setErrors] = useState<{ title?: string; date?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string; date?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
   useMemo(() => {
@@ -110,7 +111,7 @@ export default function EditReminderScreen() {
   async function submit() {
     if (!id) return;
     
-    const newErrors: { title?: string; date?: string; time?: string } = {};
+    const newErrors: { title?: string; date?: string } = {};
     
     if (!title.trim()) {
       newErrors.title = 'Reminder title is required';
@@ -119,11 +120,10 @@ export default function EditReminderScreen() {
     const dueAt = combineLocalDateTime(date, time);
     if (!dueAt) {
       newErrors.date = 'Invalid date format (YYYY-MM-DD)';
-      newErrors.time = 'Invalid time format (HH:MM)';
     }
 
     if (repeat === 'none' && dueAt && dueAt.getTime() <= Date.now()) {
-      newErrors.time = 'One-time reminders must be scheduled in the future';
+      newErrors.date = 'One-time reminders must be scheduled in the future';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -205,15 +205,7 @@ export default function EditReminderScreen() {
           error={errors.date}
           autoCapitalize="none"
         />
-        <Input
-          label="Time"
-          placeholder="HH:MM"
-          value={time}
-          onChangeText={setTime}
-          error={errors.time}
-          autoCapitalize="none"
-          keyboardType="numeric"
-        />
+        <TimePicker value={time} onChange={setTime} label="Time" />
 
         <Text style={styles.sectionLabel}>Repeat</Text>
         <View style={styles.row}>

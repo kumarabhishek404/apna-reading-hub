@@ -7,6 +7,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
+import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/ToastContext';
 import {
   DEFAULT_NOTIFICATION_SOUND,
@@ -41,7 +42,7 @@ export default function EditAlarmScreen() {
   const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [errors, setErrors] = useState<{ title?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
   const allDaysSelected = useMemo(() => repeatDays.length === 7, [repeatDays]);
@@ -90,14 +91,10 @@ export default function EditAlarmScreen() {
   async function submit() {
     if (!id) return;
     
-    const newErrors: { title?: string; time?: string } = {};
+    const newErrors: { title?: string } = {};
     
     if (!title.trim()) {
       newErrors.title = 'Alarm title is required';
-    }
-    
-    if (!isValidTime(time)) {
-      newErrors.time = 'Use 24-hour time format (HH:MM)';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -162,15 +159,7 @@ export default function EditAlarmScreen() {
           onChangeText={setTitle}
           error={errors.title}
         />
-        <Input
-          label="Time"
-          placeholder="HH:MM"
-          value={time}
-          onChangeText={setTime}
-          error={errors.time}
-          autoCapitalize="none"
-          keyboardType="numeric"
-        />
+        <TimePicker value={time} onChange={setTime} label="Time" />
 
         <Text style={styles.sectionLabel}>Repeat</Text>
         <View style={styles.daysRow}>

@@ -7,6 +7,7 @@ import { createReminder } from '@/api/reminders';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
+import { TimePicker } from '@/components/TimePicker';
 import { useToast } from '@/components/ToastContext';
 import {
   DEFAULT_NOTIFICATION_SOUND,
@@ -69,7 +70,7 @@ export default function CreateReminderScreen() {
   const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ title?: string; date?: string; time?: string }>({});
+  const [errors, setErrors] = useState<{ title?: string; date?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
 
   // Pre-fill reminder details when linked to content
@@ -105,7 +106,6 @@ export default function CreateReminderScreen() {
     const dueAt = combineLocalDateTime(date, time);
     if (!dueAt) {
       newErrors.date = 'Invalid date format (YYYY-MM-DD)';
-      newErrors.time = 'Invalid time format (HH:MM)';
     }
 
     if (repeat === 'none' && dueAt && dueAt.getTime() <= Date.now()) {
@@ -181,15 +181,7 @@ export default function CreateReminderScreen() {
           error={errors.date}
           autoCapitalize="none"
         />
-        <Input
-          label="Time"
-          placeholder="HH:MM"
-          value={time}
-          onChangeText={setTime}
-          error={errors.time}
-          autoCapitalize="none"
-          keyboardType="numeric"
-        />
+        <TimePicker value={time} onChange={setTime} label="Time" />
 
         <Text style={styles.sectionLabel}>Repeat</Text>
         <View style={styles.row}>
