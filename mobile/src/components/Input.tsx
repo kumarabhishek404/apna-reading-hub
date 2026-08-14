@@ -14,6 +14,7 @@ interface InputProps {
   secureTextEntry?: boolean;
   placeholderTextColor?: string;
   accentColor?: string;
+  editable?: boolean;
 }
 
 export function Input({
@@ -29,6 +30,7 @@ export function Input({
   secureTextEntry = false,
   placeholderTextColor = colors.textLight,
   accentColor = colors.primary,
+  editable = true,
 }: InputProps) {
   return (
     <View style={styles.container}>
@@ -52,6 +54,8 @@ export function Input({
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
         selectionColor={accentColor}
+        editable={editable}
+        contextMenuHidden={false}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
