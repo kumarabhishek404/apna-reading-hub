@@ -86,7 +86,7 @@ export default function AlarmsScreen() {
         <BrandHeader title="Alarms" subtitle="Stay on schedule" />
         <Link href="/alarms/create" asChild>
           <Pressable style={[styles.createButton, { backgroundColor: alarmTheme.primary }]}>
-            <Text style={styles.createButtonText}>+ Create Alarm</Text>
+            <Text style={styles.createButtonText}>+ Create</Text>
           </Pressable>
         </Link>
       </View>
@@ -156,13 +156,24 @@ export default function AlarmsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.alarm.background },
-  header: { paddingHorizontal: 20, paddingTop: 12 },
+  header: { 
+    paddingHorizontal: 20, 
+    paddingTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   createButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
     marginTop: 4,
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
   createButtonText: {
     color: '#fff',

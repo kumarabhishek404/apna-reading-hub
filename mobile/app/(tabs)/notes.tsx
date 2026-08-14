@@ -144,7 +144,7 @@ export default function NotesScreen() {
               title={item.title}
               meta={item.content || 'No content'}
               showKindBadge={false}
-              onPress={() => router.push(`/notes/edit?id=${item.id}` as any)}
+              onPress={() => {}}
               actions={
                 <>
                   {getItemActions(item).map((action, index) => (
