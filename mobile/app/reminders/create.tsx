@@ -6,6 +6,7 @@ import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
 import { TimePicker } from '@/components/TimePicker';
+import { DatePicker } from '@/components/DatePicker';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import {
@@ -163,15 +164,7 @@ export default function CreateReminderScreen() {
         numberOfLines={3}
         accentColor={theme.primary}
       />
-      <Input
-        label="Date"
-        placeholder="YYYY-MM-DD"
-        value={date}
-        onChangeText={setDate}
-        error={errors.date}
-        autoCapitalize="none"
-        accentColor={theme.primary}
-      />
+      <DatePicker value={date} onChange={setDate} label="Date" accentColor={theme.primary} />
       <TimePicker value={time} onChange={setTime} label="Time" accentColor={theme.primary} />
 
       <Text style={[styles.sectionLabel, { color: theme.dark }]}>Repeat</Text>
