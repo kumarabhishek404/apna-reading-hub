@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { getTags, createTag, type TagItem } from '@/api/tags';
 import { colors } from '@/theme/colors';
@@ -22,9 +22,9 @@ export function TagSelector({
   error,
   accentColor = colors.primary,
 }: TagSelectorProps) {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [tags, setTags] = useState<TagItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
@@ -41,10 +41,6 @@ export function TagSelector({
       console.error('[TagSelector] Failed to load tags:', err);
     }
   }
-
-  const filteredTags = tags.filter(tag => 
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const isTagSelected = (tagName: string) => selectedTags.includes(tagName);
 
@@ -70,6 +66,7 @@ export function TagSelector({
       await createTag(trimmedName);
       onTagsChange([...selectedTags, trimmedName]);
       setNewTagInput('');
+      setShowNewTagInput(false);
       showSuccess('Tag created successfully');
       await loadTags();
     } catch (err) {
@@ -90,9 +87,10 @@ export function TagSelector({
       
       <Pressable 
         style={[styles.selector, error && styles.selectorError]} 
-        onPress={() => setModalVisible(true)}
+        onPress={() => setDropdownOpen(!dropdownOpen)}
         accessibilityRole="button"
         accessibilityLabel={placeholder}
+        accessibilityState={{ expanded: dropdownOpen }}
       >
         <View style={styles.selectorContent}>
           {selectedTags.length === 0 ? (
@@ -105,7 +103,10 @@ export function TagSelector({
                     <Text style={styles.selectedTagText}>{tag}</Text>
                     <Pressable
                       style={styles.removeTagButton}
-                      onPress={() => removeTag(tag)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        removeTag(tag);
+                      }}
                       accessibilityRole="button"
                       accessibilityLabel={`Remove ${tag} tag`}
                     >
@@ -117,50 +118,24 @@ export function TagSelector({
             </ScrollView>
           )}
         </View>
-        <AppIcon name="chevron-down" size={16} color={colors.textMuted} />
+        <AppIcon name={dropdownOpen ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
       </Pressable>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Tags</Text>
-              <Pressable 
-                style={styles.closeButton} 
-                onPress={() => setModalVisible(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-              >
-                <AppIcon name="close" size={24} color={colors.text} />
-              </Pressable>
-            </View>
-
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search tags..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textMuted}
-            />
-
-            <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
-              {filteredTags.length === 0 ? (
-                <Text style={styles.noTagsText}>No tags found</Text>
-              ) : (
-                filteredTags.map((tag) => {
-                  const selected = isTagSelected(tag.name);
-                  return (
+      {dropdownOpen && (
+        <View style={styles.dropdown}>
+          <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+            {tags.length === 0 ? (
+              <Text style={styles.noTagsText}>No tags created yet</Text>
+            ) : (
+              tags.map((tag) => {
+                const selected = isTagSelected(tag.name);
+                return (
                   <Pressable
                     key={tag.id}
                     style={[
-                      styles.tagItem,
+                      styles.dropdownItem,
                       selected && {
                         backgroundColor: `${accentColor}14`,
                         borderWidth: 1,
@@ -169,57 +144,75 @@ export function TagSelector({
                     ]}
                     onPress={() => toggleTag(tag.name)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${tag.name} ${selected ? 'selected' : 'not selected'}, ${tag.count} items`}
+                    accessibilityLabel={`${tag.name} ${selected ? 'selected' : 'not selected'}`}
                   >
-                    <View style={styles.tagItemContent}>
+                    <View style={styles.dropdownItemContent}>
                       <AppIcon 
                         name={selected ? "checkbox" : "square-outline"} 
-                        size={20} 
+                        size={18} 
                         color={selected ? accentColor : colors.textMuted} 
                       />
-                      <Text style={[styles.tagName, selected && { fontWeight: '600', color: accentColor }]}>
+                      <Text style={[styles.dropdownItemText, selected && { fontWeight: '600', color: accentColor }]}>
                         {tag.name}
                       </Text>
                     </View>
-                    <Text style={styles.tagCount}>{tag.count}</Text>
                   </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
-
-            <View style={styles.newTagSection}>
-              <TextInput
-                style={styles.newTagInput}
-                placeholder="Create new tag..."
-                value={newTagInput}
-                onChangeText={setNewTagInput}
-                placeholderTextColor={colors.textMuted}
+                );
+              })
+            )}
+            
+            <Pressable
+              style={styles.addNewTagItem}
+              onPress={() => setShowNewTagInput(!showNewTagInput)}
+              accessibilityRole="button"
+              accessibilityLabel="Add new tag"
+            >
+              <View style={styles.dropdownItemContent}>
+                <AppIcon name="add-circle-outline" size={18} color={accentColor} />
+                <Text style={[styles.dropdownItemText, { color: accentColor }]}>Add New Tag</Text>
+              </View>
+              <AppIcon 
+                name={showNewTagInput ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={accentColor} 
               />
-              <Pressable
-                style={[
-                  styles.createTagButton,
-                  { backgroundColor: accentColor },
-                  !newTagInput.trim() && styles.createTagButtonDisabled,
-                ]}
-                onPress={handleCreateTag}
-                disabled={!newTagInput.trim() || loading}
-                accessibilityRole="button"
-                accessibilityLabel="Create new tag"
-              >
-                {loading ? (
-                  <Text style={styles.createTagButtonText}>...</Text>
-                ) : (
-                  <>
-                    <AppIcon name="add" size={18} color="#fff" />
-                    <Text style={styles.createTagButtonText}>Create</Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          </View>
+            </Pressable>
+
+            {showNewTagInput && (
+              <View style={styles.newTagInputContainer}>
+                <TextInput
+                  style={styles.newTagInput}
+                  placeholder="Enter new tag name..."
+                  value={newTagInput}
+                  onChangeText={setNewTagInput}
+                  placeholderTextColor={colors.textMuted}
+                  autoFocus
+                />
+                <Pressable
+                  style={[
+                    styles.createTagButton,
+                    { backgroundColor: accentColor },
+                    !newTagInput.trim() && styles.createTagButtonDisabled,
+                  ]}
+                  onPress={handleCreateTag}
+                  disabled={!newTagInput.trim() || loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create new tag"
+                >
+                  {loading ? (
+                    <Text style={styles.createTagButtonText}>...</Text>
+                  ) : (
+                    <>
+                      <AppIcon name="add" size={16} color="#fff" />
+                      <Text style={styles.createTagButtonText}>Create</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </ScrollView>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
@@ -227,6 +220,7 @@ export function TagSelector({
 const styles = StyleSheet.create({
   container: {
     gap: 6,
+    zIndex: 10,
   },
   label: {
     fontSize: 14,
@@ -287,107 +281,84 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ef4444',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
+  dropdown: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-  },
-  searchInput: {
-    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 16,
+    marginTop: 4,
+    maxHeight: 250,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  tagsList: {
-    flex: 1,
-    marginBottom: 16,
+  dropdownScroll: {
+    paddingVertical: 8,
   },
   noTagsText: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: 40,
+    paddingVertical: 20,
   },
-  tagItem: {
+  dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
     backgroundColor: '#f8fafc',
-  },
-  tagItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  tagName: {
-    fontSize: 16,
-    color: colors.text,
-  },
-  tagCount: {
-    fontSize: 13,
-    color: colors.textMuted,
-    backgroundColor: '#e2e8f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    marginHorizontal: 8,
+    marginVertical: 2,
     borderRadius: 8,
   },
-  newTagSection: {
+  dropdownItemContent: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
+    gap: 10,
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  addNewTagItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 8,
+    marginVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+  },
+  newTagInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   newTagInput: {
     flex: 1,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
   },
   createTagButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   createTagButtonDisabled: {
     opacity: 0.5,
@@ -395,6 +366,6 @@ const styles = StyleSheet.create({
   createTagButtonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
 });
