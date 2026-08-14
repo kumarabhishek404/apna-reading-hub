@@ -1,10 +1,11 @@
-import { View, StyleSheet, Text, Pressable, Modal, ScrollView, SafeAreaView } from 'react-native';
+import { View, StyleSheet, Text, Pressable, Modal, ScrollView, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from './AppIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { clearSession, getStoredSession, type AuthSession } from '@/lib/auth';
 import { colors } from '@/theme/colors';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SidebarProps {
   visible: boolean;
@@ -21,6 +22,7 @@ interface MenuItem {
 export function Sidebar({ visible, onClose }: SidebarProps) {
   const insets = useSafeAreaInsets();
   const [session, setSession] = useState<AuthSession | null>(null);
+  const slideAnim = useRef(new Animated.Value(-280)).current;
 
   useEffect(() => {
     const loadSession = async () => {
@@ -29,6 +31,14 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
     };
     loadSession();
   }, []);
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: visible ? 0 : -280,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [visible, slideAnim]);
 
   const user = session?.user;
   const initials = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'A';
@@ -39,7 +49,6 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
     { icon: 'document-outline', label: 'PDFs', route: '/(tabs)/content' },
     { icon: 'link-outline', label: 'Links', route: '/(tabs)/content' },
     { icon: 'alarm-outline', label: 'Alarm', route: '/(tabs)/alarms' },
-    { icon: 'notifications-outline', label: 'Reminders', route: '/(tabs)/content' },
     { icon: 'pricetag-outline', label: 'Tags', route: '/tags' },
   ];
 
@@ -68,14 +77,14 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.sidebar, { paddingTop: insets.top }]} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
+        <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
+          <SafeAreaView style={styles.safeArea} edges={['top']}>
+            <View style={[styles.header, { paddingTop: insets.top }]}>
               <View style={styles.profile}>
                 <Text style={styles.profileText}>{initials}</Text>
               </View>
@@ -122,7 +131,7 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
               ))}
             </ScrollView>
           </SafeAreaView>
-        </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );

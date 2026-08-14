@@ -46,14 +46,6 @@ export default function HomeScreen() {
       color: '#F59E0B',
       bgColor: '#FEF3C7',
     },
-    { 
-      title: 'Add Reminder', 
-      icon: 'notifications-outline' as any,
-      iconFilled: 'notifications' as any,
-      href: '/reminders/create' as any,
-      color: '#10B981',
-      bgColor: '#D1FAE5',
-    },
   ];
 
   return (

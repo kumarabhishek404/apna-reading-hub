@@ -162,7 +162,7 @@ export default function NotesScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 4, marginBottom: 8 },
   screenTitle: {
     fontSize: 28,
     fontWeight: '800',
