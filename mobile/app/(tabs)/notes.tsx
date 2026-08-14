@@ -144,7 +144,6 @@ export default function NotesScreen() {
               title={item.title}
               meta={item.content || 'No content'}
               showKindBadge={false}
-              onPress={() => {}}
               actions={
                 <>
                   {getItemActions(item).map((action, index) => (
