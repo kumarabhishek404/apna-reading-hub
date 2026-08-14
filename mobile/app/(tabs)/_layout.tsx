@@ -105,21 +105,21 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="alarms"
+        name="notes"
         options={{
-          title: 'Alarms',
+          title: 'Notes',
           tabBarButton: tabButton,
           tabBarIcon: ({ color, focused, size }) =>
-            tabIcon('alarm-outline', 'alarm', focused, color, size),
+            tabIcon('document-text-outline', 'document-text', focused, color, size),
         }}
       />
       <Tabs.Screen
-        name="reminders"
+        name="alarms"
         options={{
-          title: 'Reminders',
+          title: 'Alarm',
           tabBarButton: tabButton,
           tabBarIcon: ({ color, focused, size }) =>
-            tabIcon('notifications-outline', 'notifications', focused, color, size),
+            tabIcon('alarm-outline', 'alarm', focused, color, size),
         }}
       />
       <Tabs.Screen
