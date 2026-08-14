@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getBlogById, updateBlog } from '@/api/blogs';
-import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -111,12 +110,12 @@ export default function EditBlogScreen() {
         <View style={styles.headerRight}>
           <OfflineStatusCompact />
           <Pressable
-            style={styles.reminderIcon}
+            style={styles.reminderButton}
             onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=blog`)}
             accessibilityRole="button"
             accessibilityLabel="Add reminder"
           >
-            <AppIcon name="notifications-outline" size={20} color={colors.reminder.primary} />
+            <Text style={[styles.reminderButtonText, { color: theme.primary }]}>Add Reminder</Text>
           </Pressable>
         </View>
       }
@@ -182,14 +181,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  reminderIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.reminder.muted,
-    borderWidth: 1,
-    borderColor: colors.reminder.soft,
+  reminderButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  reminderButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
