@@ -93,10 +93,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  // scrollView: { flex: 1 },
+  scrollView: { flex: 1 },
   container: {
     paddingHorizontal: 20,
-    // paddingTop: 4,
+    paddingTop: 4,
     paddingBottom: 96,
     gap: 20,
   },

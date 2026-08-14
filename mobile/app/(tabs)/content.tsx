@@ -43,7 +43,7 @@ export default function ContentScreen() {
   const [tagsModalVisible, setTagsModalVisible] = useState(false);
   const [tags, setTags] = useState<{ id: string; name: string; count: number }[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
-  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [selectedTypes, setSelectedTypes] = useState<FilterType[]>(['all']);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -78,10 +78,10 @@ export default function ContentScreen() {
 
       setItems(combined);
       // Apply current filter to the loaded items
-      if (filterType === 'all') {
+      if (selectedTypes.includes('all')) {
         setFilteredItems(combined);
       } else {
-        setFilteredItems(combined.filter((item) => item.kind === filterType));
+        setFilteredItems(combined.filter((item) => selectedTypes.includes(item.kind)));
       }
       setError(null);
       console.log('[Content] Data loaded successfully from server', { total: combined.length });
@@ -96,10 +96,10 @@ export default function ContentScreen() {
         ];
 
         // Apply current filter to the loaded items
-        if (filterType === 'all') {
+        if (selectedTypes.includes('all')) {
           setFilteredItems(offlineItems);
         } else {
-          setFilteredItems(offlineItems.filter((item) => item.kind === filterType));
+          setFilteredItems(offlineItems.filter((item) => selectedTypes.includes(item.kind)));
         }
         setItems(offlineItems);
         setError(null);
@@ -114,27 +114,44 @@ export default function ContentScreen() {
     }
   }
 
-  function handleFilterChange(newFilter: FilterType) {
-    setFilterType(newFilter);
-    applyAllFilters(newFilter, timeFilter, selectedTag);
+  function handleTypeToggle(type: FilterType) {
+    setSelectedTypes((prev) => {
+      if (type === 'all') {
+        // If selecting "all", clear other selections
+        return ['all'];
+      }
+      
+      if (prev.includes('all')) {
+        // If "all" was selected and now selecting a specific type, remove "all"
+        return [type];
+      }
+      
+      if (prev.includes(type)) {
+        // If already selected, remove it
+        const newTypes = prev.filter((t) => t !== type);
+        // If no types selected, default to "all"
+        return newTypes.length > 0 ? newTypes : ['all'];
+      }
+      
+      // Add the new type
+      return [...prev, type];
+    });
   }
 
   function handleTimeFilterChange(newTimeFilter: TimeFilter) {
     setTimeFilter(newTimeFilter);
-    applyAllFilters(filterType, newTimeFilter, selectedTag);
   }
 
   function handleTagChange(tagId: string | null) {
     setSelectedTag(tagId);
-    applyAllFilters(filterType, timeFilter, tagId);
   }
 
-  function applyAllFilters(typeFilter: FilterType, timeFilter: TimeFilter, tagFilter: string | null) {
+  function applyAllFilters() {
     let filtered = [...items];
 
-    // Apply type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter((item) => item.kind === typeFilter);
+    // Apply type filter (multiple types supported)
+    if (!selectedTypes.includes('all')) {
+      filtered = filtered.filter((item) => selectedTypes.includes(item.kind));
     }
 
     // Apply time filter
@@ -150,7 +167,7 @@ export default function ContentScreen() {
     }
 
     // Apply tag filter (if tags are implemented on items)
-    if (tagFilter) {
+    if (selectedTag) {
       // Filter by tag when tag data is available on items
       // For now, this is a placeholder - you'll need to ensure items have tag data
     }
@@ -159,7 +176,7 @@ export default function ContentScreen() {
   }
 
   function resetFilters() {
-    setFilterType('all');
+    setSelectedTypes(['all']);
     setTimeFilter('all');
     setSelectedTag(null);
     setFilteredItems(items);
@@ -472,46 +489,46 @@ export default function ContentScreen() {
               <ScrollView style={styles.filterList} contentContainerStyle={styles.filterListContent}>
                 <Text style={styles.filterSectionTitle}>Type</Text>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'all' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('all')}
+                  style={[styles.filterItem, selectedTypes.includes('all') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('all')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'all' && styles.filterItemTextActive]}>All Items</Text>
-                  {filterType === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('all') && styles.filterItemTextActive]}>All Items</Text>
+                  {selectedTypes.includes('all') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'note' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('note')}
+                  style={[styles.filterItem, selectedTypes.includes('note') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('note')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'note' && styles.filterItemTextActive]}>Notes</Text>
-                  {filterType === 'note' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('note') && styles.filterItemTextActive]}>Notes</Text>
+                  {selectedTypes.includes('note') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'blog' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('blog')}
+                  style={[styles.filterItem, selectedTypes.includes('blog') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('blog')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'blog' && styles.filterItemTextActive]}>Blogs</Text>
-                  {filterType === 'blog' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('blog') && styles.filterItemTextActive]}>Blogs</Text>
+                  {selectedTypes.includes('blog') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'link' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('link')}
+                  style={[styles.filterItem, selectedTypes.includes('link') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('link')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'link' && styles.filterItemTextActive]}>Links</Text>
-                  {filterType === 'link' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('link') && styles.filterItemTextActive]}>Links</Text>
+                  {selectedTypes.includes('link') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'pdf' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('pdf')}
+                  style={[styles.filterItem, selectedTypes.includes('pdf') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('pdf')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'pdf' && styles.filterItemTextActive]}>PDFs</Text>
-                  {filterType === 'pdf' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('pdf') && styles.filterItemTextActive]}>PDFs</Text>
+                  {selectedTypes.includes('pdf') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, filterType === 'reminder' && styles.filterItemActive]}
-                  onPress={() => handleFilterChange('reminder')}
+                  style={[styles.filterItem, selectedTypes.includes('reminder') && styles.filterItemActive]}
+                  onPress={() => handleTypeToggle('reminder')}
                 >
-                  <Text style={[styles.filterItemText, filterType === 'reminder' && styles.filterItemTextActive]}>Reminders</Text>
-                  {filterType === 'reminder' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('reminder') && styles.filterItemTextActive]}>Reminders</Text>
+                  {selectedTypes.includes('reminder') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
 
                 <Text style={styles.filterSectionTitle}>Time Period</Text>
@@ -563,14 +580,16 @@ export default function ContentScreen() {
                 style={styles.resetButton}
                 onPress={() => {
                   resetFilters();
-                  setFilterModalVisible(false);
                 }}
               >
                 <Text style={styles.resetButtonText}>Reset</Text>
               </Pressable>
               <Pressable
                 style={styles.applyButton}
-                onPress={() => setFilterModalVisible(false)}
+                onPress={() => {
+                  applyAllFilters();
+                  setFilterModalVisible(false);
+                }}
               >
                 <Text style={styles.applyButtonText}>Done</Text>
               </Pressable>
@@ -695,7 +714,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
+    flexDirection: 'column',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -792,6 +812,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
     paddingTop: 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
