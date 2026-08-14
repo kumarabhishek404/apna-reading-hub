@@ -480,9 +480,6 @@ export default function ContentScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Library</Text>
-              <Pressable onPress={() => setFilterModalVisible(false)}>
-                <AppIcon name="close" size={24} color={colors.text} />
-              </Pressable>
             </View>
             
             <View style={styles.filterScrollContainer}>
@@ -591,7 +588,7 @@ export default function ContentScreen() {
                   setFilterModalVisible(false);
                 }}
               >
-                <Text style={styles.applyButtonText}>Done</Text>
+                <Text style={styles.applyButtonText}>Apply</Text>
               </Pressable>
             </View>
           </View>
@@ -718,9 +715,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
   },
   modalTitle: {
