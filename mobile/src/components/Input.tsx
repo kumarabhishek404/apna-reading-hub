@@ -1,4 +1,5 @@
 import { TextInput, StyleSheet, Text, View } from 'react-native';
+import { colors } from '@/theme/colors';
 
 interface InputProps {
   label?: string;
@@ -25,7 +26,7 @@ export function Input({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   secureTextEntry = false,
-  placeholderTextColor = '#7b8798',
+  placeholderTextColor = colors.textLight,
 }: InputProps) {
   return (
     <View style={styles.container}>
@@ -58,15 +59,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1d2f5f',
+    color: colors.text,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#e3ebf7',
-    color: '#1d2f5f',
+    borderColor: colors.border,
+    color: colors.text,
     fontSize: 16,
     minHeight: 48,
   },
@@ -75,12 +76,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
+    borderColor: colors.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   errorText: {
     fontSize: 12,
-    color: '#ef4444',
+    color: colors.error,
     fontWeight: '500',
   },
 });

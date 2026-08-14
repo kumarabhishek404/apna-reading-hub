@@ -4,6 +4,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { useSidebar } from '@/components/SidebarContext';
+import { colors } from '@/theme/colors';
 import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -30,7 +31,7 @@ const tabButton = ({ children, style, ...props }: any) => {
       style={[
         {
           borderRadius: 18,
-          backgroundColor: selected ? '#e9f0ff' : 'transparent',
+          backgroundColor: selected ? colors.primaryMuted : 'transparent',
           minWidth: 70,
           minHeight: 54,
           justifyContent: 'center',
@@ -38,7 +39,7 @@ const tabButton = ({ children, style, ...props }: any) => {
           paddingHorizontal: 10,
           paddingVertical: 8,
           borderWidth: selected ? 1 : 0,
-          borderColor: selected ? '#dfe9ff' : 'transparent',
+          borderColor: selected ? colors.primary : 'transparent',
         },
         style,
       ]}
@@ -57,8 +58,8 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#22409a',
-          tabBarInactiveTintColor: '#64748b',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textLight,
           tabBarStyle: {
             position: 'absolute',
             bottom: 0,
@@ -86,7 +87,7 @@ export default function TabsLayout() {
             fontSize: 11,
             fontWeight: '600',
             marginTop: 2,
-            color: '#1d2f5f',
+            color: colors.text,
           },
           tabBarIconStyle: {
             marginBottom: 0,

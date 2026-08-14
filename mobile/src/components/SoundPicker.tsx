@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   soundItemSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.primaryMuted,
     borderColor: colors.primary,
   },
   soundItemContent: {

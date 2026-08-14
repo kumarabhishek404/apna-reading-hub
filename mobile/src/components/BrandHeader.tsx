@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { colors } from '@/theme/colors';
 
 export function BrandHeader({ title, subtitle }: { title?: string; subtitle?: string }) {
   return (
@@ -22,7 +23,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   title: {
-    color: '#1d2f5f',
+    color: colors.text,
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -30,6 +31,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     fontSize: 15,
-    color: '#5f6d89',
+    color: colors.textSecondary,
   },
 });

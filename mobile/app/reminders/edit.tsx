@@ -105,7 +105,7 @@ export default function EditReminderScreen() {
       router.back();
       return;
     }
-    router.replace('/(tabs)/reminders');
+    router.replace('/(tabs)/content');
   };
 
   async function submit() {

@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   tag: {
     fontSize: 11,
     color: colors.primary,
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.primaryMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

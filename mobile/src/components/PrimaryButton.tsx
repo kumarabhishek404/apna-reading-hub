@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { colors } from '@/theme/colors';
 
 export function PrimaryButton({
   title,
@@ -22,12 +23,12 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#22409a',
+    backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 18,
     alignItems: 'center',
-    shadowColor: '#22409a',
+    shadowColor: colors.primary,
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },

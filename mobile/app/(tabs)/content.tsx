@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.primaryMuted,
   },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterItemActive: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.primaryMuted,
     borderWidth: 1,
     borderColor: colors.primary,
   },

@@ -1,16 +1,16 @@
-// Modern, professional color palette with blur and orange theme
+// Modern, professional color palette with blue primary and orange secondary
 export const colors = {
-  // Primary Orange (main accent)
-  primary: '#FF6B35',
-  primaryLight: '#FF8A5B',
-  primaryDark: '#E55A2B',
-  primaryMuted: 'rgba(255, 107, 53, 0.1)',
+  // Primary Blue (main accent)
+  primary: '#22409a',
+  primaryLight: '#3B5BCC',
+  primaryDark: '#1A327A',
+  primaryMuted: 'rgba(34, 64, 154, 0.1)',
   
-  // Secondary Indigo (third color - perfect combination with orange)
-  secondary: '#6366F1',
-  secondaryLight: '#818CF8',
-  secondaryDark: '#4F46E5',
-  secondaryMuted: 'rgba(99, 102, 241, 0.1)',
+  // Secondary Orange (complementary accent)
+  secondary: '#FF6B35',
+  secondaryLight: '#FF8A5B',
+  secondaryDark: '#E55A2B',
+  secondaryMuted: 'rgba(255, 107, 53, 0.1)',
   
   // Neutral tones
   background: '#F8FAFC',
@@ -42,20 +42,20 @@ export const colors = {
   // Border colors
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
-  borderFocus: '#6366F1',
+  borderFocus: '#22409a',
   
   // Shadow colors
   shadow: 'rgba(15, 23, 42, 0.08)',
   shadowLight: 'rgba(15, 23, 42, 0.04)',
-  shadowPrimary: 'rgba(255, 107, 53, 0.15)',
-  shadowSecondary: 'rgba(99, 102, 241, 0.15)',
+  shadowPrimary: 'rgba(34, 64, 154, 0.15)',
+  shadowSecondary: 'rgba(255, 107, 53, 0.15)',
   
   // Gradient colors
-  gradientStart: '#FF6B35',
-  gradientEnd: '#6366F1',
+  gradientStart: '#22409a',
+  gradientEnd: '#FF6B35',
+  gradientBlue: ['#22409a', '#3B5BCC'],
   gradientOrange: ['#FF6B35', '#FF8A5B'],
-  gradientIndigo: ['#6366F1', '#818CF8'],
-  gradientMixed: ['#FF6B35', '#6366F1'],
+  gradientMixed: ['#22409a', '#FF6B35'],
 };
 
 // Spacing scale

@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerItemSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: colors.primaryMuted,
   },
   pickerItemText: {
     fontSize: 16,
