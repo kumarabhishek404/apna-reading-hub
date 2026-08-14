@@ -1,12 +1,42 @@
-// Modern, professional color palette with blue primary and orange secondary
+// Modern, professional color palette with type-specific themes
 export const colors = {
-  // Primary Blue (main accent)
+  // Type-specific color themes
+  note: {
+    primary: '#22409a', // Blue
+    light: '#3B5BCC',
+    dark: '#1A327A',
+    muted: 'rgba(34, 64, 154, 0.1)',
+  },
+  blog: {
+    primary: '#8B5CF6', // Purple
+    light: '#A78BFA',
+    dark: '#7C3AED',
+    muted: 'rgba(139, 92, 246, 0.1)',
+  },
+  link: {
+    primary: '#10B981', // Green
+    light: '#34D399',
+    dark: '#059669',
+    muted: 'rgba(16, 185, 129, 0.1)',
+  },
+  pdf: {
+    primary: '#EC4899', // Pink
+    light: '#F472B6',
+    dark: '#DB2777',
+    muted: 'rgba(236, 72, 153, 0.1)',
+  },
+  reminder: {
+    primary: '#FF6B35', // Orange
+    light: '#FF8A5B',
+    dark: '#E55A2B',
+    muted: 'rgba(255, 107, 53, 0.1)',
+  },
+  
+  // Legacy colors (for backward compatibility)
   primary: '#22409a',
   primaryLight: '#3B5BCC',
   primaryDark: '#1A327A',
   primaryMuted: 'rgba(34, 64, 154, 0.1)',
-  
-  // Secondary Orange (complementary accent)
   secondary: '#FF6B35',
   secondaryLight: '#FF8A5B',
   secondaryDark: '#E55A2B',
@@ -57,6 +87,11 @@ export const colors = {
   gradientOrange: ['#FF6B35', '#FF8A5B'],
   gradientMixed: ['#22409a', '#FF6B35'],
 };
+
+// Helper function to get type-specific color
+export function getTypeColor(type: 'note' | 'blog' | 'link' | 'pdf' | 'reminder') {
+  return colors[type];
+}
 
 // Spacing scale
 export const spacing = {

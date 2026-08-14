@@ -93,7 +93,7 @@ export default function NotesScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.createButtons}>
         <Link href="/notes/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.note.primary }]}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
         </Link>
       </View>
       
@@ -115,7 +115,7 @@ export default function NotesScreen() {
             />
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <View style={[styles.card, { borderColor: colors.note.primary }]}>
               <Pressable 
                 style={{ flex: 1 }} 
                 onPress={() => router.push(`/notes/read?id=${item.id}` as any)}
@@ -182,7 +182,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   createButton: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -218,8 +217,8 @@ const styles = StyleSheet.create({
   },
   tag: {
     fontSize: 11,
-    color: colors.primary,
-    backgroundColor: colors.primaryMuted,
+    color: colors.note.primary,
+    backgroundColor: colors.note.muted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

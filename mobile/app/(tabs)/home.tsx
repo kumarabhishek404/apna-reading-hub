@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
 import { colors } from '@/theme/colors';
+import { getTypeColor } from '@/theme/typeColors';
 
 export default function HomeScreen() {
   const createOptions = [
@@ -11,48 +12,48 @@ export default function HomeScreen() {
       icon: 'document-text-outline' as any,
       iconFilled: 'document-text' as any,
       href: '/(tabs)/notes/create' as any,
-      color: colors.primary,
-      bgColor: colors.primaryMuted,
+      color: colors.note.primary,
+      bgColor: colors.note.muted,
     },
     { 
       title: 'New Blog', 
       icon: 'newspaper-outline' as any,
       iconFilled: 'newspaper' as any,
       href: '/blogs/create' as any,
-      color: colors.primaryLight,
-      bgColor: 'rgba(59, 91, 204, 0.1)',
+      color: colors.blog.primary,
+      bgColor: colors.blog.muted,
     },
     { 
       title: 'Save Link', 
       icon: 'link-outline' as any,
       iconFilled: 'link' as any,
       href: '/links/create' as any,
-      color: colors.primaryDark,
-      bgColor: 'rgba(26, 50, 122, 0.1)',
+      color: colors.link.primary,
+      bgColor: colors.link.muted,
     },
     { 
       title: 'Upload PDF', 
       icon: 'document-outline' as any,
       iconFilled: 'document' as any,
       href: '/pdfs/create' as any,
-      color: colors.secondary,
-      bgColor: colors.secondaryMuted,
+      color: colors.pdf.primary,
+      bgColor: colors.pdf.muted,
     },
     { 
       title: 'Set Alarm', 
       icon: 'alarm-outline' as any,
       iconFilled: 'alarm' as any,
       href: '/alarms/create' as any,
-      color: colors.secondaryLight,
-      bgColor: 'rgba(255, 138, 91, 0.1)',
+      color: colors.reminder.primary,
+      bgColor: colors.reminder.muted,
     },
     { 
       title: 'Add Reminder', 
       icon: 'notifications-outline' as any,
       iconFilled: 'notifications' as any,
       href: '/reminders/create' as any,
-      color: colors.secondaryDark,
-      bgColor: 'rgba(229, 90, 43, 0.1)',
+      color: colors.reminder.light,
+      bgColor: 'rgba(255, 138, 91, 0.1)',
     },
   ];
 

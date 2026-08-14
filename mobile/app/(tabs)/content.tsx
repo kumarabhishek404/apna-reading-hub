@@ -19,6 +19,7 @@ import { AnimatedButton } from '@/components/AnimatedButton';
 import { FadeInListItem } from '@/components/AnimatedFlatList';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { colors, typography, spacing, borderRadius, shadows } from '@/theme/colors';
+import { getTypeColor } from '@/theme/typeColors';
 import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
 import { noteOfflineRepository as genericNoteRepo } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { networkMonitor } from '@/lib/networkMonitor';
@@ -340,22 +341,22 @@ export default function ContentScreen() {
       
       <View style={styles.createButtons}>
         <Link href="/notes/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.note.primary }]}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
         </Link>
         <Link href="/blogs/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Blog</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.blog.primary }]}><Text style={styles.createButtonText}>+ Blog</Text></Pressable>
         </Link>
         <Link href="/links/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Link</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.link.primary }]}><Text style={styles.createButtonText}>+ Link</Text></Pressable>
         </Link>
         <Link href="/pdfs/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.pdf.primary }]}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
         </Link>
         <Link href="/reminders/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Reminder</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: colors.reminder.primary }]}><Text style={styles.createButtonText}>+ Reminder</Text></Pressable>
         </Link>
         <Pressable 
-          style={styles.tagsButton}
+          style={[styles.tagsButton, { backgroundColor: colors.reminder.light }]}
           onPress={() => {
             loadTags();
             setTagsModalVisible(true);
@@ -382,33 +383,36 @@ export default function ContentScreen() {
               colors={['#22409a']}
             />
           }
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Pressable 
-                style={{ flex: 1 }} 
-                onPress={() => void openItem(item)}
-              >
-                <Text style={styles.cardKind}>{renderLabel(item.kind)}</Text>
-                <Text style={styles.cardTitle}>{item.item.title}</Text>
-                <Text style={styles.cardMeta}>
-                  {item.kind === 'link' ? item.item.url : item.kind === 'pdf' ? (item.item.description || 'Uploaded PDF') : 'Saved to your library'}
-                </Text>
-              </Pressable>
-              <View style={styles.actions}>
-                {getItemActions(item).map((action, index) => (
-                  <Pressable
-                    key={index}
-                    style={styles.actionButton}
-                    onPress={action.onPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={action.accessibilityLabel}
-                  >
-                    <AppIcon name={action.icon as any} size={16} color={action.color} />
-                  </Pressable>
-                ))}
+          renderItem={({ item }) => {
+            const typeColor = getTypeColor(item.kind);
+            return (
+              <View style={[styles.card, { borderColor: typeColor.primary }]}>
+                <Pressable 
+                  style={{ flex: 1 }} 
+                  onPress={() => void openItem(item)}
+                >
+                  <Text style={[styles.cardKind, { color: typeColor.primary }]}>{renderLabel(item.kind)}</Text>
+                  <Text style={styles.cardTitle}>{item.item.title}</Text>
+                  <Text style={styles.cardMeta}>
+                    {item.kind === 'link' ? item.item.url : item.kind === 'pdf' ? (item.item.description || 'Uploaded PDF') : 'Saved to your library'}
+                  </Text>
+                </Pressable>
+                <View style={styles.actions}>
+                  {getItemActions(item).map((action, index) => (
+                    <Pressable
+                      key={index}
+                      style={styles.actionButton}
+                      onPress={action.onPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={action.accessibilityLabel}
+                    >
+                      <AppIcon name={action.icon as any} size={16} color={action.color} />
+                    </Pressable>
+                  ))}
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
 
@@ -486,86 +490,86 @@ export default function ContentScreen() {
               <ScrollView style={styles.filterList} contentContainerStyle={styles.filterListContent}>
                 <Text style={styles.filterSectionTitle}>Type</Text>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('all') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('all') && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('all')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('all') && styles.filterItemTextActive]}>All Items</Text>
+                  <Text style={[styles.filterItemText, selectedTypes.includes('all') && { color: colors.primary }]}>All Items</Text>
                   {selectedTypes.includes('all') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('note') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('note') && { backgroundColor: colors.note.muted, borderColor: colors.note.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('note')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('note') && styles.filterItemTextActive]}>Notes</Text>
-                  {selectedTypes.includes('note') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('note') && { color: colors.note.primary }]}>Notes</Text>
+                  {selectedTypes.includes('note') && <AppIcon name="checkmark-circle" size={20} color={colors.note.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('blog') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('blog') && { backgroundColor: colors.blog.muted, borderColor: colors.blog.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('blog')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('blog') && styles.filterItemTextActive]}>Blogs</Text>
-                  {selectedTypes.includes('blog') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('blog') && { color: colors.blog.primary }]}>Blogs</Text>
+                  {selectedTypes.includes('blog') && <AppIcon name="checkmark-circle" size={20} color={colors.blog.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('link') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('link') && { backgroundColor: colors.link.muted, borderColor: colors.link.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('link')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('link') && styles.filterItemTextActive]}>Links</Text>
-                  {selectedTypes.includes('link') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('link') && { color: colors.link.primary }]}>Links</Text>
+                  {selectedTypes.includes('link') && <AppIcon name="checkmark-circle" size={20} color={colors.link.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('pdf') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('pdf') && { backgroundColor: colors.pdf.muted, borderColor: colors.pdf.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('pdf')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('pdf') && styles.filterItemTextActive]}>PDFs</Text>
-                  {selectedTypes.includes('pdf') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('pdf') && { color: colors.pdf.primary }]}>PDFs</Text>
+                  {selectedTypes.includes('pdf') && <AppIcon name="checkmark-circle" size={20} color={colors.pdf.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('reminder') && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTypes.includes('reminder') && { backgroundColor: colors.reminder.muted, borderColor: colors.reminder.primary, borderWidth: 1 }]}
                   onPress={() => handleTypeToggle('reminder')}
                 >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('reminder') && styles.filterItemTextActive]}>Reminders</Text>
-                  {selectedTypes.includes('reminder') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, selectedTypes.includes('reminder') && { color: colors.reminder.primary }]}>Reminders</Text>
+                  {selectedTypes.includes('reminder') && <AppIcon name="checkmark-circle" size={20} color={colors.reminder.primary} />}
                 </Pressable>
 
                 <Text style={styles.filterSectionTitle}>Time Period</Text>
                 <Pressable
-                  style={[styles.filterItem, timeFilter === 'all' && styles.filterItemActive]}
+                  style={[styles.filterItem, timeFilter === 'all' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                   onPress={() => handleTimeFilterChange('all')}
                 >
-                  <Text style={[styles.filterItemText, timeFilter === 'all' && styles.filterItemTextActive]}>All Time</Text>
+                  <Text style={[styles.filterItemText, timeFilter === 'all' && { color: colors.primary }]}>All Time</Text>
                   {timeFilter === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, timeFilter === 'monthly' && styles.filterItemActive]}
+                  style={[styles.filterItem, timeFilter === 'monthly' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                   onPress={() => handleTimeFilterChange('monthly')}
                 >
-                  <Text style={[styles.filterItemText, timeFilter === 'monthly' && styles.filterItemTextActive]}>Last Month</Text>
+                  <Text style={[styles.filterItemText, timeFilter === 'monthly' && { color: colors.primary }]}>Last Month</Text>
                   {timeFilter === 'monthly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 <Pressable
-                  style={[styles.filterItem, timeFilter === 'yearly' && styles.filterItemActive]}
+                  style={[styles.filterItem, timeFilter === 'yearly' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                   onPress={() => handleTimeFilterChange('yearly')}
                 >
-                  <Text style={[styles.filterItemText, timeFilter === 'yearly' && styles.filterItemTextActive]}>Last Year</Text>
+                  <Text style={[styles.filterItemText, timeFilter === 'yearly' && { color: colors.primary }]}>Last Year</Text>
                   {timeFilter === 'yearly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
 
                 <Text style={styles.filterSectionTitle}>Tags</Text>
                 <Pressable
-                  style={[styles.filterItem, selectedTag === null && styles.filterItemActive]}
+                  style={[styles.filterItem, selectedTag === null && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                   onPress={() => handleTagChange(null)}
                 >
-                  <Text style={[styles.filterItemText, selectedTag === null && styles.filterItemTextActive]}>All Tags</Text>
+                  <Text style={[styles.filterItemText, selectedTag === null && { color: colors.primary }]}>All Tags</Text>
                   {selectedTag === null && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
                 {tags.map((tag) => (
                   <Pressable
                     key={tag.id}
-                    style={[styles.filterItem, selectedTag === tag.id && styles.filterItemActive]}
+                    style={[styles.filterItem, selectedTag === tag.id && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
                     onPress={() => handleTagChange(tag.id)}
                   >
-                    <Text style={[styles.filterItemText, selectedTag === tag.id && styles.filterItemTextActive]}>{tag.name}</Text>
+                    <Text style={[styles.filterItemText, selectedTag === tag.id && { color: colors.primary }]}>{tag.name}</Text>
                     {selectedTag === tag.id && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                   </Pressable>
                 ))}
@@ -632,7 +636,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   createButton: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -658,7 +661,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-  cardKind: { fontSize: 11, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
+  cardKind: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 4 },
   cardMeta: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
   actions: {
@@ -788,18 +791,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  filterItemActive: {
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
   filterItemText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-  },
-  filterItemTextActive: {
-    color: colors.primary,
   },
   filterModalFooter: {
     flexDirection: 'row',
