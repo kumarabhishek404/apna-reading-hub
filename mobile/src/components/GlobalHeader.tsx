@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from './AppIcon';
 import { useSidebar } from './SidebarContext';
-import { getStoredSession } from '@/lib/auth';
 import { colors } from '@/theme/colors';
 
 interface GlobalHeaderProps {
@@ -12,7 +10,6 @@ interface GlobalHeaderProps {
   showBack?: boolean;
   onBackPress?: () => void;
   showProfile?: boolean;
-  userInitials?: string;
 }
 
 export function GlobalHeader({
@@ -20,29 +17,9 @@ export function GlobalHeader({
   showBack = false,
   onBackPress,
   showProfile = true,
-  userInitials,
 }: GlobalHeaderProps) {
   const insets = useSafeAreaInsets();
   const { openSidebar } = useSidebar();
-  const [initials, setInitials] = useState(userInitials || 'A');
-
-  useEffect(() => {
-    if (userInitials) {
-      setInitials(userInitials);
-      return;
-    }
-
-    let active = true;
-    const load = async () => {
-      const session = await getStoredSession();
-      const next = session?.user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'A';
-      if (active) setInitials(next);
-    };
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [userInitials]);
 
   const goToSettings = () => {
     router.push('/(tabs)/settings');
@@ -89,16 +66,12 @@ export function GlobalHeader({
 
         {showProfile ? (
           <Pressable
-            style={styles.profileButton}
+            style={styles.iconButton}
             onPress={goToSettings}
             accessibilityRole="button"
-            accessibilityLabel="Open profile settings"
+            accessibilityLabel="Open settings"
           >
-            <View style={styles.profileRing}>
-              <View style={styles.profile}>
-                <Text style={styles.profileText}>{initials}</Text>
-              </View>
-            </View>
+            <AppIcon name="settings-outline" size={22} color={colors.primary} />
           </Pressable>
         ) : null}
       </View>
@@ -151,32 +124,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
-  },
-  profileButton: {
-    marginLeft: 'auto',
-  },
-  profileRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    padding: 2,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.note.soft,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profile: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
   },
 });

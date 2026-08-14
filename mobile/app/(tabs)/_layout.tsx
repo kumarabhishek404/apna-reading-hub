@@ -202,23 +202,6 @@ export default function TabsLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarActiveTintColor: TAB_THEMES.settings.primary,
-            tabBarButton: makeTabButton(TAB_THEMES.settings),
-            tabBarIcon: ({ color, focused, size }) => (
-              <TabIcon
-                name="settings-outline"
-                activeName="settings"
-                focused={focused}
-                color={color}
-                size={size}
-              />
-            ),
-          }}
-        />
       </Tabs>
       <Sidebar visible={isOpen} onClose={closeSidebar} />
     </>
