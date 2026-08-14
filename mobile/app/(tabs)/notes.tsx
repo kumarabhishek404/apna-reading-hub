@@ -87,12 +87,6 @@ export default function NotesScreen() {
         accessibilityLabel: 'Edit note',
       },
       {
-        icon: 'heart-outline' as const,
-        color: colors.reminder.primary,
-        onPress: () => router.push(`/notes/edit?id=${note.id}` as any),
-        accessibilityLabel: 'Favorite note',
-      },
-      {
         icon: 'trash-outline' as const,
         color: colors.pdf.primary,
         onPress: () => deleteItem(note),
