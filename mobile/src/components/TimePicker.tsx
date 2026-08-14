@@ -17,18 +17,36 @@ export function TimePicker({
   accentColor = colors.primary,
 }: TimePickerProps) {
   const [visible, setVisible] = useState(false);
-  const [hours, setHours] = useState(parseInt(value.split(':')[0]) || 7);
-  const [minutes, setMinutes] = useState(parseInt(value.split(':')[1]) || 0);
+  
+  // Parse 24-hour time to 12-hour with AM/PM
+  const parseTime = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const isPM = h >= 12;
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return { hour12, m, isPM };
+  };
+  
+  const initialTime = parseTime(value);
+  const [hour12, setHour12] = useState(initialTime.hour12);
+  const [minutes, setMinutes] = useState(initialTime.m);
+  const [isPM, setIsPM] = useState(initialTime.isPM);
 
-  const hoursOptions = Array.from({ length: 24 }, (_, i) => i);
+  const hoursOptions = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
   const minutesOptions = Array.from({ length: 60 }, (_, i) => i);
 
-  const formatTime = (h: number, m: number) => {
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  const formatTimeDisplay = (h: number, m: number, pm: boolean) => {
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${pm ? 'PM' : 'AM'}`;
+  };
+
+  const formatTime24 = (h: number, m: number, pm: boolean) => {
+    let hour24 = h;
+    if (pm && h !== 12) hour24 = h + 12;
+    if (!pm && h === 12) hour24 = 0;
+    return `${hour24.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
   const handleConfirm = () => {
-    onChange(formatTime(hours, minutes));
+    onChange(formatTime24(hour12, minutes, isPM));
     setVisible(false);
   };
 
@@ -36,7 +54,7 @@ export function TimePicker({
     <View style={styles.container}>
       {label ? <Text style={[styles.label, { color: accentColor }]}>{label}</Text> : null}
       <Pressable style={styles.timeDisplay} onPress={() => setVisible(true)}>
-        <Text style={styles.timeText}>{value}</Text>
+        <Text style={styles.timeText}>{formatTimeDisplay(hour12, minutes, isPM)}</Text>
         <AppIcon name="time-outline" size={20} color={accentColor} />
       </Pressable>
 
@@ -57,7 +75,7 @@ export function TimePicker({
 
             <View style={styles.timeDisplayLarge}>
               <Text style={[styles.timeTextLarge, { color: accentColor }]}>
-                {formatTime(hours, minutes)}
+                {formatTimeDisplay(hour12, minutes, isPM)}
               </Text>
             </View>
 
@@ -70,14 +88,14 @@ export function TimePicker({
                       key={h}
                       style={[
                         styles.pickerItem,
-                        hours === h && { backgroundColor: `${accentColor}1F` },
+                        hour12 === h && { backgroundColor: `${accentColor}1F` },
                       ]}
-                      onPress={() => setHours(h)}
+                      onPress={() => setHour12(h)}
                     >
                       <Text
                         style={[
                           styles.pickerItemText,
-                          hours === h && { color: accentColor },
+                          hour12 === h && { color: accentColor },
                         ]}
                       >
                         {h.toString().padStart(2, '0')}
@@ -109,6 +127,44 @@ export function TimePicker({
                       </Text>
                     </Pressable>
                   ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.pickerColumn}>
+                <Text style={styles.pickerLabel}>AM/PM</Text>
+                <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                  <Pressable
+                    style={[
+                      styles.pickerItem,
+                      !isPM && { backgroundColor: `${accentColor}1F` },
+                    ]}
+                    onPress={() => setIsPM(false)}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerItemText,
+                        !isPM && { color: accentColor },
+                      ]}
+                    >
+                      AM
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.pickerItem,
+                      isPM && { backgroundColor: `${accentColor}1F` },
+                    ]}
+                    onPress={() => setIsPM(true)}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerItemText,
+                        isPM && { color: accentColor },
+                      ]}
+                    >
+                      PM
+                    </Text>
+                  </Pressable>
                 </ScrollView>
               </View>
             </View>
