@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getBlogById, updateBlog } from '@/api/blogs';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -103,7 +104,24 @@ export default function EditBlogScreen() {
   }
 
   return (
-    <TypeThemedScreen type={TYPE} title="Edit Blog" headerRight={<OfflineStatusCompact />} scroll>
+    <TypeThemedScreen
+      type={TYPE}
+      title="Edit Blog"
+      headerRight={
+        <View style={styles.headerRight}>
+          <OfflineStatusCompact />
+          <Pressable
+            style={styles.reminderIcon}
+            onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=blog`)}
+            accessibilityRole="button"
+            accessibilityLabel="Add reminder"
+          >
+            <AppIcon name="notifications-outline" size={20} color={colors.reminder.primary} />
+          </Pressable>
+        </View>
+      }
+      scroll
+    >
       <Input
         label="Blog Title"
         placeholder="Enter blog title"
@@ -138,12 +156,6 @@ export default function EditBlogScreen() {
         onTagsChange={(tagNames) => setTags(tagNames)}
         accentColor={theme.primary}
       />
-      <Pressable
-        style={styles.reminderButton}
-        onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=blog`)}
-      >
-        <Text style={styles.reminderButtonText}>+ Add Reminder</Text>
-      </Pressable>
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Blog'}
         onPress={submit}
@@ -165,16 +177,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
   },
-  reminderButton: {
-    backgroundColor: colors.reminder.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    gap: 8,
   },
-  reminderButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  reminderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.reminder.muted,
+    borderWidth: 1,
+    borderColor: colors.reminder.soft,
   },
 });

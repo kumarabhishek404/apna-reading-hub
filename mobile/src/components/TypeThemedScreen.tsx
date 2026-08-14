@@ -58,7 +58,11 @@ export function TypeThemedScreen({
         >
           <AppIcon name="chevron-back" size={22} color={theme.primary} />
         </Pressable>
-        {headerRight}
+        {headerRight && (
+          <View style={styles.headerRightContainer}>
+            {headerRight}
+          </View>
+        )}
       </View>
 
       <View style={[styles.typeBadge, { backgroundColor: theme.muted }]}>
@@ -125,6 +129,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
     width: 40,

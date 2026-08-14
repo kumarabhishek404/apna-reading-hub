@@ -113,7 +113,24 @@ export default function EditLinkScreen() {
   }
 
   return (
-    <TypeThemedScreen type={TYPE} title="Edit Link" headerRight={<OfflineStatusCompact />} scroll>
+    <TypeThemedScreen
+      type={TYPE}
+      title="Edit Link"
+      headerRight={
+        <View style={styles.headerRight}>
+          <OfflineStatusCompact />
+          <Pressable
+            style={styles.reminderIcon}
+            onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=link`)}
+            accessibilityRole="button"
+            accessibilityLabel="Add reminder"
+          >
+            <AppIcon name="notifications-outline" size={20} color={colors.reminder.primary} />
+          </Pressable>
+        </View>
+      }
+      scroll
+    >
       <Input
         label="Link Title"
         placeholder="Enter link title"
@@ -150,12 +167,6 @@ export default function EditLinkScreen() {
           <Text style={[styles.openButtonText, { color: theme.primary }]}>Test Link</Text>
         </Pressable>
       </View>
-      <Pressable
-        style={styles.reminderButton}
-        onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=link`)}
-      >
-        <Text style={styles.reminderButtonText}>+ Add Reminder</Text>
-      </Pressable>
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Link'}
         onPress={submit}
@@ -185,17 +196,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  reminderButton: {
-    backgroundColor: colors.reminder.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    gap: 8,
   },
-  reminderButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  reminderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.reminder.muted,
+    borderWidth: 1,
+    borderColor: colors.reminder.soft,
   },
   loadingContainer: {
     flex: 1,

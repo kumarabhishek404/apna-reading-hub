@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getPdfById, updatePdf } from '@/api/pdfs';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
@@ -81,7 +82,21 @@ export default function EditPdfScreen() {
   }
 
   return (
-    <TypeThemedScreen type={TYPE} title="Edit PDF" scroll>
+    <TypeThemedScreen
+      type={TYPE}
+      title="Edit PDF"
+      headerRight={
+        <Pressable
+          style={styles.reminderIcon}
+          onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=pdf`)}
+          accessibilityRole="button"
+          accessibilityLabel="Add reminder"
+        >
+          <AppIcon name="notifications-outline" size={20} color={colors.reminder.primary} />
+        </Pressable>
+      }
+      scroll
+    >
       <Input
         label="PDF Title"
         placeholder="Enter PDF title"
@@ -106,12 +121,6 @@ export default function EditPdfScreen() {
         onTagsChange={setTags}
         accentColor={theme.primary}
       />
-      <Pressable
-        style={styles.reminderButton}
-        onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=pdf`)}
-      >
-        <Text style={styles.reminderButtonText}>+ Add Reminder</Text>
-      </Pressable>
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update PDF'}
         onPress={submit}
@@ -133,16 +142,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
   },
-  reminderButton: {
-    backgroundColor: colors.reminder.primary,
-    paddingVertical: 14,
+  reminderIcon: {
+    width: 36,
+    height: 36,
     borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-  },
-  reminderButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    backgroundColor: colors.reminder.muted,
+    borderWidth: 1,
+    borderColor: colors.reminder.soft,
   },
 });
