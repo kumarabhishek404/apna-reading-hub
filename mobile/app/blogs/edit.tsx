@@ -8,6 +8,9 @@ import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import { blogOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { useIsOnline } from '@/lib/networkMonitor';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import type { BlogItem } from '@/types';
 
 export default function EditBlogScreen() {
@@ -19,7 +22,8 @@ export default function EditBlogScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
+  const isOnline = useIsOnline();
 
   useEffect(() => {
     async function loadBlog() {
@@ -69,12 +73,26 @@ export default function EditBlogScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updateBlog(id, { title, url, content, tags: tags as any });
-      setLoading(false);
-      showSuccess('Blog updated successfully');
-      router.back();
+      if (isOnline) {
+        // Online: Update via API
+        const result = await updateBlog(id, { title, url, content, tags: tags as any });
+        setLoading(false);
+        showSuccess('Blog updated successfully');
+        router.back();
+      } else {
+        // Offline: Update locally first
+        const blog = await blogOfflineRepository.updateEntity('blog', id, {
+          title,
+          url,
+          content,
+          tags: tags.map(t => ({ id: t, name: t })),
+        });
+        setLoading(false);
+        showInfo('Blog saved locally. Will sync when online.');
+        router.back();
+      }
     } catch (error) {
-      console.error('[Blog Edit] API call failed', error);
+      console.error('[Blog Edit] Failed', error);
       setLoading(false);
       showError('Could not update blog. Please try again.');
     }
@@ -97,6 +115,7 @@ export default function EditBlogScreen() {
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
+          <OfflineStatusCompact />
         </View>
         <Text style={styles.title}>Edit Blog</Text>
         <Input
@@ -127,7 +146,7 @@ export default function EditBlogScreen() {
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
-          onTagsChange={setTags}
+          onTagsChange={(tagNames) => setTags(tagNames)}
         />
         <PrimaryButton title={loading ? 'Saving...' : 'Update Blog'} onPress={submit} disabled={loading} />
       </ScrollView>
@@ -138,7 +157,7 @@ export default function EditBlogScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
   container: { padding: 20, gap: 14, paddingBottom: 40 },
-  headerRow: { marginBottom: 4 },
+  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   backButton: {
     width: 38,
     height: 38,

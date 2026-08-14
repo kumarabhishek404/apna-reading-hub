@@ -8,6 +8,9 @@ import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import { linkOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { useIsOnline } from '@/lib/networkMonitor';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 
 export default function CreateLinkScreen() {
   const [title, setTitle] = useState('');
@@ -16,7 +19,8 @@ export default function CreateLinkScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
+  const isOnline = useIsOnline();
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -47,12 +51,27 @@ export default function CreateLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await createLink({ title, url, description, tags, isFavorite: false });
-      setLoading(false);
-      showSuccess('Link created successfully');
-      router.back();
+      if (isOnline) {
+        // Online: Create via API
+        const result = await createLink({ title, url, description, tags, isFavorite: false });
+        setLoading(false);
+        showSuccess('Link created successfully');
+        router.back();
+      } else {
+        // Offline: Create locally first
+        const link = await linkOfflineRepository.createEntity('link', {
+          title,
+          url,
+          description,
+          tags: tags.map(t => ({ id: t, name: t })),
+          isFavorite: false,
+        });
+        setLoading(false);
+        showInfo('Link saved locally. Will sync when online.');
+        router.back();
+      }
     } catch (error) {
-      console.error('[Link Create] API call failed', error);
+      console.error('[Link Create] Failed', error);
       setLoading(false);
       showError('Could not create link. Please try again.');
     }
@@ -65,6 +84,7 @@ export default function CreateLinkScreen() {
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
+          <OfflineStatusCompact />
         </View>
         <Text style={styles.title}>New Link</Text>
         <Input
@@ -95,7 +115,7 @@ export default function CreateLinkScreen() {
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
-          onTagsChange={setTags}
+          onTagsChange={(tagNames) => setTags(tagNames)}
         />
         <PrimaryButton title={loading ? 'Saving...' : 'Create Link'} onPress={submit} disabled={loading} />
       </View>
@@ -112,7 +132,7 @@ export default function CreateLinkScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
   container: { flex: 1, padding: 20, gap: 14 },
-  headerRow: { marginBottom: 4 },
+  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   backButton: {
     width: 38,
     height: 38,

@@ -8,6 +8,9 @@ import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import { linkOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { useIsOnline } from '@/lib/networkMonitor';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import type { LinkItem } from '@/types';
 
 export default function EditLinkScreen() {
@@ -19,7 +22,8 @@ export default function EditLinkScreen() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
+  const isOnline = useIsOnline();
 
   useEffect(() => {
     async function loadLink() {
@@ -71,12 +75,26 @@ export default function EditLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await updateLink(id, { title, url, description, tags: tags as any });
-      setLoading(false);
-      showSuccess('Link updated successfully');
-      router.back();
+      if (isOnline) {
+        // Online: Update via API
+        const result = await updateLink(id, { title, url, description, tags: tags as any });
+        setLoading(false);
+        showSuccess('Link updated successfully');
+        router.back();
+      } else {
+        // Offline: Update locally first
+        const link = await linkOfflineRepository.updateEntity('link', id, {
+          title,
+          url,
+          description,
+          tags: tags.map(t => ({ id: t, name: t })),
+        });
+        setLoading(false);
+        showInfo('Link saved locally. Will sync when online.');
+        router.back();
+      }
     } catch (error) {
-      console.error('[Link Edit] API call failed', error);
+      console.error('[Link Edit] Failed', error);
       setLoading(false);
       showError('Could not update link. Please try again.');
     }
@@ -106,6 +124,7 @@ export default function EditLinkScreen() {
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
+          <OfflineStatusCompact />
         </View>
         <Text style={styles.title}>Edit Link</Text>
         <Input
@@ -136,7 +155,7 @@ export default function EditLinkScreen() {
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
-          onTagsChange={setTags}
+          onTagsChange={(tagNames) => setTags(tagNames)}
         />
         <View style={styles.buttonRow}>
           <Pressable style={styles.openButton} onPress={openLink}>
@@ -153,7 +172,7 @@ export default function EditLinkScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
   container: { padding: 20, gap: 14, paddingBottom: 40 },
-  headerRow: { marginBottom: 4 },
+  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   backButton: {
     width: 38,
     height: 38,
