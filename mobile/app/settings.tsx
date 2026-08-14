@@ -16,7 +16,6 @@ import { backgroundSync } from '@/lib/backgroundSync';
 import { useIsOnline } from '@/lib/networkMonitor';
 import { getSyncStats } from '@/lib/storage';
 import { colors } from '@/theme/colors';
-import { useTabContentPaddingBottom } from '@/theme/layout';
 import { getTypeTheme, TYPE_LABELS, type ItemType } from '@/theme/typeColors';
 
 const LIBRARY_TYPES: ItemType[] = ['note', 'blog', 'link', 'pdf', 'reminder'];
@@ -32,7 +31,6 @@ export default function SettingsScreen() {
   });
   const { showSuccess, showError } = useToast();
   const isOnline = useIsOnline();
-  const tabPaddingBottom = useTabContentPaddingBottom();
 
   useEffect(() => {
     let active = true;
@@ -88,10 +86,22 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.container, { paddingBottom: tabPaddingBottom }]}
+        contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.screenTitle}>Profile</Text>
@@ -217,10 +227,41 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 56,
+    gap: 8,
+    backgroundColor: colors.note.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.note.soft,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    flex: 1,
+  },
+  headerSpacer: {
+    width: 40,
+  },
   scroll: { flex: 1 },
   container: {
     paddingHorizontal: 20,
     paddingTop: 12,
+    paddingBottom: 40,
     gap: 12,
   },
   screenTitle: {

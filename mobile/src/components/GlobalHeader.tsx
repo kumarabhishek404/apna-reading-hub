@@ -22,7 +22,7 @@ export function GlobalHeader({
   const { openSidebar } = useSidebar();
 
   const goToSettings = () => {
-    router.push('/(tabs)/settings');
+    router.push('/settings');
   };
 
   return (

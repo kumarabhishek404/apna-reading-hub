@@ -215,8 +215,8 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
   const initials = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'A';
 
   const accountItems: MenuItem[] = [
-    { icon: 'person-outline', label: 'Profile', route: '/(tabs)/settings', tone: 'brand' },
-    { icon: 'settings-outline', label: 'Settings', route: '/(tabs)/settings', tone: 'brand' },
+    { icon: 'person-outline', label: 'Profile', route: '/settings', tone: 'brand' },
+    { icon: 'settings-outline', label: 'Settings', route: '/settings', tone: 'brand' },
     {
       icon: 'log-out-outline',
       label: 'Logout',
