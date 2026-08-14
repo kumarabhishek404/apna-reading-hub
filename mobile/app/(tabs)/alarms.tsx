@@ -85,7 +85,7 @@ export default function AlarmsScreen() {
       <View style={styles.header}>
         <BrandHeader title="Alarms" subtitle="Stay on schedule" />
         <Link href="/alarms/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: alarmTheme.primary }]}>
+          <Pressable style={styles.createButton}>
             <Text style={styles.createButtonText}>+ Create</Text>
           </Pressable>
         </Link>
@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   createButton: {
+    backgroundColor: alarmTheme.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
