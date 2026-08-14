@@ -169,6 +169,11 @@ export default function TagContentScreen() {
                       ? item.item.description || 'Uploaded PDF'
                       : 'Saved to your library'
                 }
+                onPress={
+                  item.kind === 'blog' || item.kind === 'pdf' || item.kind === 'link'
+                    ? () => void openItem(item)
+                    : undefined
+                }
               />
             )}
           />
