@@ -8,6 +8,9 @@ import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { useToast } from '@/components/ToastContext';
+import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
+import { useIsOnline } from '@/lib/networkMonitor';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 
 export default function CreateNoteScreen() {
   const [title, setTitle] = useState('');
@@ -15,7 +18,8 @@ export default function CreateNoteScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string }>({});
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
+  const isOnline = useIsOnline();
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -40,12 +44,27 @@ export default function CreateNoteScreen() {
     setErrors({});
     setLoading(true);
     try {
-      const result = await createNote({ title, content, tags, isPinned: false, isFavorite: false });
-      setLoading(false);
-      showSuccess('Note created successfully');
-      router.back();
+      if (isOnline) {
+        // Online: Create via API
+        const result = await createNote({ title, content, tags, isPinned: false, isFavorite: false });
+        setLoading(false);
+        showSuccess('Note created successfully');
+        router.back();
+      } else {
+        // Offline: Create locally first
+        const note = await noteRepository.createNote({ 
+          title, 
+          content, 
+          tags: tags.map(t => ({ id: t, name: t })), 
+          isPinned: false, 
+          isFavorite: false 
+        });
+        setLoading(false);
+        showInfo('Note saved locally. Will sync when online.');
+        router.back();
+      }
     } catch (error) {
-      console.error('[Note Create] API call failed', error);
+      console.error('[Note Create] Failed', error);
       setLoading(false);
       showError('Could not create note. Please try again.');
     }
@@ -58,6 +77,7 @@ export default function CreateNoteScreen() {
           <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
             <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
           </Pressable>
+          <OfflineStatusCompact />
         </View>
         <Text style={styles.title}>New Note</Text>
         <Input
@@ -79,7 +99,7 @@ export default function CreateNoteScreen() {
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
-          onTagsChange={setTags}
+          onTagsChange={(tagNames) => setTags(tagNames)}
         />
         <PrimaryButton title={loading ? 'Saving...' : 'Create Note'} onPress={submit} disabled={loading} />
       </View>

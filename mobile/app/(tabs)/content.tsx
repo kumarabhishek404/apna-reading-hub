@@ -17,7 +17,11 @@ import { ModernHeader } from '@/components/ModernHeader';
 import { AnimatedCard } from '@/components/AnimatedCard';
 import { AnimatedButton } from '@/components/AnimatedButton';
 import { FadeInListItem } from '@/components/AnimatedFlatList';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { colors, typography, spacing, borderRadius, shadows } from '@/theme/colors';
+import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
+import { noteOfflineRepository as genericNoteRepo } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { networkMonitor } from '@/lib/networkMonitor';
 import type { BlogItem, LinkItem, NoteItem, PdfItem } from '@/types';
 
 type ContentItem =
@@ -39,6 +43,7 @@ export default function ContentScreen() {
   async function load() {
     console.log('[Content] Loading data from database');
     try {
+      // Try to load from server first
       const [notesRes, blogsRes, linksRes, pdfsRes] = await Promise.all([
         getNotes(),
         getBlogs(),
@@ -62,10 +67,25 @@ export default function ContentScreen() {
 
       setItems(combined);
       setError(null);
-      console.log('[Content] Data loaded successfully', { total: combined.length });
+      console.log('[Content] Data loaded successfully from server', { total: combined.length });
     } catch (err) {
-      console.error('[Content] Failed to load data:', err);
-      setError('Could not load library items');
+      console.error('[Content] Failed to load from server, trying offline storage', err);
+      
+      // Fallback to offline storage
+      try {
+        const offlineNotes = await genericNoteRepo.getAllEntities('note');
+        const offlineItems: ContentItem[] = [
+          ...offlineNotes.map((item) => ({ kind: 'note' as const, item: item as any })),
+        ];
+
+        // Add other entity types when their repositories are implemented
+        setItems(offlineItems);
+        setError(null);
+        console.log('[Content] Data loaded from offline storage', { total: offlineItems.length });
+      } catch (offlineErr) {
+        console.error('[Content] Failed to load from offline storage', offlineErr);
+        setError('Could not load library items');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -190,7 +210,10 @@ export default function ContentScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <BrandHeader title="Library" subtitle="Notes, links, blogs, and PDFs" />
+        <View style={styles.headerContent}>
+          <BrandHeader title="Library" subtitle="Notes, links, blogs, and PDFs" />
+        </View>
+        <OfflineStatusCompact />
       </View>
       
       <View style={styles.createButtons}>
@@ -326,7 +349,8 @@ export default function ContentScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerContent: { flex: 1 },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
   createButtons: {

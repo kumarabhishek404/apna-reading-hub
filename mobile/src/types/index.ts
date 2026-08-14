@@ -1,5 +1,13 @@
 export type ContentType = 'blog' | 'link' | 'pdf' | 'note' | 'reminder' | 'alarm';
 
+export interface TagItem {
+  id: string;
+  name: string;
+  count?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface BlogItem {
   id: string;
   title: string;

@@ -7,6 +7,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { IoniconsReadyProvider } from '@/components/IoniconsReadyContext';
 import { ToastProvider } from '@/components/ToastContext';
+import { initDatabase } from '@/lib/storage';
+import { backgroundSync } from '@/lib/backgroundSync';
 
 // Keep splash visible until icon fonts are ready.
 // @expo/vector-icons renders an empty <Text /> until the font is loaded.
@@ -19,6 +21,19 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // Initialize offline services
+    const initOfflineServices = async () => {
+      try {
+        await initDatabase();
+        await backgroundSync.start();
+        console.log('[App] Offline services initialized');
+      } catch (error) {
+        console.error('[App] Failed to initialize offline services', error);
+      }
+    };
+
+    initOfflineServices();
+
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
     }

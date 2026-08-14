@@ -67,7 +67,8 @@
         }
       ],
       "./plugins/withGradleWrapperResilience.js",
-      "./plugins/withCleartextTraffic.js"
+      "./plugins/withCleartextTraffic.js",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true
