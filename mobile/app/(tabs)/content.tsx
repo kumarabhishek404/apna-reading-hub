@@ -32,6 +32,7 @@ type ContentItem =
   | ({ kind: 'reminder'; item: ReminderItem });
 
 type FilterType = 'all' | 'note' | 'blog' | 'link' | 'pdf' | 'reminder';
+type TimeFilter = 'all' | 'monthly' | 'yearly';
 
 export default function ContentScreen() {
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -43,6 +44,8 @@ export default function ContentScreen() {
   const [tags, setTags] = useState<{ id: string; name: string; count: number }[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { showInfo, showSuccess, showError } = useToast();
 
@@ -113,13 +116,53 @@ export default function ContentScreen() {
 
   function handleFilterChange(newFilter: FilterType) {
     setFilterType(newFilter);
-    // Apply filter immediately with current items
-    if (newFilter === 'all') {
-      setFilteredItems(items);
-    } else {
-      setFilteredItems(items.filter((item) => item.kind === newFilter));
+    applyAllFilters(newFilter, timeFilter, selectedTag);
+  }
+
+  function handleTimeFilterChange(newTimeFilter: TimeFilter) {
+    setTimeFilter(newTimeFilter);
+    applyAllFilters(filterType, newTimeFilter, selectedTag);
+  }
+
+  function handleTagChange(tagId: string | null) {
+    setSelectedTag(tagId);
+    applyAllFilters(filterType, timeFilter, tagId);
+  }
+
+  function applyAllFilters(typeFilter: FilterType, timeFilter: TimeFilter, tagFilter: string | null) {
+    let filtered = [...items];
+
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((item) => item.kind === typeFilter);
     }
-    setFilterModalVisible(false);
+
+    // Apply time filter
+    if (timeFilter !== 'all') {
+      const now = new Date();
+      const cutoffDate = new Date();
+      if (timeFilter === 'monthly') {
+        cutoffDate.setMonth(now.getMonth() - 1);
+      } else if (timeFilter === 'yearly') {
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+      }
+      filtered = filtered.filter((item) => new Date(item.item.createdAt) >= cutoffDate);
+    }
+
+    // Apply tag filter (if tags are implemented on items)
+    if (tagFilter) {
+      // Filter by tag when tag data is available on items
+      // For now, this is a placeholder - you'll need to ensure items have tag data
+    }
+
+    setFilteredItems(filtered);
+  }
+
+  function resetFilters() {
+    setFilterType('all');
+    setTimeFilter('all');
+    setSelectedTag(null);
+    setFilteredItems(items);
   }
 
   async function loadTags() {
@@ -133,6 +176,12 @@ export default function ContentScreen() {
       setTagsLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (filterModalVisible) {
+      loadTags();
+    }
+  }, [filterModalVisible]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -249,7 +298,12 @@ export default function ContentScreen() {
       return;
     }
 
-    showInfo(entry.kind === 'note' ? entry.item.content || 'No content yet.' : 'Open this item from your library.');
+    if (entry.kind === 'note') {
+      router.push(`/notes/edit?id=${entry.item.id}`);
+      return;
+    }
+
+    showInfo('Open this item from your library.');
   }
 
   return (
@@ -415,6 +469,7 @@ export default function ContentScreen() {
             </View>
             
             <ScrollView style={styles.filterList}>
+              <Text style={styles.filterSectionTitle}>Type</Text>
               <Pressable
                 style={[styles.filterItem, filterType === 'all' && styles.filterItemActive]}
                 onPress={() => handleFilterChange('all')}
@@ -457,7 +512,67 @@ export default function ContentScreen() {
                 <Text style={[styles.filterItemText, filterType === 'reminder' && styles.filterItemTextActive]}>Reminders</Text>
                 {filterType === 'reminder' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
               </Pressable>
+
+              <Text style={styles.filterSectionTitle}>Time Period</Text>
+              <Pressable
+                style={[styles.filterItem, timeFilter === 'all' && styles.filterItemActive]}
+                onPress={() => handleTimeFilterChange('all')}
+              >
+                <Text style={[styles.filterItemText, timeFilter === 'all' && styles.filterItemTextActive]}>All Time</Text>
+                {timeFilter === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+              </Pressable>
+              <Pressable
+                style={[styles.filterItem, timeFilter === 'monthly' && styles.filterItemActive]}
+                onPress={() => handleTimeFilterChange('monthly')}
+              >
+                <Text style={[styles.filterItemText, timeFilter === 'monthly' && styles.filterItemTextActive]}>Last Month</Text>
+                {timeFilter === 'monthly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+              </Pressable>
+              <Pressable
+                style={[styles.filterItem, timeFilter === 'yearly' && styles.filterItemActive]}
+                onPress={() => handleTimeFilterChange('yearly')}
+              >
+                <Text style={[styles.filterItemText, timeFilter === 'yearly' && styles.filterItemTextActive]}>Last Year</Text>
+                {timeFilter === 'yearly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+              </Pressable>
+
+              <Text style={styles.filterSectionTitle}>Tags</Text>
+              <Pressable
+                style={[styles.filterItem, selectedTag === null && styles.filterItemActive]}
+                onPress={() => handleTagChange(null)}
+              >
+                <Text style={[styles.filterItemText, selectedTag === null && styles.filterItemTextActive]}>All Tags</Text>
+                {selectedTag === null && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+              </Pressable>
+              {tags.map((tag) => (
+                <Pressable
+                  key={tag.id}
+                  style={[styles.filterItem, selectedTag === tag.id && styles.filterItemActive]}
+                  onPress={() => handleTagChange(tag.id)}
+                >
+                  <Text style={[styles.filterItemText, selectedTag === tag.id && styles.filterItemTextActive]}>{tag.name}</Text>
+                  {selectedTag === tag.id && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+              ))}
             </ScrollView>
+
+            <View style={styles.filterModalFooter}>
+              <Pressable
+                style={styles.resetButton}
+                onPress={() => {
+                  resetFilters();
+                  setFilterModalVisible(false);
+                }}
+              >
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </Pressable>
+              <Pressable
+                style={styles.applyButton}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={styles.applyButtonText}>Done</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -591,6 +706,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 16,
+    marginBottom: 8,
+  },
   tagsList: {
     flex: 1,
   },
@@ -653,5 +777,39 @@ const styles = StyleSheet.create({
   },
   filterItemTextActive: {
     color: colors.primary,
+  },
+  filterModalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  resetButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resetButtonText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  applyButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
