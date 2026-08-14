@@ -147,6 +147,28 @@ export default function EditAlarmScreen() {
       />
       <TimePicker value={time} onChange={setTime} label="Time" accentColor={theme.primary} />
 
+      <Text style={[styles.sectionLabel, { color: theme.dark }]}>Status</Text>
+      <View style={styles.statusRow}>
+        <Pressable
+          onPress={() => setIsEnabled(true)}
+          style={[
+            styles.statusButton,
+            isEnabled && { backgroundColor: theme.primary, borderColor: theme.primary },
+          ]}
+        >
+          <Text style={[styles.statusButtonText, isEnabled && styles.statusButtonTextSelected]}>ON</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setIsEnabled(false)}
+          style={[
+            styles.statusButton,
+            !isEnabled && { backgroundColor: theme.primary, borderColor: theme.primary },
+          ]}
+        >
+          <Text style={[styles.statusButtonText, !isEnabled && styles.statusButtonTextSelected]}>OFF</Text>
+        </Pressable>
+      </View>
+
       <Text style={[styles.sectionLabel, { color: theme.dark }]}>Repeat</Text>
       <View style={styles.daysRow}>
         {DAY_OPTIONS.map((day) => {
@@ -182,7 +204,19 @@ export default function EditAlarmScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18, marginTop: -4 },
-  sectionLabel: { fontSize: 14, fontWeight: '700' },
+  sectionLabel: { fontSize: 14, fontWeight: '700', marginTop: 16 },
+  statusRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e3ebf7',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  statusButtonText: { fontWeight: '700', color: colors.textMuted },
+  statusButtonTextSelected: { color: '#fff' },
   daysRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   dayChip: {
     width: 36,

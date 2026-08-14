@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router, useFocusEffect } from 'expo-router';
-import { deleteAlarm, getAlarms, toggleAlarm } from '@/api/alarms';
+import { deleteAlarm, getAlarms } from '@/api/alarms';
 import { AppIcon } from '@/components/AppIcon';
 import { BrandHeader } from '@/components/BrandHeader';
 import { TypeContentCard } from '@/components/TypeContentCard';
@@ -59,16 +59,6 @@ export default function AlarmsScreen() {
 
   useDataSync(load, { immediate: false, interval: 45000 });
 
-  async function onToggle(id: string) {
-    try {
-      const updated = await toggleAlarm(id);
-      setAlarms((current) => current.map((item) => item.id === id ? updated.alarm : item));
-      await syncScheduledNotificationsFromBackend();
-    } catch {
-      setError('Could not update alarm');
-    }
-  }
-
   async function onDelete(id: string) {
     try {
       await deleteAlarm(id);
@@ -113,7 +103,6 @@ export default function AlarmsScreen() {
               title={item.title}
               meta={`${item.time} · ${getSoundOption(item.sound).label}`}
               showKindBadge={false}
-              onPress={() => onToggle(item.id)}
               actions={
                 <>
                   <Pressable 
@@ -123,18 +112,6 @@ export default function AlarmsScreen() {
                     accessibilityLabel="Edit alarm"
                   >
                     <AppIcon name="create-outline" size={18} color={alarmTheme.primary} />
-                  </Pressable>
-                  <Pressable 
-                    style={styles.actionButton} 
-                    onPress={() => onToggle(item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
-                  >
-                    <AppIcon
-                      name={item.isEnabled ? "radio-button-on" : "radio-button-off"}
-                      size={18}
-                      color={alarmTheme.primary}
-                    />
                   </Pressable>
                   <Pressable 
                     style={styles.actionButton} 

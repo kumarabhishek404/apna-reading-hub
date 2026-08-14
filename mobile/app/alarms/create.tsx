@@ -37,6 +37,7 @@ export default function CreateAlarmScreen() {
   const [time, setTime] = useState('07:00');
   const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
+  const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
@@ -77,7 +78,7 @@ export default function CreateAlarmScreen() {
         title: title.trim(),
         time: time.trim(),
         repeatDays,
-        isEnabled: true,
+        isEnabled,
         sound,
       });
 
@@ -107,6 +108,28 @@ export default function CreateAlarmScreen() {
         accentColor={theme.primary}
       />
       <TimePicker value={time} onChange={setTime} label="Time" accentColor={theme.primary} />
+
+      <Text style={[styles.sectionLabel, { color: theme.dark }]}>Status</Text>
+      <View style={styles.statusRow}>
+        <Pressable
+          onPress={() => setIsEnabled(true)}
+          style={[
+            styles.statusButton,
+            isEnabled && { backgroundColor: theme.primary, borderColor: theme.primary },
+          ]}
+        >
+          <Text style={[styles.statusButtonText, isEnabled && styles.statusButtonTextSelected]}>ON</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setIsEnabled(false)}
+          style={[
+            styles.statusButton,
+            !isEnabled && { backgroundColor: theme.primary, borderColor: theme.primary },
+          ]}
+        >
+          <Text style={[styles.statusButtonText, !isEnabled && styles.statusButtonTextSelected]}>OFF</Text>
+        </Pressable>
+      </View>
 
       <Text style={[styles.sectionLabel, { color: theme.dark }]}>Repeat</Text>
       <View style={styles.daysRow}>
@@ -142,7 +165,19 @@ export default function CreateAlarmScreen() {
 
 const styles = StyleSheet.create({
   hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18, marginTop: -4 },
-  sectionLabel: { fontSize: 14, fontWeight: '700' },
+  sectionLabel: { fontSize: 14, fontWeight: '700', marginTop: 16 },
+  statusRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e3ebf7',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  statusButtonText: { fontWeight: '700', color: colors.textMuted },
+  statusButtonTextSelected: { color: '#fff' },
   daysRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   dayChip: {
     width: 36,
