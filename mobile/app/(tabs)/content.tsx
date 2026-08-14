@@ -467,7 +467,7 @@ export default function ContentScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 4, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  header: { paddingHorizontal: 20, paddingTop: 4, marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   headerText: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   screenTitle: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 20,
     gap: 10,
-    marginTop: 4,
+    marginTop: 0,
   },
   createButton: {
     backgroundColor: colors.primary,

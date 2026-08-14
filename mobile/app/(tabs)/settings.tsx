@@ -9,6 +9,7 @@ import { useIsOnline } from '@/lib/networkMonitor';
 import { getSyncStats } from '@/lib/storage';
 import { AppIcon } from '@/components/AppIcon';
 import { useToast } from '@/components/ToastContext';
+import { colors } from '@/theme/colors';
 
 export default function SettingsScreen() {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -121,24 +122,24 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1, padding: 20 },
   profileCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#edf1fa',
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 18,
+    marginTop: 4,
+    marginBottom: 16,
   },
   avatar: {
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: '#22409a',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,

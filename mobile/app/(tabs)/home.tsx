@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   container: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 4,
     paddingBottom: 96,
-    gap: 24,
+    gap: 20,
   },
   createGrid: {
     flexDirection: 'row',

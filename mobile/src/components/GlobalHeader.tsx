@@ -65,8 +65,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    height: 56,
+    paddingVertical: 8,
+    height: 48,
   },
   iconButton: {
     width: 40,

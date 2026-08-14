@@ -8,6 +8,7 @@ import { AppIcon } from '@/components/AppIcon';
 import { BrandHeader } from '@/components/BrandHeader';
 import { useToast } from '@/components/ToastContext';
 import { getSoundOption } from '@/constants/notificationSounds';
+import { colors } from '@/theme/colors';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import { useDataSync } from '@/lib/dataSync';
 import type { AlarmItem } from '@/types';
@@ -113,7 +114,7 @@ export default function AlarmsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Edit alarm"
                 >
-                  <AppIcon name="create-outline" size={18} color="#22409a" />
+                  <AppIcon name="create-outline" size={18} color={colors.primary} />
                 </Pressable>
                 <Pressable 
                   style={styles.actionButton} 
@@ -121,7 +122,7 @@ export default function AlarmsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
                 >
-                  <AppIcon name={item.isEnabled ? "power" : "power-outline"} size={18} color="#22409a" />
+                  <AppIcon name={item.isEnabled ? "power" : "power-outline"} size={18} color={colors.primary} />
                 </Pressable>
                 <Pressable 
                   style={styles.actionButton} 
@@ -129,7 +130,7 @@ export default function AlarmsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Delete alarm"
                 >
-                  <AppIcon name="trash-outline" size={18} color="#ef4444" />
+                  <AppIcon name="trash-outline" size={18} color={colors.error} />
                 </Pressable>
               </View>
             </View>
@@ -141,15 +142,15 @@ export default function AlarmsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  header: { paddingHorizontal: 20, paddingTop: 12 },
-  title: { fontSize: 26, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.4 },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  header: { paddingHorizontal: 20, paddingTop: 4 },
+  title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   createButton: {
-    backgroundColor: '#22409a',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    marginTop: 10,
+    marginTop: 4,
     alignItems: 'center',
   },
   createButtonText: {
@@ -157,30 +158,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  flatListContent: { padding: 16, gap: 12 },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: '#edf1fa',
-    shadowColor: '#22409a',
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1d2f5f' },
-  cardTime: { fontSize: 13, color: '#64748b', marginTop: 4 },
-  cardMeta: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  cardTime: { fontSize: 13, color: colors.textLight, marginTop: 4 },
+  cardMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   actions: {
     flexDirection: 'row',
     gap: 8,
     paddingLeft: 8,
     borderLeftWidth: 1,
-    borderLeftColor: '#edf1fa',
+    borderLeftColor: colors.border,
   },
   actionButton: {
     width: 36,
@@ -188,7 +190,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.backgroundSecondary,
   },
-  error: { marginTop: 16, color: '#d14f46', paddingHorizontal: 20, fontWeight: '600' },
+  error: { marginTop: 16, color: colors.error, paddingHorizontal: 20, fontWeight: '600' },
 });
