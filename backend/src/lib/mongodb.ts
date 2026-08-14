@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getEnv } from "./env";
 
 type MongooseCache = {
   conn: typeof mongoose | null;
@@ -19,20 +20,6 @@ if (!global.__readingHubMongoose) {
   global.__readingHubMongoose = cached;
 }
 
-function resolveMongoUri() {
-  const uri = process.env.MONGODB_URI?.trim();
-  if (uri) return uri;
-
-  // Local/dev fallback only — never silently use localhost on Vercel.
-  if (process.env.VERCEL) {
-    throw new Error(
-      "MONGODB_URI is not set. Add it in Vercel → Project Settings → Environment Variables."
-    );
-  }
-
-  return "mongodb://localhost:27017/reading-hub";
-}
-
 /**
  * Ensures a live mongoose connection before any model call.
  * Safe for Vercel serverless cold starts (cached across warm invocations).
@@ -42,19 +29,19 @@ export async function connectDB() {
     return cached.conn;
   }
 
-  // If a previous attempt failed or the socket dropped, clear and reconnect.
   if (mongoose.connection.readyState === 0) {
     cached.conn = null;
   }
 
   if (!cached.promise) {
-    const uri = resolveMongoUri();
+    const { mongodbUri, isProd, isVercel } = getEnv();
     cached.promise = mongoose
-      .connect(uri, {
-        // With buffering off, callers MUST await connectDB() first (see ensureDb middleware).
+      .connect(mongodbUri, {
         bufferCommands: false,
-        serverSelectionTimeoutMS: 10_000,
-        maxPoolSize: 10,
+        serverSelectionTimeoutMS: isProd || isVercel ? 8_000 : 10_000,
+        // Keep pools modest on serverless; larger on long-lived hosts.
+        maxPoolSize: isVercel ? 5 : 20,
+        minPoolSize: isVercel ? 0 : 2,
         retryWrites: true,
       })
       .then((instance) => instance);

@@ -1,7 +1,9 @@
 import cors from "cors";
 import express from "express";
-import connectDB from "./lib/mongodb";
+import connectDB, { getDbReadyState } from "./lib/mongodb";
+import { getEnv } from "./lib/env";
 import { ensureDb } from "./middleware/ensure-db";
+import { errorHandler, notFoundHandler } from "./lib/async-handler";
 import blogsRouter from "./routes/blogs";
 import linksRouter from "./routes/links";
 import pdfsRouter from "./routes/pdfs";
@@ -13,12 +15,19 @@ import miscRouter from "./routes/misc";
 import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
 
+// Validate env early so misconfigured production fails fast.
+const env = getEnv();
+
 const app = express();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+if (env.isProd || env.isVercel) {
+  app.set("trust proxy", 1);
+}
+
+app.disable("x-powered-by");
 
 const allowedOrigins = [
-  FRONTEND_URL,
+  env.frontendUrl,
   "http://localhost:3000",
   process.env.RENDER_EXTERNAL_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
@@ -26,7 +35,6 @@ const allowedOrigins = [
 
 const isLocalExpoOrigin = (origin: string) => {
   const normalized = origin.toLowerCase();
-
   return (
     normalized.startsWith("http://localhost") ||
     normalized.startsWith("http://127.0.0.1") ||
@@ -46,39 +54,54 @@ app.use(
         callback(null, true);
         return;
       }
-      if (
-        origin.endsWith(".onrender.com") ||
-        origin.endsWith(".vercel.app")
-      ) {
+      if (origin.endsWith(".onrender.com") || origin.endsWith(".vercel.app")) {
         callback(null, true);
         return;
       }
-      callback(new Error("Not allowed by CORS"));
+      // Do not throw — throwing breaks the request pipeline.
+      callback(null, false);
     },
     credentials: true,
   })
 );
-app.use(express.json());
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
 
 app.use("/uploads", express.static(UPLOADS_DIR));
 app.use("/api/uploads", express.static(UPLOADS_DIR));
 
+function healthPayload() {
+  const dbState = getDbReadyState();
+  const db =
+    dbState === 1 ? "connected" : dbState === 2 ? "connecting" : "disconnected";
+  return {
+    status: "ok",
+    env: env.nodeEnv,
+    db,
+    time: new Date().toISOString(),
+  };
+}
+
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json(healthPayload());
 });
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json(healthPayload());
 });
 
-// Warm the connection for long-lived servers (local/Render/Docker).
-// Do NOT process.exit on failure — that kills Vercel serverless invocations.
-if (!process.env.VERCEL) {
+if (!env.isVercel) {
   connectDB().catch((err) => {
     console.error("[Backend] Initial MongoDB connection failed:", err);
   });
 }
 
-// Every DB-backed API route must wait for mongoose.connect() first.
 app.use("/api", ensureDb);
 
 app.use("/api/auth", authRouter);
@@ -91,17 +114,8 @@ app.use("/api/alarms", alarmsRouter);
 app.use("/api/tags", tagsRouter);
 app.use("/api", miscRouter);
 
-app.use(
-  (
-    err: Error,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Internal server error" });
-  }
-);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
 export { UPLOADS_DIR };

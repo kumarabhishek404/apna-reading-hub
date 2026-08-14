@@ -5,14 +5,20 @@ export function PrimaryButton({
   title,
   onPress,
   disabled = false,
+  color = colors.primary,
 }: {
   title: string;
   onPress: () => void;
   disabled?: boolean;
+  color?: string;
 }) {
   return (
     <Pressable
-      style={[styles.button, disabled && styles.buttonDisabled]}
+      style={[
+        styles.button,
+        { backgroundColor: color, shadowColor: color },
+        disabled && styles.buttonDisabled,
+      ]}
       onPress={onPress}
       disabled={disabled}
     >
@@ -23,12 +29,10 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 15,
     borderRadius: 18,
     alignItems: 'center',
-    shadowColor: colors.primary,
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },

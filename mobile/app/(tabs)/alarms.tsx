@@ -3,15 +3,19 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { deleteAlarm, getAlarms, toggleAlarm } from '@/api/alarms';
-import { ActionMenu } from '@/components/ActionMenu';
 import { AppIcon } from '@/components/AppIcon';
 import { BrandHeader } from '@/components/BrandHeader';
+import { TypeContentCard } from '@/components/TypeContentCard';
 import { useToast } from '@/components/ToastContext';
 import { getSoundOption } from '@/constants/notificationSounds';
 import { colors } from '@/theme/colors';
+import { useTabContentPaddingBottom } from '@/theme/layout';
+import { getTypeTheme } from '@/theme/typeColors';
 import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import { useDataSync } from '@/lib/dataSync';
 import type { AlarmItem } from '@/types';
+
+const alarmTheme = getTypeTheme('alarm');
 
 export default function AlarmsScreen() {
   const [alarms, setAlarms] = useState<AlarmItem[]>([]);
@@ -19,6 +23,7 @@ export default function AlarmsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
+  const tabPaddingBottom = useTabContentPaddingBottom();
 
   async function load() {
     console.log('[Alarms] Loading alarms from database');
@@ -52,7 +57,6 @@ export default function AlarmsScreen() {
     }, [])
   );
 
-  // Auto-sync data for database consistency
   useDataSync(load, { immediate: false, interval: 45000 });
 
   async function onToggle(id: string) {
@@ -77,63 +81,72 @@ export default function AlarmsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
         <BrandHeader title="Alarms" subtitle="Stay on schedule" />
         <Link href="/alarms/create" asChild>
-          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Create Alarm</Text></Pressable>
+          <Pressable style={[styles.createButton, { backgroundColor: alarmTheme.primary }]}>
+            <Text style={styles.createButtonText}>+ Create Alarm</Text>
+          </Pressable>
         </Link>
       </View>
-      {loading ? <ActivityIndicator size="large" style={{ marginTop: 24 }} /> : error ? <Text style={styles.error}>{error}</Text> : (
+      {loading ? (
+        <ActivityIndicator size="large" color={alarmTheme.primary} style={{ marginTop: 24 }} />
+      ) : error ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : (
         <FlatList
           data={alarms}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, gap: 12 }}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: tabPaddingBottom }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#22409a"
-              colors={['#22409a']}
+              tintColor={alarmTheme.primary}
+              colors={[alarmTheme.primary]}
             />
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Pressable 
-                style={{ flex: 1 }} 
-                onPress={() => onToggle(item.id)}
-              >
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardTime}>{item.time}</Text>
-                <Text style={styles.cardMeta}>{getSoundOption(item.sound).label}</Text>
-              </Pressable>
-              <View style={styles.actions}>
-                <Pressable 
-                  style={styles.actionButton} 
-                  onPress={() => router.push(`/alarms/edit?id=${item.id}`)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit alarm"
-                >
-                  <AppIcon name="create-outline" size={18} color={colors.primary} />
-                </Pressable>
-                <Pressable 
-                  style={styles.actionButton} 
-                  onPress={() => onToggle(item.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
-                >
-                  <AppIcon name={item.isEnabled ? "power" : "power-outline"} size={18} color={colors.primary} />
-                </Pressable>
-                <Pressable 
-                  style={styles.actionButton} 
-                  onPress={() => onDelete(item.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Delete alarm"
-                >
-                  <AppIcon name="trash-outline" size={18} color={colors.error} />
-                </Pressable>
-              </View>
-            </View>
+            <TypeContentCard
+              type="alarm"
+              title={item.title}
+              meta={`${item.time} · ${getSoundOption(item.sound).label}`}
+              showKindBadge={false}
+              onPress={() => onToggle(item.id)}
+              actions={
+                <>
+                  <Pressable 
+                    style={styles.actionButton} 
+                    onPress={() => router.push(`/alarms/edit?id=${item.id}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit alarm"
+                  >
+                    <AppIcon name="create-outline" size={18} color={alarmTheme.primary} />
+                  </Pressable>
+                  <Pressable 
+                    style={styles.actionButton} 
+                    onPress={() => onToggle(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
+                  >
+                    <AppIcon
+                      name={item.isEnabled ? "power" : "power-outline"}
+                      size={18}
+                      color={alarmTheme.primary}
+                    />
+                  </Pressable>
+                  <Pressable 
+                    style={styles.actionButton} 
+                    onPress={() => onDelete(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete alarm"
+                  >
+                    <AppIcon name="trash-outline" size={18} color={colors.error} />
+                  </Pressable>
+                </>
+              }
+            />
           )}
         />
       )}
@@ -142,11 +155,9 @@ export default function AlarmsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
+  safeArea: { flex: 1, backgroundColor: colors.alarm.background },
+  header: { paddingHorizontal: 20, paddingTop: 12 },
   createButton: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -157,32 +168,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
-  },
-  flatListContent: { padding: 16, gap: 12 },
-  card: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
-  cardTime: { fontSize: 13, color: colors.textLight, marginTop: 4 },
-  cardMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingLeft: 8,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
   },
   actionButton: {
     width: 36,

@@ -1,5 +1,7 @@
-import { Link, Tag } from "../models";
+import { Link } from "../models";
 import type { LinkItem } from "../lib/types";
+import { HttpError } from "../lib/errors";
+import { LIST_LIMIT, mapTags, toIso } from "../lib/query";
 import { upsertTags } from "./tag.service";
 
 function mapLink(link: any): LinkItem {
@@ -9,23 +11,16 @@ function mapLink(link: any): LinkItem {
     url: link.url,
     description: link.description,
     isFavorite: link.isFavorite,
-    createdAt: link.createdAt.toISOString(),
-    updatedAt: link.updatedAt.toISOString(),
-    tags: link.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+    createdAt: toIso(link.createdAt),
+    updatedAt: toIso(link.updatedAt),
+    tags: mapTags(link.tags),
   };
 }
 
 export async function getLinks(search?: string, tag?: string, userId?: string) {
-  const filter: any = {};
-  
-  if (userId) {
-    filter.userId = userId;
-  }
-  
-  if (tag) {
-    filter.tags = tag;
-  }
-  
+  const filter: Record<string, unknown> = {};
+  if (userId) filter.userId = userId;
+  if (tag) filter.tags = tag;
   if (search) {
     filter.$or = [
       { title: { $regex: search, $options: "i" } },
@@ -35,24 +30,29 @@ export async function getLinks(search?: string, tag?: string, userId?: string) {
   }
 
   const links = await Link.find(filter)
-    .sort({ createdAt: "desc" });
-  
+    .sort({ createdAt: -1 })
+    .limit(LIST_LIMIT)
+    .lean();
+
   return links.map(mapLink);
 }
 
 export async function getLinkById(id: string, userId?: string) {
-  const link = await Link.findById(id);
+  const link = await Link.findById(id).lean();
   if (!link || (userId && link.userId.toString() !== userId)) return null;
   return mapLink(link);
 }
 
-export async function createLink(data: {
-  title: string;
-  url: string;
-  description?: string;
-  tags?: string[];
-  isFavorite?: boolean;
-}, userId: string) {
+export async function createLink(
+  data: {
+    title: string;
+    url: string;
+    description?: string;
+    tags?: string[];
+    isFavorite?: boolean;
+  },
+  userId: string
+) {
   const tags = await upsertTags(data.tags ?? []);
   const link = await Link.create({
     userId,
@@ -77,9 +77,11 @@ export async function updateLink(
   userId?: string
 ) {
   const existing = await Link.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Link not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Link not found");
+  }
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.url !== undefined) updateData.url = data.url;
   if (data.description !== undefined) updateData.description = data.description;
@@ -89,13 +91,15 @@ export async function updateLink(
     updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const link = await Link.findByIdAndUpdate(id, updateData, { new: true });
+  const link = await Link.findByIdAndUpdate(id, updateData, { new: true }).lean();
   return mapLink(link);
 }
 
 export async function deleteLink(id: string, userId?: string) {
   const existing = await Link.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Link not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Link not found");
+  }
   await Link.findByIdAndDelete(id);
 }
 

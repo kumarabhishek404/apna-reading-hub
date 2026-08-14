@@ -1,65 +1,85 @@
-// Modern, professional color palette with type-specific themes
+// Fixed per-type identity colors used across the whole app.
+// Each content type keeps its own primary so lists, filters, and forms stay distinguishable.
 export const colors = {
-  // Type-specific color themes
   note: {
-    primary: '#22409a', // Blue
+    primary: '#22409A', // navy blue
     light: '#3B5BCC',
     dark: '#1A327A',
-    muted: 'rgba(34, 64, 154, 0.1)',
+    muted: 'rgba(34, 64, 154, 0.12)',
+    background: '#EEF2FA',
+    soft: '#DCE5F7',
+    onPrimary: '#FFFFFF',
   },
   blog: {
-    primary: '#8B5CF6', // Purple
-    light: '#A78BFA',
-    dark: '#7C3AED',
-    muted: 'rgba(139, 92, 246, 0.1)',
+    primary: '#0284C7', // sky / cerulean — clearly different from navy notes & green links
+    light: '#38BDF8',
+    dark: '#0369A1',
+    muted: 'rgba(2, 132, 199, 0.12)',
+    background: '#E8F6FD',
+    soft: '#CDEBFA',
+    onPrimary: '#FFFFFF',
   },
   link: {
-    primary: '#10B981', // Green
-    light: '#34D399',
-    dark: '#059669',
-    muted: 'rgba(16, 185, 129, 0.1)',
+    primary: '#15803D', // forest green
+    light: '#22C55E',
+    dark: '#166534',
+    muted: 'rgba(21, 128, 61, 0.12)',
+    background: '#EAF8EF',
+    soft: '#CDEAD7',
+    onPrimary: '#FFFFFF',
   },
   pdf: {
-    primary: '#EC4899', // Pink
-    light: '#F472B6',
-    dark: '#DB2777',
-    muted: 'rgba(236, 72, 153, 0.1)',
+    primary: '#BE123C', // rose / crimson
+    light: '#E11D48',
+    dark: '#9F1239',
+    muted: 'rgba(190, 18, 60, 0.12)',
+    background: '#FCECEF',
+    soft: '#F8D4DC',
+    onPrimary: '#FFFFFF',
   },
   reminder: {
-    primary: '#FF6B35', // Orange
-    light: '#FF8A5B',
-    dark: '#E55A2B',
-    muted: 'rgba(255, 107, 53, 0.1)',
+    primary: '#EA580C', // bright orange
+    light: '#F97316',
+    dark: '#C2410C',
+    muted: 'rgba(234, 88, 12, 0.12)',
+    background: '#FFF3EB',
+    soft: '#FEDFC8',
+    onPrimary: '#FFFFFF',
   },
-  
-  // Legacy colors (for backward compatibility)
-  primary: '#22409a',
+  alarm: {
+    primary: '#A16207', // amber / gold-brown — distinct from reminder orange
+    light: '#CA8A04',
+    dark: '#854D0E',
+    muted: 'rgba(161, 98, 7, 0.12)',
+    background: '#FFF8E8',
+    soft: '#F5E2B8',
+    onPrimary: '#FFFFFF',
+  },
+
+  // App chrome / brand (defaults to note blue)
+  primary: '#22409A',
   primaryLight: '#3B5BCC',
   primaryDark: '#1A327A',
   primaryMuted: 'rgba(34, 64, 154, 0.1)',
-  secondary: '#FF6B35',
-  secondaryLight: '#FF8A5B',
-  secondaryDark: '#E55A2B',
-  secondaryMuted: 'rgba(255, 107, 53, 0.1)',
-  
-  // Neutral tones
+  secondary: '#EA580C',
+  secondaryLight: '#F97316',
+  secondaryDark: '#C2410C',
+  secondaryMuted: 'rgba(234, 88, 12, 0.1)',
+
   background: '#F8FAFC',
   backgroundSecondary: '#F1F5F9',
   surface: '#FFFFFF',
   surfaceLight: '#F8FAFC',
-  
-  // Text colors
+
   text: '#0F172A',
   textSecondary: '#475569',
   textMuted: '#94A3B8',
   textLight: '#64748B',
-  
-  // Blur/Overlay colors
+
   blur: 'rgba(255, 255, 255, 0.7)',
   blurDark: 'rgba(15, 23, 42, 0.8)',
   blurOverlay: 'rgba(255, 255, 255, 0.4)',
-  
-  // Semantic colors
+
   success: '#10B981',
   successLight: '#34D399',
   error: '#EF4444',
@@ -68,32 +88,27 @@ export const colors = {
   warningLight: '#FBBF24',
   info: '#3B82F6',
   infoLight: '#60A5FA',
-  
-  // Border colors
+
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
-  borderFocus: '#22409a',
-  
-  // Shadow colors
+  borderFocus: '#22409A',
+
   shadow: 'rgba(15, 23, 42, 0.08)',
   shadowLight: 'rgba(15, 23, 42, 0.04)',
   shadowPrimary: 'rgba(34, 64, 154, 0.15)',
-  shadowSecondary: 'rgba(255, 107, 53, 0.15)',
-  
-  // Gradient colors
-  gradientStart: '#22409a',
-  gradientEnd: '#FF6B35',
-  gradientBlue: ['#22409a', '#3B5BCC'],
-  gradientOrange: ['#FF6B35', '#FF8A5B'],
-  gradientMixed: ['#22409a', '#FF6B35'],
+  shadowSecondary: 'rgba(234, 88, 12, 0.15)',
+
+  gradientStart: '#22409A',
+  gradientEnd: '#EA580C',
+  gradientBlue: ['#22409A', '#3B5BCC'],
+  gradientOrange: ['#EA580C', '#F97316'],
+  gradientMixed: ['#22409A', '#EA580C'],
 };
 
-// Helper function to get type-specific color
-export function getTypeColor(type: 'note' | 'blog' | 'link' | 'pdf' | 'reminder') {
+export function getTypeColor(type: 'note' | 'blog' | 'link' | 'pdf' | 'reminder' | 'alarm') {
   return colors[type];
 }
 
-// Spacing scale
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -105,7 +120,6 @@ export const spacing = {
   xxxxl: 40,
 };
 
-// Border radius
 export const borderRadius = {
   sm: 8,
   md: 12,
@@ -115,7 +129,6 @@ export const borderRadius = {
   full: 9999,
 };
 
-// Shadow presets
 export const shadows = {
   sm: {
     shadowColor: colors.shadow,
@@ -161,28 +174,26 @@ export const shadows = {
   },
 };
 
-// Typography
 export const typography = {
   heading: {
-    h1: { fontSize: 32, fontWeight: '800', lineHeight: 40, letterSpacing: -0.5 },
-    h2: { fontSize: 28, fontWeight: '700', lineHeight: 36, letterSpacing: -0.3 },
-    h3: { fontSize: 24, fontWeight: '700', lineHeight: 32, letterSpacing: -0.2 },
-    h4: { fontSize: 20, fontWeight: '600', lineHeight: 28, letterSpacing: -0.1 },
+    h1: { fontSize: 32, fontWeight: '800' as const, lineHeight: 40, letterSpacing: -0.5 },
+    h2: { fontSize: 28, fontWeight: '700' as const, lineHeight: 36, letterSpacing: -0.3 },
+    h3: { fontSize: 24, fontWeight: '700' as const, lineHeight: 32, letterSpacing: -0.2 },
+    h4: { fontSize: 20, fontWeight: '600' as const, lineHeight: 28, letterSpacing: -0.1 },
   },
   body: {
-    large: { fontSize: 18, fontWeight: '500', lineHeight: 26 },
-    medium: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
-    small: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
-    tiny: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
+    large: { fontSize: 18, fontWeight: '500' as const, lineHeight: 26 },
+    medium: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
+    small: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+    tiny: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
   },
   label: {
-    large: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
-    medium: { fontSize: 12, fontWeight: '600', lineHeight: 18 },
-    small: { fontSize: 11, fontWeight: '700', lineHeight: 16, letterSpacing: 0.5 },
+    large: { fontSize: 14, fontWeight: '600' as const, lineHeight: 20 },
+    medium: { fontSize: 12, fontWeight: '600' as const, lineHeight: 18 },
+    small: { fontSize: 11, fontWeight: '700' as const, lineHeight: 16, letterSpacing: 0.5 },
   },
 };
 
-// Animation durations
 export const animation = {
   fast: 150,
   normal: 300,
@@ -190,7 +201,6 @@ export const animation = {
   slower: 700,
 };
 
-// Easing functions
 export const easing = {
   ease: 'ease',
   easeIn: 'ease-in',

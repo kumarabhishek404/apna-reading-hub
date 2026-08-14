@@ -7,9 +7,15 @@ interface TimePickerProps {
   value: string;
   onChange: (time: string) => void;
   label?: string;
+  accentColor?: string;
 }
 
-export function TimePicker({ value, onChange, label }: TimePickerProps) {
+export function TimePicker({
+  value,
+  onChange,
+  label,
+  accentColor = colors.primary,
+}: TimePickerProps) {
   const [visible, setVisible] = useState(false);
   const [hours, setHours] = useState(parseInt(value.split(':')[0]) || 7);
   const [minutes, setMinutes] = useState(parseInt(value.split(':')[1]) || 0);
@@ -26,20 +32,12 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
     setVisible(false);
   };
 
-  const handleHourPress = (h: number) => {
-    setHours(h);
-  };
-
-  const handleMinutePress = (m: number) => {
-    setMinutes(m);
-  };
-
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={[styles.label, { color: accentColor }]}>{label}</Text> : null}
       <Pressable style={styles.timeDisplay} onPress={() => setVisible(true)}>
         <Text style={styles.timeText}>{value}</Text>
-        <AppIcon name="time-outline" size={20} color={colors.primary} />
+        <AppIcon name="time-outline" size={20} color={accentColor} />
       </Pressable>
 
       <Modal
@@ -58,7 +56,9 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
             </View>
 
             <View style={styles.timeDisplayLarge}>
-              <Text style={styles.timeTextLarge}>{formatTime(hours, minutes)}</Text>
+              <Text style={[styles.timeTextLarge, { color: accentColor }]}>
+                {formatTime(hours, minutes)}
+              </Text>
             </View>
 
             <View style={styles.pickerContainer}>
@@ -68,10 +68,18 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                   {hoursOptions.map((h) => (
                     <Pressable
                       key={h}
-                      style={[styles.pickerItem, hours === h && styles.pickerItemSelected]}
-                      onPress={() => handleHourPress(h)}
+                      style={[
+                        styles.pickerItem,
+                        hours === h && { backgroundColor: `${accentColor}1F` },
+                      ]}
+                      onPress={() => setHours(h)}
                     >
-                      <Text style={[styles.pickerItemText, hours === h && styles.pickerItemTextSelected]}>
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          hours === h && { color: accentColor },
+                        ]}
+                      >
                         {h.toString().padStart(2, '0')}
                       </Text>
                     </Pressable>
@@ -85,10 +93,18 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
                   {minutesOptions.map((m) => (
                     <Pressable
                       key={m}
-                      style={[styles.pickerItem, minutes === m && styles.pickerItemSelected]}
-                      onPress={() => handleMinutePress(m)}
+                      style={[
+                        styles.pickerItem,
+                        minutes === m && { backgroundColor: `${accentColor}1F` },
+                      ]}
+                      onPress={() => setMinutes(m)}
                     >
-                      <Text style={[styles.pickerItemText, minutes === m && styles.pickerItemTextSelected]}>
+                      <Text
+                        style={[
+                          styles.pickerItemText,
+                          minutes === m && { color: accentColor },
+                        ]}
+                      >
                         {m.toString().padStart(2, '0')}
                       </Text>
                     </Pressable>
@@ -97,7 +113,10 @@ export function TimePicker({ value, onChange, label }: TimePickerProps) {
               </View>
             </View>
 
-            <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+            <Pressable
+              style={[styles.confirmButton, { backgroundColor: accentColor }]}
+              onPress={handleConfirm}
+            >
               <Text style={styles.confirmButtonText}>Confirm</Text>
             </Pressable>
           </View>
@@ -113,8 +132,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '700',
     marginBottom: 8,
   },
   timeDisplay: {
@@ -165,7 +183,6 @@ const styles = StyleSheet.create({
   timeTextLarge: {
     fontSize: 48,
     fontWeight: '800',
-    color: colors.primary,
   },
   pickerContainer: {
     flexDirection: 'row',
@@ -191,19 +208,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
-  pickerItemSelected: {
-    backgroundColor: colors.primaryMuted,
-  },
   pickerItemText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
   },
-  pickerItemTextSelected: {
-    color: colors.primary,
-  },
   confirmButton: {
-    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

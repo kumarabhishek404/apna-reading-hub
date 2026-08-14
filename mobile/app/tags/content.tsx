@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Linking,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
-import { getContentByTag, type TagItem } from '@/api/tags';
-import { getBlogs } from '@/api/blogs';
-import { getLinks } from '@/api/links';
-import { getPdfs } from '@/api/pdfs';
-import { getNotes } from '@/api/notes';
-import { useToast } from '@/components/ToastContext';
+import { TypeContentCard } from '@/components/TypeContentCard';
+import { getContentByTag } from '@/api/tags';
 import { useDataSync } from '@/lib/dataSync';
+import { colors } from '@/theme/colors';
+import type { ItemType } from '@/theme/typeColors';
 
 type ContentItem = {
   kind: 'blog' | 'link' | 'pdf' | 'note';
@@ -22,27 +29,21 @@ export default function TagContentScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { showError } = useToast();
 
   async function load() {
     if (!name) return;
     setLoading(true);
     setError(null);
     try {
-      console.log('[Tag Content] Loading content for tag:', name);
       const content = await getContentByTag(name);
-      console.log('[Tag Content] Received content:', content);
-      
       const allItems: ContentItem[] = [];
 
-      // Add blogs
       if (content.items && Array.isArray(content.items)) {
         content.items.forEach((item: any) => {
           allItems.push({ kind: item.kind || 'blog', item });
         });
       }
 
-      console.log('[Tag Content] Total items:', allItems.length);
       setItems(allItems);
     } catch (err) {
       console.error('[Tag Content] Failed to load content:', err);
@@ -53,10 +54,9 @@ export default function TagContentScreen() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [name]);
 
-  // Auto-sync data for database consistency
   useDataSync(load, { immediate: false, interval: 45000 });
 
   async function onRefresh() {
@@ -75,8 +75,8 @@ export default function TagContentScreen() {
 
   const openItem = async (entry: ContentItem) => {
     if (entry.kind === 'link') {
-      const url = entry.item.url.startsWith('http') 
-        ? entry.item.url 
+      const url = entry.item.url.startsWith('http')
+        ? entry.item.url
         : `https://${entry.item.url}`;
       await Linking.openURL(url);
       return;
@@ -84,8 +84,8 @@ export default function TagContentScreen() {
 
     if (entry.kind === 'blog') {
       if (entry.item.url) {
-        const url = entry.item.url.startsWith('http') 
-          ? entry.item.url 
+        const url = entry.item.url.startsWith('http')
+          ? entry.item.url
           : `https://${entry.item.url}`;
         await Linking.openURL(url);
       } else {
@@ -101,82 +101,76 @@ export default function TagContentScreen() {
 
     if (entry.kind === 'note') {
       router.push(`/notes/edit?id=${entry.item.id}`);
-      return;
     }
   };
-
-  const renderLabel = (kind: string) => {
-    const labels = {
-      note: 'NOTE',
-      blog: 'BLOG',
-      link: 'LINK',
-      pdf: 'PDF',
-    };
-    return labels[kind as keyof typeof labels] || kind.toUpperCase();
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Loading content...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-          <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
+        <Pressable
+          style={styles.backButton}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={colors.primary} />
         </Pressable>
         <View style={styles.titleContainer}>
+          <View style={styles.tagBadge}>
+            <AppIcon name="pricetag" size={12} color="#fff" />
+            <Text style={styles.tagBadgeText}>Tag</Text>
+          </View>
           <Text style={styles.title}>{name}</Text>
-          <Text style={styles.subtitle}>{items.length} items</Text>
+          <Text style={styles.subtitle}>
+            {loading ? 'Loading…' : `${items.length} item${items.length === 1 ? '' : 's'}`}
+          </Text>
         </View>
       </View>
 
       <View style={styles.container}>
-        {error ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading content…</Text>
+          </View>
+        ) : error ? (
           <Text style={styles.error}>{error}</Text>
         ) : items.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <AppIcon name="document-outline" size={48} color="#94a3b8" />
-            <Text style={styles.emptyText}>No content tagged with "{name}"</Text>
+            <View style={styles.emptyIcon}>
+              <AppIcon name="document-outline" size={36} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyText}>Nothing tagged yet</Text>
+            <Text style={styles.emptySubtext}>
+              Add “{name}” when creating notes, links, blogs, or PDFs.
+            </Text>
           </View>
         ) : (
           <FlatList
             data={items}
             keyExtractor={(entry, index) => `${entry.kind}-${entry.item.id}-${index}`}
-            contentContainerStyle={{ padding: 16, gap: 12 }}
+            contentContainerStyle={styles.listContent}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor="#22409a"
-                colors={['#22409a']}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
               />
             }
             renderItem={({ item }) => (
-              <Pressable 
-                style={styles.card} 
-                onPress={() => openItem(item)}
-              >
-                <Text style={styles.cardKind}>{renderLabel(item.kind)}</Text>
-                <Text style={styles.cardTitle}>{item.item.title}</Text>
-                <Text style={styles.cardMeta}>
-                  {item.kind === 'link' ? item.item.url : 
-                   item.kind === 'pdf' ? item.item.description || 'Uploaded PDF' : 
-                   'Saved to your library'}
-                </Text>
-              </Pressable>
+              <TypeContentCard
+                type={item.kind as ItemType}
+                title={item.item.title}
+                meta={
+                  item.kind === 'link'
+                    ? item.item.url
+                    : item.kind === 'pdf'
+                      ? item.item.description || 'Uploaded PDF'
+                      : 'Saved to your library'
+                }
+                onPress={() => void openItem(item)}
+              />
             )}
           />
         )}
@@ -186,54 +180,63 @@ export default function TagContentScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1, backgroundColor: colors.note.background },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
     gap: 12,
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eef4ff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#dfe9ff',
+    borderColor: colors.note.soft,
   },
   titleContainer: {
     flex: 1,
+    gap: 4,
+  },
+  tagBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  tagBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#1d2f5f',
+    color: colors.primaryDark,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 2,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
   },
-  container: { flex: 1, padding: 16 },
-  card: {
-    backgroundColor: '#fff',
+  container: { flex: 1 },
+  listContent: {
     padding: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#edf1fa',
-    shadowColor: '#22409a',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    gap: 12,
+    paddingBottom: 28,
   },
-  cardKind: { fontSize: 11, fontWeight: '800', color: '#ff8a00', textTransform: 'uppercase', letterSpacing: 0.8 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1d2f5f', marginTop: 4 },
-  cardMeta: { fontSize: 12, color: '#64748b', marginTop: 6 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -241,23 +244,43 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 15,
+    color: colors.textMuted,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    paddingHorizontal: 28,
+  },
+  emptyIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+    marginBottom: 4,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   error: {
     marginTop: 16,
-    color: '#d14f46',
+    color: colors.error,
     paddingHorizontal: 20,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

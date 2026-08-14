@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon } from '@/components/AppIcon';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { createLink } from '@/api/links';
 import { Input } from '@/components/Input';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { linkOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { useIsOnline } from '@/lib/networkMonitor';
-import { OfflineStatusCompact } from '@/components/OfflineStatus';
+import { getTypeTheme } from '@/theme/typeColors';
+
+const TYPE = 'link' as const;
+const theme = getTypeTheme(TYPE);
 
 export default function CreateLinkScreen() {
   const [title, setTitle] = useState('');
@@ -21,14 +24,6 @@ export default function CreateLinkScreen() {
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
   const isOnline = useIsOnline();
-
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/content');
-  };
 
   async function submit() {
     const newErrors: { title?: string; url?: string } = {};
@@ -52,14 +47,12 @@ export default function CreateLinkScreen() {
     setLoading(true);
     try {
       if (isOnline) {
-        // Online: Create via API
-        const result = await createLink({ title, url, description, tags, isFavorite: false });
+        await createLink({ title, url, description, tags, isFavorite: false });
         setLoading(false);
         showSuccess('Link created successfully');
         router.back();
       } else {
-        // Offline: Create locally first
-        const link = await linkOfflineRepository.createEntity('link', {
+        await linkOfflineRepository.createEntity('link', {
           title,
           url,
           description,
@@ -78,21 +71,15 @@ export default function CreateLinkScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-          <OfflineStatusCompact />
-        </View>
-        <Text style={styles.title}>New Link</Text>
+    <View style={styles.wrapper}>
+      <TypeThemedScreen type={TYPE} title="New Link" headerRight={<OfflineStatusCompact />}>
         <Input
           label="Link Title"
           placeholder="Enter link title"
           value={title}
           onChangeText={setTitle}
           error={errors.title}
+          accentColor={theme.primary}
         />
         <Input
           label="Link URL"
@@ -102,6 +89,7 @@ export default function CreateLinkScreen() {
           error={errors.url}
           autoCapitalize="none"
           keyboardType="url"
+          accentColor={theme.primary}
         />
         <Input
           label="Description"
@@ -110,41 +98,34 @@ export default function CreateLinkScreen() {
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
+          accentColor={theme.primary}
         />
         <TagSelector
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
           onTagsChange={(tagNames) => setTags(tagNames)}
+          accentColor={theme.primary}
         />
-        <PrimaryButton title={loading ? 'Saving...' : 'Create Link'} onPress={submit} disabled={loading} />
-      </View>
+        <PrimaryButton
+          title={loading ? 'Saving...' : 'Create Link'}
+          onPress={submit}
+          disabled={loading}
+          color={theme.primary}
+        />
+      </TypeThemedScreen>
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Saving link...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.dark }]}>Saving link...</Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { flex: 1, padding: 20, gap: 14 },
-  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  wrapper: { flex: 1 },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -159,6 +140,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1d2f5f',
   },
 });

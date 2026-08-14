@@ -13,6 +13,7 @@ interface InputProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   secureTextEntry?: boolean;
   placeholderTextColor?: string;
+  accentColor?: string;
 }
 
 export function Input({
@@ -27,15 +28,19 @@ export function Input({
   autoCapitalize = 'sentences',
   secureTextEntry = false,
   placeholderTextColor = colors.textLight,
+  accentColor = colors.primary,
 }: InputProps) {
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? (
+        <Text style={[styles.label, { color: accentColor }]}>{label}</Text>
+      ) : null}
       <TextInput
         style={[
           styles.input,
           multiline && styles.multiline,
           error && styles.inputError,
+          !error && { borderColor: colors.border },
         ]}
         placeholder={placeholder}
         placeholderTextColor={placeholderTextColor}
@@ -46,8 +51,9 @@ export function Input({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
+        selectionColor={accentColor}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -58,8 +64,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '700',
   },
   input: {
     backgroundColor: colors.surface,

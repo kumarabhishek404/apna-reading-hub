@@ -6,14 +6,18 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { getBlogById } from '@/api/blogs';
 import { ActionMenu } from '@/components/ActionMenu';
 import { useToast } from '@/components/ToastContext';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
 import type { BlogItem } from '@/types';
+
+const theme = getTypeTheme('blog');
 
 export default function ReadBlogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [blog, setBlog] = useState<BlogItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
 
   useEffect(() => {
     async function loadBlog() {
@@ -50,19 +54,19 @@ export default function ReadBlogScreen() {
     {
       label: 'Edit',
       icon: 'create-outline',
-      color: '#22409a',
+      color: theme.primary,
       onPress: () => router.push(`/blogs/edit?id=${id}`),
     },
     {
       label: 'Add Reminder',
       icon: 'alarm-outline',
-      color: '#22409a',
+      color: theme.primary,
       onPress: () => router.push(`/reminders/create?linkedId=${id}&linkedType=blog`),
     },
     {
       label: blog?.url ? 'Open URL' : 'No URL',
       icon: 'open-outline',
-      color: blog?.url ? '#22409a' : '#94a3b8',
+      color: blog?.url ? theme.primary : colors.textMuted,
       onPress: () => blog?.url && openUrl(),
       disabled: !blog?.url,
     },
@@ -70,9 +74,9 @@ export default function ReadBlogScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22409a" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading blog...</Text>
         </View>
       </SafeAreaView>
@@ -81,7 +85,7 @@ export default function ReadBlogScreen() {
 
   if (!blog) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Blog not found</Text>
         </View>
@@ -90,22 +94,32 @@ export default function ReadBlogScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-          <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: theme.muted, borderColor: theme.soft }]}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={theme.primary} />
         </Pressable>
-        <Pressable style={styles.menuButton} onPress={() => setShowMenu(true)} accessibilityRole="button" accessibilityLabel="More options">
-          <AppIcon name="ellipsis-vertical" size={22} color="#1d2f5f" />
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: theme.muted, borderColor: theme.soft }]}
+          onPress={() => setShowMenu(true)}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+        >
+          <AppIcon name="ellipsis-vertical" size={22} color={theme.primary} />
         </Pressable>
       </View>
       
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>{blog.title}</Text>
+        <Text style={[styles.title, { color: theme.dark }]}>{blog.title}</Text>
         {blog.url && (
-          <Pressable style={styles.urlButton} onPress={openUrl}>
+          <Pressable style={[styles.urlButton, { backgroundColor: theme.primary }]} onPress={openUrl}>
             <Text style={styles.urlButtonText}>Open Original URL</Text>
-            <AppIcon name="open-outline" size={16} color="#22409a" />
+            <AppIcon name="open-outline" size={16} color={theme.onPrimary} />
           </Pressable>
         )}
         <Text style={styles.content}>{blog.content || 'No content available.'}</Text>
@@ -124,7 +138,7 @@ export default function ReadBlogScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -133,25 +147,13 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  backButton: {
+  iconButton: {
     width: 38,
     height: 38,
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eef4ff',
     borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  menuButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
   },
   container: {
     padding: 20,
@@ -160,7 +162,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#1d2f5f',
     letterSpacing: -0.3,
   },
   urlButton: {
@@ -168,7 +169,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#22409a',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.textMuted,
     marginTop: 8,
   },
   loadingContainer: {
@@ -197,6 +197,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
   },
 });

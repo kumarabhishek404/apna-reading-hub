@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { AppIcon } from '@/components/AppIcon';
-import { BrandHeader } from '@/components/BrandHeader';
-import { getTags, deleteTag, type TagItem } from '@/api/tags';
 import { ActionMenu } from '@/components/ActionMenu';
 import { useToast } from '@/components/ToastContext';
+import { getTags, deleteTag, type TagItem } from '@/api/tags';
 import { useDataSync } from '@/lib/dataSync';
+import { colors } from '@/theme/colors';
 
 export default function TagsScreen() {
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -33,10 +42,15 @@ export default function TagsScreen() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
-  // Auto-sync data for database consistency
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, []),
+  );
+
   useDataSync(load, { immediate: false, interval: 45000 });
 
   async function onRefresh() {
@@ -66,21 +80,6 @@ export default function TagsScreen() {
     setShowMenu(true);
   };
 
-  const getActions = (tag: TagItem) => [
-    {
-      label: 'Edit',
-      icon: 'create-outline',
-      color: '#22409a',
-      onPress: () => router.push(`/tags/create?id=${tag.id}&name=${encodeURIComponent(tag.name)}`),
-    },
-    {
-      label: 'Delete',
-      icon: 'trash-outline',
-      color: '#ef4444',
-      onPress: () => onDelete(tag.id),
-    },
-  ];
-
   const onDelete = async (id: string) => {
     try {
       await deleteTag(id);
@@ -92,74 +91,106 @@ export default function TagsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Loading tags...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const getActions = (tag: TagItem) => [
+    {
+      label: 'Edit',
+      icon: 'create-outline',
+      color: colors.primary,
+      onPress: () =>
+        router.push(`/tags/create?id=${tag.id}&name=${encodeURIComponent(tag.name)}`),
+    },
+    {
+      label: 'Delete',
+      icon: 'trash-outline',
+      color: colors.error,
+      onPress: () => onDelete(tag.id),
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-          <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
+        <Pressable
+          style={styles.backButton}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={colors.primary} />
         </Pressable>
-        <BrandHeader title="Tags" subtitle="Organize your content" />
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Tags</Text>
+          <Text style={styles.subtitle}>
+            {loading ? 'Loading…' : `${tags.length} tag${tags.length === 1 ? '' : 's'} to organize content`}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.container}>
-        <Pressable style={styles.createButton} onPress={navigateToCreateTag} accessibilityRole="button" accessibilityLabel="Create new tag">
+        <Pressable
+          style={styles.createButton}
+          onPress={navigateToCreateTag}
+          accessibilityRole="button"
+          accessibilityLabel="Create new tag"
+        >
           <AppIcon name="add" size={20} color="#fff" />
-          <Text style={styles.createButtonText}>Create Tag</Text>
+          <Text style={styles.createButtonText}>Create tag</Text>
         </Pressable>
 
-        {error ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading tags…</Text>
+          </View>
+        ) : error ? (
           <Text style={styles.error}>{error}</Text>
         ) : tags.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <AppIcon name="pricetag-outline" size={48} color="#94a3b8" />
+            <View style={styles.emptyIcon}>
+              <AppIcon name="pricetag-outline" size={40} color={colors.primary} />
+            </View>
             <Text style={styles.emptyText}>No tags yet</Text>
-            <Text style={styles.emptySubtext}>Create your first tag to organize content</Text>
+            <Text style={styles.emptySubtext}>
+              Create your first tag, then attach it while saving notes, links, blogs, or PDFs.
+            </Text>
+            <Pressable style={styles.emptyButton} onPress={navigateToCreateTag}>
+              <Text style={styles.emptyButtonText}>Create your first tag</Text>
+            </Pressable>
           </View>
         ) : (
           <FlatList
             data={tags}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ padding: 16, gap: 12 }}
+            contentContainerStyle={styles.listContent}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor="#22409a"
-                colors={['#22409a']}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
               />
             }
             renderItem={({ item }) => (
-              <Pressable 
-                style={styles.tagCard} 
+              <Pressable
+                style={styles.tagCard}
                 onPress={() => navigateToTagContent(item)}
                 onLongPress={() => handleLongPress(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`View ${item.name} tag with ${item.count} items`}
               >
-                <View style={styles.tagContent}>
-                  <AppIcon name="pricetag" size={20} color="#22409a" />
+                <View style={styles.tagIcon}>
+                  <AppIcon name="pricetag" size={18} color="#fff" />
+                </View>
+                <View style={styles.tagCopy}>
                   <Text style={styles.tagName}>{item.name}</Text>
+                  <Text style={styles.tagMetaText}>
+                    {item.count} item{item.count === 1 ? '' : 's'}
+                  </Text>
                 </View>
-                <View style={styles.tagMeta}>
+                <View style={styles.tagCountBadge}>
                   <Text style={styles.tagCount}>{item.count}</Text>
-                  <AppIcon name="chevron-forward" size={16} color="#94a3b8" />
                 </View>
+                <AppIcon name="chevron-forward" size={16} color={colors.primary} />
               </Pressable>
             )}
           />
@@ -176,7 +207,7 @@ export default function TagsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1, backgroundColor: colors.note.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,69 +217,93 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eef4ff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#dfe9ff',
+    borderColor: colors.note.soft,
   },
-  container: { flex: 1, padding: 16, gap: 16 },
+  headerCopy: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    marginTop: 2,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 8, gap: 14 },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#22409a',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
   },
   createButtonText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 16,
   },
+  listContent: {
+    paddingBottom: 40,
+    gap: 10,
+  },
   tagCard: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.surface,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#edf1fa',
-    shadowColor: '#22409a',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  tagContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+  },
+  tagIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagCopy: {
+    flex: 1,
+    gap: 2,
   },
   tagName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1d2f5f',
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
-  tagMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  tagMetaText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  tagCountBadge: {
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   tagCount: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#22409a',
-    backgroundColor: '#eef4ff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -257,28 +312,55 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 15,
+    color: colors.textMuted,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    paddingHorizontal: 24,
+  },
+  emptyIcon: {
+    width: 84,
+    height: 84,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+    marginBottom: 4,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.primaryDark,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyButton: {
+    marginTop: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
   },
   error: {
     marginTop: 16,
-    color: '#d14f46',
-    paddingHorizontal: 20,
-    fontWeight: '600',
+    color: colors.error,
+    paddingHorizontal: 8,
+    fontWeight: '700',
   },
 });

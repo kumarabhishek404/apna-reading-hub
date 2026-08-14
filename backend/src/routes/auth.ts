@@ -1,46 +1,47 @@
 import { Router } from "express";
 import { getCurrentUserFromRequest, requireAuth } from "../lib/auth";
 import { loginUser, registerUser } from "../services/auth.service";
+import { asyncHandler } from "../lib/async-handler";
+import { rateLimit } from "../middleware/rate-limit";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
-  try {
-    const result = await registerUser(req.body);
-    return res.status(201).json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Registration failed";
-    const status =
-      /already exists/i.test(message) ? 409 :
-      /required|valid|match|characters/i.test(message) ? 400 :
-      400;
-    return res.status(status).json({ error: message });
-  }
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyPrefix: "auth",
 });
 
-router.post("/login", async (req, res) => {
-  try {
+router.post(
+  "/register",
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const result = await registerUser(req.body);
+    res.status(201).json(result);
+  })
+);
+
+router.post(
+  "/login",
+  authLimiter,
+  asyncHandler(async (req, res) => {
     const { mobile, password } = req.body ?? {};
     const result = await loginUser(mobile ?? "", password ?? "");
-    return res.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Login failed";
-    const status = /required/i.test(message) ? 400 : 401;
-    return res.status(status).json({ error: message });
-  }
-});
+    res.json(result);
+  })
+);
 
-router.get("/me", requireAuth, async (req, res) => {
-  try {
+router.get(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
     const user = await getCurrentUserFromRequest(req);
     if (!user) {
-      return res.status(401).json({ error: "User not found" });
+      res.status(401).json({ error: "User not found" });
+      return;
     }
-    return res.json({ user });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load profile";
-    return res.status(500).json({ error: message });
-  }
-});
+    res.json({ user });
+  })
+);
 
 export default router;

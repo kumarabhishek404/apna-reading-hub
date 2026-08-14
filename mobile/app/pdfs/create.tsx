@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
@@ -8,7 +7,13 @@ import { createPdf } from '@/api/pdfs';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
+
+const TYPE = 'pdf' as const;
+const theme = getTypeTheme(TYPE);
 
 export default function CreatePdfScreen() {
   const [title, setTitle] = useState('');
@@ -18,14 +23,6 @@ export default function CreatePdfScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; pdfFile?: string }>({});
   const { showSuccess, showError } = useToast();
-
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/content');
-  };
 
   const pickPdfFile = async () => {
     console.log('[PDF Create] File picker started');
@@ -55,7 +52,6 @@ export default function CreatePdfScreen() {
       });
 
       setPdfFile(selectedFile);
-      // Auto-fill title if empty
       if (!title.trim()) {
         const autoTitle = selectedFile.name.replace('.pdf', '');
         console.log('[PDF Create] Auto-filling title', autoTitle);
@@ -99,7 +95,6 @@ export default function CreatePdfScreen() {
         setLoading(false);
         return;
       }
-      // Create FormData for file upload
       const formData = new FormData();
       formData.append('title', title.trim());
       formData.append('description', description.trim());
@@ -131,26 +126,22 @@ export default function CreatePdfScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-        </View>
-        <Text style={styles.title}>New PDF</Text>
-        
-        <Pressable style={styles.filePickerButton} onPress={pickPdfFile}>
-          <AppIcon name="document-outline" size={24} color="#22409a" />
+    <View style={styles.wrapper}>
+      <TypeThemedScreen type={TYPE} title="New PDF">
+        <Pressable
+          style={[styles.filePickerButton, { borderColor: theme.primary }]}
+          onPress={pickPdfFile}
+        >
+          <AppIcon name="document-outline" size={24} color={theme.primary} />
           <View style={styles.filePickerContent}>
-            <Text style={styles.filePickerTitle}>
+            <Text style={[styles.filePickerTitle, { color: theme.dark }]}>
               {pdfFile ? pdfFile.name : 'Select PDF File'}
             </Text>
             <Text style={styles.filePickerSubtitle}>
               {pdfFile ? 'Tap to change file' : 'Tap to browse files'}
             </Text>
           </View>
-          <AppIcon name="chevron-forward" size={20} color="#94a3b8" />
+          <AppIcon name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
         
         <Input
@@ -159,6 +150,7 @@ export default function CreatePdfScreen() {
           value={title}
           onChangeText={setTitle}
           error={errors.title}
+          accentColor={theme.primary}
         />
         <Input
           label="Description"
@@ -167,41 +159,34 @@ export default function CreatePdfScreen() {
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
+          accentColor={theme.primary}
         />
         <TagSelector
           label="Tags"
           placeholder="Select tags (optional)"
           selectedTags={tags}
           onTagsChange={setTags}
+          accentColor={theme.primary}
         />
-        <PrimaryButton title={loading ? 'Uploading...' : 'Upload PDF'} onPress={submit} disabled={loading} />
-      </View>
+        <PrimaryButton
+          title={loading ? 'Uploading...' : 'Upload PDF'}
+          onPress={submit}
+          disabled={loading}
+          color={theme.primary}
+        />
+      </TypeThemedScreen>
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>Uploading PDF...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.dark }]}>Uploading PDF...</Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { flex: 1, padding: 20, gap: 14 },
-  headerRow: { marginBottom: 4 },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  wrapper: { flex: 1 },
   filePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,7 +195,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#22409a',
     borderStyle: 'dashed',
   },
   filePickerContent: {
@@ -219,11 +203,10 @@ const styles = StyleSheet.create({
   filePickerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1d2f5f',
   },
   filePickerSubtitle: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.textMuted,
     marginTop: 2,
   },
   loadingOverlay: {
@@ -240,6 +223,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1d2f5f',
   },
 });

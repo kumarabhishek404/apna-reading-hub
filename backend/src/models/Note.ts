@@ -26,6 +26,8 @@ const NoteSchema = new Schema<INote>(
 );
 
 NoteSchema.index({ userId: 1, isPinned: -1, createdAt: -1 });
+NoteSchema.index({ userId: 1, tags: 1 });
+NoteSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
 NoteSchema.index({ title: "text", content: "text" });
 
 const NoteModel: Model<INote> = mongoose.models.Note || mongoose.model<INote>("Note", NoteSchema);

@@ -26,6 +26,8 @@ const BlogSchema = new Schema<IBlog>(
 );
 
 BlogSchema.index({ userId: 1, createdAt: -1 });
+BlogSchema.index({ userId: 1, tags: 1 });
+BlogSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
 BlogSchema.index({ title: "text", content: "text", url: "text" });
 
 const BlogModel: Model<IBlog> = mongoose.models.Blog || mongoose.model<IBlog>("Blog", BlogSchema);

@@ -1,18 +1,20 @@
 import { Reminder } from "../models";
 import type { ReminderItem } from "../lib/types";
+import { HttpError } from "../lib/errors";
+import { LIST_LIMIT, toIso } from "../lib/query";
 
 function mapReminder(r: any): ReminderItem {
   return {
     id: r._id.toString(),
     title: r.title,
     description: r.description,
-    dueAt: r.dueAt.toISOString(),
+    dueAt: toIso(r.dueAt),
     priority: r.priority as ReminderItem["priority"],
     repeat: r.repeat as ReminderItem["repeat"],
     isCompleted: r.isCompleted,
     sound: (r.sound || "default") as ReminderItem["sound"],
-    createdAt: r.createdAt.toISOString(),
-    updatedAt: r.updatedAt.toISOString(),
+    createdAt: toIso(r.createdAt),
+    updatedAt: toIso(r.updatedAt),
   };
 }
 
@@ -23,20 +25,11 @@ export async function getReminders(options?: {
   userId?: string;
 }) {
   const now = new Date();
-  const filter: any = {};
-  
-  if (options?.userId) {
-    filter.userId = options.userId;
-  }
-  
-  if (!options?.includeCompleted) {
-    filter.isCompleted = false;
-  }
-  
-  if (options?.upcoming) {
-    filter.dueAt = { $gte: now };
-  }
-  
+  const filter: Record<string, unknown> = {};
+
+  if (options?.userId) filter.userId = options.userId;
+  if (!options?.includeCompleted) filter.isCompleted = false;
+  if (options?.upcoming) filter.dueAt = { $gte: now };
   if (options?.search) {
     filter.$or = [
       { title: { $regex: options.search, $options: "i" } },
@@ -45,25 +38,30 @@ export async function getReminders(options?: {
   }
 
   const reminders = await Reminder.find(filter)
-    .sort({ isCompleted: "asc", dueAt: "asc" });
-  
+    .sort({ isCompleted: 1, dueAt: 1 })
+    .limit(LIST_LIMIT)
+    .lean();
+
   return reminders.map(mapReminder);
 }
 
 export async function getReminderById(id: string, userId?: string) {
-  const reminder = await Reminder.findById(id);
+  const reminder = await Reminder.findById(id).lean();
   if (!reminder || (userId && reminder.userId.toString() !== userId)) return null;
   return mapReminder(reminder);
 }
 
-export async function createReminder(data: {
-  title: string;
-  description?: string;
-  dueAt: string;
-  priority?: string;
-  repeat?: string;
-  sound?: string;
-}, userId: string) {
+export async function createReminder(
+  data: {
+    title: string;
+    description?: string;
+    dueAt: string;
+    priority?: string;
+    repeat?: string;
+    sound?: string;
+  },
+  userId: string
+) {
   const reminder = await Reminder.create({
     userId,
     title: data.title,
@@ -90,9 +88,11 @@ export async function updateReminder(
   userId?: string
 ) {
   const existing = await Reminder.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Reminder not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Reminder not found");
+  }
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.dueAt !== undefined) updateData.dueAt = new Date(data.dueAt);
@@ -101,13 +101,15 @@ export async function updateReminder(
   if (data.isCompleted !== undefined) updateData.isCompleted = data.isCompleted;
   if (data.sound !== undefined) updateData.sound = data.sound;
 
-  const reminder = await Reminder.findByIdAndUpdate(id, updateData, { new: true });
+  const reminder = await Reminder.findByIdAndUpdate(id, updateData, { new: true }).lean();
   return mapReminder(reminder);
 }
 
 export async function deleteReminder(id: string, userId?: string) {
   const existing = await Reminder.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Reminder not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Reminder not found");
+  }
   await Reminder.findByIdAndDelete(id);
 }
 
@@ -121,10 +123,14 @@ export async function toggleReminderComplete(id: string, userId?: string) {
       if (current.repeat === "daily") next.setDate(next.getDate() + 1);
       else if (current.repeat === "weekly") next.setDate(next.getDate() + 7);
       else if (current.repeat === "monthly") next.setMonth(next.getMonth() + 1);
-      return updateReminder(id, {
-        dueAt: next.toISOString(),
-        isCompleted: false,
-      }, userId);
+      return updateReminder(
+        id,
+        {
+          dueAt: next.toISOString(),
+          isCompleted: false,
+        },
+        userId
+      );
     }
     return updateReminder(id, { isCompleted: true }, userId);
   }
@@ -134,13 +140,12 @@ export async function toggleReminderComplete(id: string, userId?: string) {
 
 export async function getUpcomingReminders(limit = 5, userId?: string) {
   const now = new Date();
-  const reminders = await Reminder.find({ 
-    userId: userId ?? undefined, 
-    isCompleted: false, 
-    dueAt: { $gte: now } 
-  })
-    .sort({ dueAt: "asc" })
-    .limit(limit);
-  
+  const filter: Record<string, unknown> = {
+    isCompleted: false,
+    dueAt: { $gte: now },
+  };
+  if (userId) filter.userId = userId;
+
+  const reminders = await Reminder.find(filter).sort({ dueAt: 1 }).limit(limit).lean();
   return reminders.map(mapReminder);
 }

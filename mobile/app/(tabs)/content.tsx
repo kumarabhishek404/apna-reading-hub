@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { deleteNote, getNotes } from '@/api/notes';
 import { deleteBlog, getBlogs } from '@/api/blogs';
 import { deleteLink, getLinks } from '@/api/links';
@@ -18,8 +18,10 @@ import { AnimatedCard } from '@/components/AnimatedCard';
 import { AnimatedButton } from '@/components/AnimatedButton';
 import { FadeInListItem } from '@/components/AnimatedFlatList';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
+import { TypeContentCard } from '@/components/TypeContentCard';
 import { colors, typography, spacing, borderRadius, shadows } from '@/theme/colors';
-import { getTypeColor } from '@/theme/typeColors';
+import { useTabContentPaddingBottom } from '@/theme/layout';
+import { getTypeTheme } from '@/theme/typeColors';
 import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
 import { noteOfflineRepository as genericNoteRepo } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { networkMonitor } from '@/lib/networkMonitor';
@@ -47,8 +49,13 @@ export default function ContentScreen() {
   const [selectedTypes, setSelectedTypes] = useState<FilterType[]>(['all']);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  // Draft selections inside the popup — applied only when user taps Done.
+  const [draftTypes, setDraftTypes] = useState<FilterType[]>(['all']);
+  const [draftTimeFilter, setDraftTimeFilter] = useState<TimeFilter>('all');
+  const [draftTag, setDraftTag] = useState<string | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { showInfo, showSuccess, showError } = useToast();
+  const tabPaddingBottom = useTabContentPaddingBottom();
 
   async function load() {
     console.log('[Content] Loading data from database');
@@ -78,12 +85,7 @@ export default function ContentScreen() {
       });
 
       setItems(combined);
-      // Apply current filter to the loaded items
-      if (selectedTypes.includes('all')) {
-        setFilteredItems(combined);
-      } else {
-        setFilteredItems(combined.filter((item) => selectedTypes.includes(item.kind)));
-      }
+      applyFilters(selectedTypes, timeFilter, selectedTag, combined);
       setError(null);
       console.log('[Content] Data loaded successfully from server', { total: combined.length });
     } catch (err) {
@@ -96,13 +98,8 @@ export default function ContentScreen() {
           ...offlineNotes.map((item) => ({ kind: 'note' as const, item: item as any })),
         ];
 
-        // Apply current filter to the loaded items
-        if (selectedTypes.includes('all')) {
-          setFilteredItems(offlineItems);
-        } else {
-          setFilteredItems(offlineItems.filter((item) => selectedTypes.includes(item.kind)));
-        }
         setItems(offlineItems);
+        applyFilters(selectedTypes, timeFilter, selectedTag, offlineItems);
         setError(null);
         console.log('[Content] Data loaded from offline storage', { total: offlineItems.length });
       } catch (offlineErr) {
@@ -116,70 +113,92 @@ export default function ContentScreen() {
   }
 
   function handleTypeToggle(type: FilterType) {
-    setSelectedTypes((prev) => {
+    setDraftTypes((prev) => {
       if (type === 'all') {
-        // If selecting "all", clear other selections
         return ['all'];
       }
-      
-      if (prev.includes('all')) {
-        // If "all" was selected and now selecting a specific type, remove "all"
-        return [type];
+
+      const withoutAll = prev.filter((t) => t !== 'all');
+
+      if (withoutAll.includes(type)) {
+        const next = withoutAll.filter((t) => t !== type);
+        return next.length > 0 ? next : ['all'];
       }
-      
-      if (prev.includes(type)) {
-        // If already selected, remove it
-        const newTypes = prev.filter((t) => t !== type);
-        // If no types selected, default to "all"
-        return newTypes.length > 0 ? newTypes : ['all'];
-      }
-      
-      // Add the new type
-      return [...prev, type];
+
+      return [...withoutAll, type];
     });
   }
 
   function handleTimeFilterChange(newTimeFilter: TimeFilter) {
-    setTimeFilter(newTimeFilter);
+    setDraftTimeFilter(newTimeFilter);
   }
 
   function handleTagChange(tagId: string | null) {
-    setSelectedTag(tagId);
+    setDraftTag(tagId);
   }
 
-  function applyAllFilters() {
-    let filtered = [...items];
+  function applyFilters(
+    types: FilterType[] = selectedTypes,
+    time: TimeFilter = timeFilter,
+    tag: string | null = selectedTag,
+    sourceItems: ContentItem[] = items,
+  ) {
+    let filtered = [...sourceItems];
 
-    // Apply type filter (multiple types supported)
-    if (!selectedTypes.includes('all')) {
-      filtered = filtered.filter((item) => selectedTypes.includes(item.kind));
+    if (!types.includes('all')) {
+      filtered = filtered.filter((item) => types.includes(item.kind));
     }
 
-    // Apply time filter
-    if (timeFilter !== 'all') {
+    if (time !== 'all') {
       const now = new Date();
       const cutoffDate = new Date();
-      if (timeFilter === 'monthly') {
+      if (time === 'monthly') {
         cutoffDate.setMonth(now.getMonth() - 1);
-      } else if (timeFilter === 'yearly') {
+      } else if (time === 'yearly') {
         cutoffDate.setFullYear(now.getFullYear() - 1);
       }
       filtered = filtered.filter((item) => new Date(item.item.createdAt) >= cutoffDate);
     }
 
-    // Apply tag filter (if tags are implemented on items)
-    if (selectedTag) {
-      // Filter by tag when tag data is available on items
-      // For now, this is a placeholder - you'll need to ensure items have tag data
+    if (tag) {
+      // Tag filtering is handled when tag metadata is available on items.
     }
 
     setFilteredItems(filtered);
+  }
+
+  function openFilterModal() {
+    setDraftTypes(selectedTypes);
+    setDraftTimeFilter(timeFilter);
+    setDraftTag(selectedTag);
+    setFilterModalVisible(true);
+  }
+
+  function closeFilterModalWithoutApplying() {
+    setFilterModalVisible(false);
+  }
+
+  function resetDraftFilters() {
+    setDraftTypes(['all']);
+    setDraftTimeFilter('all');
+    setDraftTag(null);
+  }
+
+  function applyDraftFiltersAndClose() {
+    setSelectedTypes(draftTypes);
+    setTimeFilter(draftTimeFilter);
+    setSelectedTag(draftTag);
+    applyFilters(draftTypes, draftTimeFilter, draftTag, items);
+    setFilterModalVisible(false);
   }
 
   function resetFilters() {
     setSelectedTypes(['all']);
     setTimeFilter('all');
     setSelectedTag(null);
+    setDraftTypes(['all']);
+    setDraftTimeFilter('all');
+    setDraftTag(null);
     setFilteredItems(items);
   }
 
@@ -246,10 +265,11 @@ export default function ContentScreen() {
   }
 
   const getItemActions = (entry: ContentItem) => {
+    const typeTheme = getTypeTheme(entry.kind);
     const actions = [
       {
         icon: 'create-outline',
-        color: '#22409a',
+        color: typeTheme.primary,
         onPress: () => {
           if (entry.kind === 'reminder') {
             router.push(`/reminders/edit?id=${entry.item.id}`);
@@ -261,7 +281,7 @@ export default function ContentScreen() {
       },
       {
         icon: 'trash-outline',
-        color: '#ef4444',
+        color: colors.error,
         onPress: () => deleteItem(entry),
         accessibilityLabel: `Delete ${entry.kind}`,
       },
@@ -269,8 +289,8 @@ export default function ContentScreen() {
 
     if (entry.kind !== 'note') {
       actions.splice(1, 0, {
-        icon: 'alarm-outline',
-        color: '#22409a',
+        icon: 'notifications-outline',
+        color: colors.reminder.primary,
         onPress: () => router.push(`/reminders/create?linkedId=${entry.item.id}&linkedType=${entry.kind}`),
         accessibilityLabel: `Add reminder to ${entry.kind}`,
       });
@@ -278,16 +298,6 @@ export default function ContentScreen() {
 
     return actions;
   };
-
-  function renderLabel(kind: ContentItem['kind']) {
-    switch (kind) {
-      case 'note': return 'Note';
-      case 'blog': return 'Blog';
-      case 'link': return 'Link';
-      case 'pdf': return 'PDF';
-      case 'reminder': return 'Reminder';
-    }
-  }
 
   async function openItem(entry: ContentItem) {
     if (entry.kind === 'link') {
@@ -325,46 +335,67 @@ export default function ContentScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.screenTitle}>Library</Text>
           <Text style={styles.screenSubtitle}>Notes, links, blogs, PDFs, and reminders</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+          <Pressable style={styles.filterButton} onPress={openFilterModal}>
             <AppIcon name="funnel-outline" size={20} color={colors.primary} />
           </Pressable>
           <OfflineStatusCompact />
         </View>
       </View>
       
-      <View style={styles.createButtons}>
-        <Link href="/notes/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: colors.note.primary }]}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
-        </Link>
-        <Link href="/blogs/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: colors.blog.primary }]}><Text style={styles.createButtonText}>+ Blog</Text></Pressable>
-        </Link>
-        <Link href="/links/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: colors.link.primary }]}><Text style={styles.createButtonText}>+ Link</Text></Pressable>
-        </Link>
-        <Link href="/pdfs/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: colors.pdf.primary }]}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
-        </Link>
-        <Link href="/reminders/create" asChild>
-          <Pressable style={[styles.createButton, { backgroundColor: colors.reminder.primary }]}><Text style={styles.createButtonText}>+ Reminder</Text></Pressable>
-        </Link>
-        <Pressable 
-          style={[styles.tagsButton, { backgroundColor: colors.reminder.light }]}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.createButtonsScroll}
+        contentContainerStyle={styles.createButtons}
+      >
+        {(
+          [
+            { type: 'note' as const, label: 'Note', href: '/notes/create', icon: 'document-text-outline' as const },
+            { type: 'blog' as const, label: 'Blog', href: '/blogs/create', icon: 'newspaper-outline' as const },
+            { type: 'link' as const, label: 'Link', href: '/links/create', icon: 'link-outline' as const },
+            { type: 'pdf' as const, label: 'PDF', href: '/pdfs/create', icon: 'document-outline' as const },
+            { type: 'reminder' as const, label: 'Reminder', href: '/reminders/create', icon: 'notifications-outline' as const },
+          ] as const
+        ).map((option) => {
+          const theme = getTypeTheme(option.type);
+          return (
+            <Pressable
+              key={option.type}
+              style={[
+                styles.createButton,
+                {
+                  backgroundColor: theme.primary,
+                  borderColor: theme.dark,
+                },
+              ]}
+              onPress={() => router.push(option.href as any)}
+              accessibilityRole="button"
+              accessibilityLabel={`Create ${option.label}`}
+            >
+              <AppIcon name={option.icon} size={16} color="#fff" />
+              <Text style={styles.createButtonText}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          style={[styles.tagsButton, { backgroundColor: colors.primary }]}
           onPress={() => {
             loadTags();
             setTagsModalVisible(true);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open tags"
         >
           <AppIcon name="pricetag" size={18} color="#fff" />
         </Pressable>
-      </View>
+      </ScrollView>
       
       {loading ? (
         <ActivityIndicator size="large" style={{ marginTop: 24 }} />
@@ -374,43 +405,42 @@ export default function ContentScreen() {
         <FlatList
           data={filteredItems}
           keyExtractor={(entry, index) => `${entry.kind}-${entry.item.id}-${index}`}
-          contentContainerStyle={{ padding: 16, gap: 12 }}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: tabPaddingBottom }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#22409a"
-              colors={['#22409a']}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
           renderItem={({ item }) => {
-            const typeColor = getTypeColor(item.kind);
+            const typeTheme = getTypeTheme(item.kind);
+            const meta =
+              item.kind === 'link'
+                ? item.item.url
+                : item.kind === 'pdf'
+                  ? item.item.description || 'Uploaded PDF'
+                  : 'Saved to your library';
+
             return (
-              <View style={[styles.card, { borderColor: typeColor.primary }]}>
-                <Pressable 
-                  style={{ flex: 1 }} 
-                  onPress={() => void openItem(item)}
-                >
-                  <Text style={[styles.cardKind, { color: typeColor.primary }]}>{renderLabel(item.kind)}</Text>
-                  <Text style={styles.cardTitle}>{item.item.title}</Text>
-                  <Text style={styles.cardMeta}>
-                    {item.kind === 'link' ? item.item.url : item.kind === 'pdf' ? (item.item.description || 'Uploaded PDF') : 'Saved to your library'}
-                  </Text>
-                </Pressable>
-                <View style={styles.actions}>
-                  {getItemActions(item).map((action, index) => (
-                    <Pressable
-                      key={index}
-                      style={styles.actionButton}
-                      onPress={action.onPress}
-                      accessibilityRole="button"
-                      accessibilityLabel={action.accessibilityLabel}
-                    >
-                      <AppIcon name={action.icon as any} size={16} color={action.color} />
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
+              <TypeContentCard
+                type={item.kind}
+                title={item.item.title}
+                meta={meta}
+                onPress={() => void openItem(item)}
+                actions={getItemActions(item).map((action, index) => (
+                  <Pressable
+                    key={index}
+                    style={[styles.actionButton, { backgroundColor: typeTheme.muted }]}
+                    onPress={action.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.accessibilityLabel}
+                  >
+                    <AppIcon name={action.icon as any} size={16} color={action.color} />
+                  </Pressable>
+                ))}
+              />
             );
           }}
         />
@@ -424,24 +454,60 @@ export default function ContentScreen() {
         onRequestClose={() => setTagsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>All Tags</Text>
-              <Pressable onPress={() => setTagsModalVisible(false)}>
-                <AppIcon name="close" size={24} color={colors.text} />
+          <Pressable style={styles.modalDismissArea} onPress={() => setTagsModalVisible(false)} />
+          <View style={styles.tagsSheet}>
+            <View style={styles.tagsSheetHeader}>
+              <View style={styles.tagsSheetTitleBlock}>
+                <Text style={styles.tagsSheetTitle}>All Tags</Text>
+                <Text style={styles.tagsSheetSubtitle}>
+                  {tagsLoading
+                    ? 'Loading…'
+                    : tags.length === 0
+                      ? 'No tags yet'
+                      : `${tags.length} tag${tags.length === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.tagsCloseButton}
+                onPress={() => setTagsModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close tags"
+              >
+                <AppIcon name="close" size={20} color={colors.primary} />
               </Pressable>
             </View>
-            
+
             {tagsLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+              <View style={styles.tagsEmptyState}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.emptySubtext}>Loading tags…</Text>
+              </View>
             ) : tags.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <AppIcon name="pricetag-outline" size={48} color={colors.textMuted} />
+              <View style={styles.tagsEmptyState}>
+                <View style={styles.tagsEmptyIcon}>
+                  <AppIcon name="pricetag-outline" size={36} color={colors.primary} />
+                </View>
                 <Text style={styles.emptyText}>No tags yet</Text>
-                <Text style={styles.emptySubtext}>Add tags when creating content</Text>
+                <Text style={styles.emptySubtext}>
+                  Create tags while adding notes, links, blogs, or PDFs.
+                </Text>
+                <Pressable
+                  style={styles.tagsPrimaryButton}
+                  onPress={() => {
+                    setTagsModalVisible(false);
+                    router.push('/tags/create');
+                  }}
+                >
+                  <AppIcon name="add" size={18} color="#fff" />
+                  <Text style={styles.tagsPrimaryButtonText}>Create tag</Text>
+                </Pressable>
               </View>
             ) : (
-              <ScrollView style={styles.tagsList}>
+              <ScrollView
+                style={styles.tagsList}
+                contentContainerStyle={styles.tagsListContent}
+                showsVerticalScrollIndicator={false}
+              >
                 {tags.map((tag) => (
                   <Pressable
                     key={tag.id}
@@ -451,14 +517,22 @@ export default function ContentScreen() {
                       router.push(`/tags/content?name=${encodeURIComponent(tag.name)}`);
                     }}
                   >
-                    <Text style={styles.tagName}>{tag.name}</Text>
-                    <Text style={styles.tagCount}>{tag.count} items</Text>
+                    <View style={styles.tagItemIcon}>
+                      <AppIcon name="pricetag" size={16} color="#fff" />
+                    </View>
+                    <View style={styles.tagItemCopy}>
+                      <Text style={styles.tagName}>{tag.name}</Text>
+                      <Text style={styles.tagCount}>
+                        {tag.count} item{tag.count === 1 ? '' : 's'}
+                      </Text>
+                    </View>
+                    <AppIcon name="chevron-forward" size={16} color={colors.primary} />
                   </Pressable>
                 ))}
               </ScrollView>
             )}
 
-            <View style={styles.modalFooter}>
+            <View style={styles.tagsSheetFooter}>
               <Pressable
                 style={styles.manageTagsButton}
                 onPress={() => {
@@ -466,7 +540,8 @@ export default function ContentScreen() {
                   router.push('/tags');
                 }}
               >
-                <Text style={styles.manageTagsButtonText}>Manage All Tags</Text>
+                <AppIcon name="options-outline" size={18} color="#fff" />
+                <Text style={styles.manageTagsButtonText}>Manage tags</Text>
               </Pressable>
             </View>
           </View>
@@ -478,121 +553,256 @@ export default function ContentScreen() {
         visible={filterModalVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => setFilterModalVisible(false)}
+        onRequestClose={closeFilterModalWithoutApplying}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Library</Text>
+          <Pressable style={styles.modalDismissArea} onPress={closeFilterModalWithoutApplying} />
+          <View style={styles.filterSheet}>
+            <View style={styles.filterSheetHeader}>
+              <View style={styles.filterSheetTitleBlock}>
+                <Text style={styles.filterSheetTitle}>Filter Library</Text>
+                <Text style={styles.filterSheetSubtitle}>
+                  Choose types, time, and tags — then tap Done
+                </Text>
+              </View>
+              <Pressable
+                style={styles.filterCloseButton}
+                onPress={closeFilterModalWithoutApplying}
+                accessibilityRole="button"
+                accessibilityLabel="Close filters"
+              >
+                <AppIcon name="close" size={20} color={colors.primary} />
+              </Pressable>
             </View>
-            
-            <View style={styles.filterScrollContainer}>
-              <ScrollView style={styles.filterList} contentContainerStyle={styles.filterListContent}>
-                <Text style={styles.filterSectionTitle}>Type</Text>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('all') && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('all')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('all') && { color: colors.primary }]}>All Items</Text>
-                  {selectedTypes.includes('all') && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('note') && { backgroundColor: colors.note.muted, borderColor: colors.note.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('note')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('note') && { color: colors.note.primary }]}>Notes</Text>
-                  {selectedTypes.includes('note') && <AppIcon name="checkmark-circle" size={20} color={colors.note.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('blog') && { backgroundColor: colors.blog.muted, borderColor: colors.blog.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('blog')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('blog') && { color: colors.blog.primary }]}>Blogs</Text>
-                  {selectedTypes.includes('blog') && <AppIcon name="checkmark-circle" size={20} color={colors.blog.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('link') && { backgroundColor: colors.link.muted, borderColor: colors.link.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('link')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('link') && { color: colors.link.primary }]}>Links</Text>
-                  {selectedTypes.includes('link') && <AppIcon name="checkmark-circle" size={20} color={colors.link.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('pdf') && { backgroundColor: colors.pdf.muted, borderColor: colors.pdf.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('pdf')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('pdf') && { color: colors.pdf.primary }]}>PDFs</Text>
-                  {selectedTypes.includes('pdf') && <AppIcon name="checkmark-circle" size={20} color={colors.pdf.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, selectedTypes.includes('reminder') && { backgroundColor: colors.reminder.muted, borderColor: colors.reminder.primary, borderWidth: 1 }]}
-                  onPress={() => handleTypeToggle('reminder')}
-                >
-                  <Text style={[styles.filterItemText, selectedTypes.includes('reminder') && { color: colors.reminder.primary }]}>Reminders</Text>
-                  {selectedTypes.includes('reminder') && <AppIcon name="checkmark-circle" size={20} color={colors.reminder.primary} />}
-                </Pressable>
 
-                <Text style={styles.filterSectionTitle}>Time Period</Text>
-                <Pressable
-                  style={[styles.filterItem, timeFilter === 'all' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
-                  onPress={() => handleTimeFilterChange('all')}
-                >
-                  <Text style={[styles.filterItemText, timeFilter === 'all' && { color: colors.primary }]}>All Time</Text>
-                  {timeFilter === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, timeFilter === 'monthly' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
-                  onPress={() => handleTimeFilterChange('monthly')}
-                >
-                  <Text style={[styles.filterItemText, timeFilter === 'monthly' && { color: colors.primary }]}>Last Month</Text>
-                  {timeFilter === 'monthly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-                </Pressable>
-                <Pressable
-                  style={[styles.filterItem, timeFilter === 'yearly' && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
-                  onPress={() => handleTimeFilterChange('yearly')}
-                >
-                  <Text style={[styles.filterItemText, timeFilter === 'yearly' && { color: colors.primary }]}>Last Year</Text>
-                  {timeFilter === 'yearly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-                </Pressable>
+            <ScrollView
+              style={styles.filterList}
+              contentContainerStyle={styles.filterListContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.filterSectionTitle}>Type</Text>
+              <Text style={styles.filterHint}>Select one or more types</Text>
+              {(
+                [
+                  {
+                    key: 'all' as const,
+                    label: 'All Items',
+                    icon: 'apps-outline' as const,
+                    muted: colors.primaryMuted,
+                    soft: colors.note.soft,
+                    accent: colors.primary,
+                    dark: colors.primaryDark,
+                  },
+                  {
+                    key: 'note' as const,
+                    label: 'Notes',
+                    icon: 'document-text-outline' as const,
+                    muted: colors.note.muted,
+                    soft: colors.note.soft,
+                    accent: colors.note.primary,
+                    dark: colors.note.dark,
+                  },
+                  {
+                    key: 'blog' as const,
+                    label: 'Blogs',
+                    icon: 'newspaper-outline' as const,
+                    muted: colors.blog.muted,
+                    soft: colors.blog.soft,
+                    accent: colors.blog.primary,
+                    dark: colors.blog.dark,
+                  },
+                  {
+                    key: 'link' as const,
+                    label: 'Links',
+                    icon: 'link-outline' as const,
+                    muted: colors.link.muted,
+                    soft: colors.link.soft,
+                    accent: colors.link.primary,
+                    dark: colors.link.dark,
+                  },
+                  {
+                    key: 'pdf' as const,
+                    label: 'PDFs',
+                    icon: 'document-outline' as const,
+                    muted: colors.pdf.muted,
+                    soft: colors.pdf.soft,
+                    accent: colors.pdf.primary,
+                    dark: colors.pdf.dark,
+                  },
+                  {
+                    key: 'reminder' as const,
+                    label: 'Reminders',
+                    icon: 'notifications-outline' as const,
+                    muted: colors.reminder.muted,
+                    soft: colors.reminder.soft,
+                    accent: colors.reminder.primary,
+                    dark: colors.reminder.dark,
+                  },
+                ]
+              ).map((option) => {
+                const selected = draftTypes.includes(option.key);
+                return (
+                  <Pressable
+                    key={option.key}
+                    style={[
+                      styles.filterItem,
+                      {
+                        backgroundColor: selected ? option.muted : colors.surface,
+                        borderColor: selected ? option.soft : colors.borderLight,
+                      },
+                    ]}
+                    onPress={() => handleTypeToggle(option.key)}
+                  >
+                    <View style={[styles.filterItemIcon, { backgroundColor: option.accent }]}>
+                      <AppIcon name={option.icon} size={16} color="#fff" />
+                    </View>
+                    <Text
+                      style={[
+                        styles.filterItemText,
+                        { color: selected ? option.dark : colors.text },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {selected ? (
+                      <AppIcon name="checkmark-circle" size={22} color={option.accent} />
+                    ) : (
+                      <View style={styles.filterItemRadio} />
+                    )}
+                  </Pressable>
+                );
+              })}
 
-                <Text style={styles.filterSectionTitle}>Tags</Text>
-                <Pressable
-                  style={[styles.filterItem, selectedTag === null && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
-                  onPress={() => handleTagChange(null)}
+              <Text style={styles.filterSectionTitle}>Time Period</Text>
+              <Text style={styles.filterHint}>Select one time range</Text>
+              {(
+                [
+                  { key: 'all' as const, label: 'All Time', icon: 'infinite-outline' as const },
+                  { key: 'monthly' as const, label: 'Last Month', icon: 'calendar-outline' as const },
+                  { key: 'yearly' as const, label: 'Last Year', icon: 'calendar-number-outline' as const },
+                ]
+              ).map((option) => {
+                const selected = draftTimeFilter === option.key;
+                return (
+                  <Pressable
+                    key={option.key}
+                    style={[
+                      styles.filterItem,
+                      {
+                        backgroundColor: selected ? colors.primaryMuted : colors.surface,
+                        borderColor: selected ? colors.note.soft : colors.borderLight,
+                      },
+                    ]}
+                    onPress={() => handleTimeFilterChange(option.key)}
+                  >
+                    <View
+                      style={[
+                        styles.filterItemIcon,
+                        { backgroundColor: selected ? colors.primary : colors.textMuted },
+                      ]}
+                    >
+                      <AppIcon name={option.icon} size={16} color="#fff" />
+                    </View>
+                    <Text
+                      style={[
+                        styles.filterItemText,
+                        { color: selected ? colors.primaryDark : colors.text },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {selected ? (
+                      <AppIcon name="checkmark-circle" size={22} color={colors.primary} />
+                    ) : (
+                      <View style={styles.filterItemRadio} />
+                    )}
+                  </Pressable>
+                );
+              })}
+
+              <Text style={styles.filterSectionTitle}>Tags</Text>
+              <Text style={styles.filterHint}>Optional — pick one tag</Text>
+              <Pressable
+                style={[
+                  styles.filterItem,
+                  {
+                    backgroundColor: draftTag === null ? colors.primaryMuted : colors.surface,
+                    borderColor: draftTag === null ? colors.note.soft : colors.borderLight,
+                  },
+                ]}
+                onPress={() => handleTagChange(null)}
+              >
+                <View
+                  style={[
+                    styles.filterItemIcon,
+                    { backgroundColor: draftTag === null ? colors.primary : colors.textMuted },
+                  ]}
                 >
-                  <Text style={[styles.filterItemText, selectedTag === null && { color: colors.primary }]}>All Tags</Text>
-                  {selectedTag === null && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-                </Pressable>
-                {tags.map((tag) => (
+                  <AppIcon name="pricetags-outline" size={16} color="#fff" />
+                </View>
+                <Text
+                  style={[
+                    styles.filterItemText,
+                    { color: draftTag === null ? colors.primaryDark : colors.text },
+                  ]}
+                >
+                  All Tags
+                </Text>
+                {draftTag === null ? (
+                  <AppIcon name="checkmark-circle" size={22} color={colors.primary} />
+                ) : (
+                  <View style={styles.filterItemRadio} />
+                )}
+              </Pressable>
+              {tags.map((tag) => {
+                const selected = draftTag === tag.id;
+                return (
                   <Pressable
                     key={tag.id}
-                    style={[styles.filterItem, selectedTag === tag.id && { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderWidth: 1 }]}
+                    style={[
+                      styles.filterItem,
+                      {
+                        backgroundColor: selected ? colors.primaryMuted : colors.surface,
+                        borderColor: selected ? colors.note.soft : colors.borderLight,
+                      },
+                    ]}
                     onPress={() => handleTagChange(tag.id)}
                   >
-                    <Text style={[styles.filterItemText, selectedTag === tag.id && { color: colors.primary }]}>{tag.name}</Text>
-                    {selectedTag === tag.id && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                    <View
+                      style={[
+                        styles.filterItemIcon,
+                        { backgroundColor: selected ? colors.primary : colors.textMuted },
+                      ]}
+                    >
+                      <AppIcon name="pricetag" size={16} color="#fff" />
+                    </View>
+                    <Text
+                      style={[
+                        styles.filterItemText,
+                        { color: selected ? colors.primaryDark : colors.text },
+                      ]}
+                    >
+                      {tag.name}
+                    </Text>
+                    {selected ? (
+                      <AppIcon name="checkmark-circle" size={22} color={colors.primary} />
+                    ) : (
+                      <View style={styles.filterItemRadio} />
+                    )}
                   </Pressable>
-                ))}
-              </ScrollView>
-            </View>
+                );
+              })}
+            </ScrollView>
 
             <View style={styles.filterModalFooter}>
-              <Pressable
-                style={styles.resetButton}
-                onPress={() => {
-                  resetFilters();
-                }}
-              >
+              <Pressable style={styles.resetButton} onPress={resetDraftFilters}>
+                <AppIcon name="refresh-outline" size={16} color={colors.text} />
                 <Text style={styles.resetButtonText}>Reset</Text>
               </Pressable>
-              <Pressable
-                style={styles.applyButton}
-                onPress={() => {
-                  applyAllFilters();
-                  setFilterModalVisible(false);
-                }}
-              >
-                <Text style={styles.applyButtonText}>Apply</Text>
+              <Pressable style={styles.applyButton} onPress={applyDraftFiltersAndClose}>
+                <AppIcon name="checkmark" size={16} color="#fff" />
+                <Text style={styles.applyButtonText}>Done</Text>
               </Pressable>
             </View>
           </View>
@@ -604,7 +814,7 @@ export default function ContentScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 4, marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   headerText: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   screenTitle: {
@@ -628,48 +838,39 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
+  createButtonsScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    marginTop: 4,
+    marginBottom: 4,
+  },
   createButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    gap: 10,
-    marginTop: 0,
+    gap: 8,
+    paddingBottom: 4,
   },
   createButton: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    minWidth: 80,
-    alignItems: 'center',
+    borderWidth: 1,
   },
   createButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
-  card: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 18,
-    flexDirection: 'row',
+  tagsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    shadowColor: colors.text,
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  cardKind: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 4 },
-  cardMeta: { fontSize: 12, color: colors.textMuted, marginTop: 6 },
-  actions: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingLeft: 8,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.borderLight,
   },
   actionButton: {
     width: 32,
@@ -678,14 +879,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surfaceLight,
-  },
-  tagsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.secondary,
   },
   error: { marginTop: 16, color: colors.error, paddingHorizontal: 20, fontWeight: '600' },
   emptyContainer: {
@@ -697,17 +890,22 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontWeight: '700',
+    color: colors.text,
   },
   emptySubtext: {
     fontSize: 14,
     color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  modalDismissArea: {
+    flex: 1,
   },
   modalContent: {
     backgroundColor: colors.surface,
@@ -717,8 +915,51 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     flexDirection: 'column',
   },
+  filterSheet: {
+    backgroundColor: colors.note.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
+    height: '78%',
+    flexDirection: 'column',
+  },
+  filterSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 12,
+  },
+  filterSheetTitleBlock: {
+    flex: 1,
+  },
+  filterSheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    letterSpacing: -0.3,
+  },
+  filterSheetSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  filterCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+  },
   modalHeader: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   modalTitle: {
     fontSize: 20,
@@ -731,39 +972,162 @@ const styles = StyleSheet.create({
   },
   filterList: {
     flex: 1,
+    minHeight: 0,
   },
   filterListContent: {
-    paddingBottom: 8,
+    paddingBottom: 16,
+    gap: 8,
   },
   filterSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 16,
-    marginBottom: 8,
+    letterSpacing: 0.9,
+    marginTop: 14,
+    marginBottom: 2,
+  },
+  filterHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  tagsSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
+    height: '62%',
+    flexDirection: 'column',
+  },
+  tagsSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
+  },
+  tagsSheetTitleBlock: {
+    flex: 1,
+  },
+  tagsSheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    letterSpacing: -0.3,
+  },
+  tagsSheetSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  tagsCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+  },
+  tagsEmptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+  },
+  tagsEmptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+    marginBottom: 4,
+  },
+  tagsPrimaryButton: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  tagsPrimaryButtonText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 15,
   },
   tagsList: {
     flex: 1,
+    minHeight: 0,
+  },
+  tagsListContent: {
+    paddingBottom: 8,
+    gap: 8,
   },
   tagItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    marginBottom: 8,
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: colors.note.background,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+  },
+  tagItemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagItemCopy: {
+    flex: 1,
+    gap: 2,
   },
   tagName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   tagCount: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textMuted,
+    fontWeight: '600',
+  },
+  tagsSheetFooter: {
+    marginTop: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  manageTagsButton: {
+    backgroundColor: colors.primary,
+    padding: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  manageTagsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   modalFooter: {
     marginTop: 16,
@@ -771,64 +1135,74 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
-  manageTagsButton: {
-    backgroundColor: colors.primary,
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  manageTagsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   filterItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    marginBottom: 8,
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  filterItemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterItemText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  filterItemRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   filterModalFooter: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    marginTop: 8,
+    paddingTop: 12,
+    paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderTopColor: colors.note.soft,
+    backgroundColor: colors.note.background,
   },
   resetButton: {
     flex: 1,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.note.soft,
   },
   resetButtonText: {
     color: colors.text,
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 15,
   },
   applyButton: {
     flex: 1,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     backgroundColor: colors.primary,
   },
   applyButtonText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontWeight: '800',
+    fontSize: 15,
   },
 });

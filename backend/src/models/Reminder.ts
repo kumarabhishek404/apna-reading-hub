@@ -42,6 +42,7 @@ const ReminderSchema = new Schema<IReminder>(
 );
 
 ReminderSchema.index({ userId: 1, dueAt: 1 });
+ReminderSchema.index({ userId: 1, isCompleted: 1, dueAt: 1 });
 
 const ReminderModel: Model<IReminder> = mongoose.models.Reminder || mongoose.model<IReminder>("Reminder", ReminderSchema);
 

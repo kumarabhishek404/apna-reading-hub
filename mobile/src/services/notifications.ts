@@ -1,10 +1,12 @@
 import * as Notifications from 'expo-notifications';
-import * as Audio from 'expo-av';
-import * as Asset from 'expo-asset';
+import { Audio } from 'expo-av';
+import { Asset } from 'expo-asset';
+import * as TaskManager from 'expo-task-manager';
 import { AppState, Platform } from 'react-native';
 import { getAlarms } from '@/api/alarms';
 import { getReminders } from '@/api/reminders';
 import {
+  ALARM_RING_SECONDS,
   DEFAULT_NOTIFICATION_SOUND,
   NOTIFICATION_SOUNDS,
   getSoundOption,
@@ -12,96 +14,74 @@ import {
 } from '@/constants/notificationSounds';
 import type { AlarmItem, ReminderItem } from '@/types';
 
-// Audio playback for continuous alarm sounds
-let activeSound: any = null;
-let playbackTimeout: NodeJS.Timeout | null = null;
+const BACKGROUND_NOTIFICATION_TASK = 'APNA_BACKGROUND_NOTIFICATION_TASK';
+const ALARM_CATEGORY = 'alarm_category';
+const REMINDER_CATEGORY = 'reminder_category';
+const STOP_ALARM_ACTION = 'stop_alarm';
+const STOP_REMINDER_ACTION = 'stop_reminder';
+
+let activeSound: Audio.Sound | null = null;
+let playbackTimeout: ReturnType<typeof setTimeout> | null = null;
 let isPlaying = false;
+let channelsReady = false;
+let categoriesReady = false;
 
 async function initializeAudio() {
   try {
-    await Audio.Audio.setAudioModeAsync({
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
     });
-    console.log('[Audio] Audio mode initialized successfully');
   } catch (error) {
     console.error('[Audio] Failed to initialize audio mode:', error);
   }
 }
 
-async function getSoundUri(fileName: string | null): Promise<string | null> {
-  if (!fileName) {
-    console.log('[Audio] No file name provided, using system sound');
-    return null;
-  }
-  
-  try {
-    // Try to load from assets folder
-    const asset = Asset.Asset.fromModule(fileName);
-    console.log('[Audio] Loading sound asset', { fileName, asset });
-    const download = await asset.downloadAsync();
-    console.log('[Audio] Sound asset downloaded', { localUri: download.localUri });
-    return download.localUri || null;
-  } catch (error) {
-    console.error('[Audio] Failed to get sound URI:', error);
-    return null;
-  }
+async function resolveCustomSoundSource(soundId: NotificationSoundId) {
+  const option = getSoundOption(soundId);
+  if (!option.assetModule) return null;
+
+  const asset = Asset.fromModule(option.assetModule);
+  await asset.downloadAsync();
+  if (asset.localUri) return { uri: asset.localUri };
+  return option.assetModule;
 }
 
-async function playAlarmSound(soundId: NotificationSoundId, duration: number = 30) {
-  console.log('[Audio] Playing alarm sound', { soundId, duration });
+export async function playAlarmSound(
+  soundId: NotificationSoundId,
+  duration: number = ALARM_RING_SECONDS
+) {
   try {
-    // Stop any existing playback first
     await stopAlarmSound();
+    await initializeAudio();
 
-    const soundOption = getSoundOption(soundId);
-    console.log('[Audio] Sound option', { id: soundOption.id, fileName: soundOption.fileName });
-    
-    // For custom sounds, use expo-av for continuous playback
-    if (soundOption.fileName && soundOption.fileName !== 'default') {
-      // Try to load from local assets
-      try {
-        const soundUri = await getSoundUri(soundOption.fileName);
-        
-        if (soundUri) {
-          console.log('[Audio] Creating sound with URI', soundUri);
-          const { sound } = await Audio.Audio.Sound.createAsync(
-            { uri: soundUri },
-            { 
-              shouldPlay: true, 
-              isLooping: true,
-              volume: 1.0,
-            }
-          );
-          
-          activeSound = sound;
-          isPlaying = true;
-          
-          // Set timeout to stop after specified duration
-          playbackTimeout = setTimeout(async () => {
-            console.log('[Audio] Duration timeout reached, stopping sound');
-            await stopAlarmSound();
-          }, duration * 1000);
-          
-          console.log(`[Audio] Playing ${soundId} for ${duration} seconds`);
-          return;
-        }
-      } catch (audioError) {
-        console.error('[Audio] Failed to play custom sound, falling back to system sound:', audioError);
-      }
+    const source = await resolveCustomSoundSource(soundId);
+    if (!source) {
+      // Device default — OS notification sound handles playback.
+      return;
     }
-    
-    // Fallback to system notification sound
-    console.log('[Audio] Using system notification sound');
+
+    const { sound } = await Audio.Sound.createAsync(source, {
+      shouldPlay: true,
+      isLooping: true,
+      volume: 1.0,
+    });
+
+    activeSound = sound;
+    isPlaying = true;
+
+    playbackTimeout = setTimeout(() => {
+      void stopAlarmSound();
+    }, Math.max(1, duration) * 1000);
   } catch (error) {
     console.error('[Audio] Failed to play alarm sound:', error);
   }
 }
 
-async function stopAlarmSound() {
-  console.log('[Audio] Stopping alarm sound', { isPlaying, hasActiveSound: activeSound !== null });
+export async function stopAlarmSound() {
   try {
     if (playbackTimeout) {
       clearTimeout(playbackTimeout);
@@ -109,91 +89,160 @@ async function stopAlarmSound() {
     }
 
     if (activeSound) {
-      await activeSound.stopAsync();
-      await activeSound.unloadAsync();
+      try {
+        await activeSound.stopAsync();
+      } catch {
+        // ignore
+      }
+      try {
+        await activeSound.unloadAsync();
+      } catch {
+        // ignore
+      }
       activeSound = null;
     }
-    
+
     isPlaying = false;
-    console.log('[Audio] Stopped alarm sound successfully');
   } catch (error) {
     console.error('[Audio] Failed to stop alarm sound:', error);
   }
 }
 
-function getActiveSoundState() {
+export function getActiveSoundState() {
   return { isPlaying, activeSound: activeSound !== null };
 }
 
-// Export audio control functions for use in other parts of the app
-export { playAlarmSound, stopAlarmSound, getActiveSoundState };
+async function handleStopAction(
+  actionIdentifier: string,
+  notification: Notifications.Notification
+) {
+  const data = (notification.request.content.data ?? {}) as {
+    kind?: string;
+    id?: string;
+  };
 
-// Handle app state changes to manage audio playback
+  if (actionIdentifier === STOP_ALARM_ACTION) {
+    await stopAlarmSound();
+    try {
+      await Notifications.dismissNotificationAsync(notification.request.identifier);
+    } catch {
+      // ignore
+    }
+    if (data?.id) {
+      await cancelNotificationsByPrefix(`alarm:${data.id}:`);
+    }
+    return;
+  }
+
+  if (actionIdentifier === STOP_REMINDER_ACTION) {
+    await stopAlarmSound();
+    try {
+      await Notifications.dismissNotificationAsync(notification.request.identifier);
+    } catch {
+      // ignore
+    }
+    if (data?.id) {
+      await cancelNotificationsByPrefix(`reminder:${data.id}`);
+    }
+  }
+}
+
 AppState.addEventListener('change', (nextAppState) => {
   if (nextAppState === 'background' && isPlaying) {
-    console.log('[Audio] App going to background, audio will continue playing');
-  }
-  if (nextAppState === 'active' && isPlaying) {
-    console.log('[Audio] App came to foreground, audio is still playing');
+    // Keep looping via staysActiveInBackground until timeout / Stop.
   }
 });
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as {
+      kind?: string;
+      soundId?: NotificationSoundId;
+    };
+
+    // When the OS delivers the alarm while the app process is alive,
+    // reinforce with a looping track capped at ALARM_RING_SECONDS.
+    if (data?.kind === 'alarm' && data?.soundId) {
+      void playAlarmSound(data.soundId, ALARM_RING_SECONDS);
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
-// Initialize audio on app start
-initializeAudio();
+void initializeAudio();
 
-// Handle notification actions (like "Stop Alarm" button)
 Notifications.addNotificationResponseReceivedListener(async (response) => {
   const { actionIdentifier, notification } = response;
-  
-  if (actionIdentifier === 'stop_alarm') {
-    const data = notification.request.content.data as { kind?: string; id?: string };
-    if (data?.kind === 'alarm' && data?.id) {
-      // Stop audio playback
-      await stopAlarmSound();
-      // Cancel the alarm notification
-      await Notifications.dismissNotificationAsync(notification.request.identifier);
-      // Also cancel any follow-up notifications for this alarm
-      await cancelNotificationsByPrefix(`alarm:${data.id}:`);
-      console.log(`[Notifications] Stopped alarm ${data.id}`);
-    }
-  }
-  
-  if (actionIdentifier === 'stop_reminder') {
-    const data = notification.request.content.data as { kind?: string; id?: string };
-    if (data?.kind === 'reminder' && data?.id) {
-      await stopAlarmSound();
-      await Notifications.dismissNotificationAsync(notification.request.identifier);
-      await cancelNotificationsByPrefix(`reminder:${data.id}:`);
-      console.log(`[Notifications] Stopped reminder ${data.id}`);
-    }
+  if (
+    actionIdentifier === STOP_ALARM_ACTION ||
+    actionIdentifier === STOP_REMINDER_ACTION
+  ) {
+    await handleStopAction(actionIdentifier, notification);
   }
 });
 
-// Handle notification presentation to start audio
 Notifications.addNotificationReceivedListener(async (notification) => {
-  const data = notification.request.content.data as { kind?: string; soundId?: NotificationSoundId };
-  
+  const data = notification.request.content.data as {
+    kind?: string;
+    soundId?: NotificationSoundId;
+  };
+
   if (data?.kind === 'alarm' && data?.soundId) {
-    // Start continuous audio playback for alarms
-    await playAlarmSound(data.soundId, 30); // 30 seconds
+    await playAlarmSound(data.soundId, ALARM_RING_SECONDS);
   }
 });
 
-let channelsReady = false;
+/**
+ * Background task so "Stop Alarm" can run without bringing the app to the foreground.
+ * Must be defined at module scope (before registerTaskAsync).
+ */
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+  if (error) {
+    console.error('[Notifications] Background task error:', error);
+    return;
+  }
+
+  const payload = data as {
+    actionIdentifier?: string;
+    notification?: Notifications.Notification;
+  } | null;
+
+  const actionIdentifier = payload?.actionIdentifier;
+  const notification = payload?.notification;
+  if (!actionIdentifier || !notification) return;
+
+  if (
+    actionIdentifier === STOP_ALARM_ACTION ||
+    actionIdentifier === STOP_REMINDER_ACTION
+  ) {
+    await handleStopAction(actionIdentifier, notification);
+  }
+});
+
+async function ensureBackgroundTaskRegistered() {
+  try {
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(
+      BACKGROUND_NOTIFICATION_TASK
+    );
+    if (!isRegistered) {
+      await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+    }
+  } catch (error) {
+    // Simulator / Expo Go may not support background notification tasks.
+    console.warn('[Notifications] Could not register background task:', error);
+  }
+}
 
 function notificationSoundValue(soundId: NotificationSoundId): string | boolean {
   const option = getSoundOption(soundId);
-  return option.fileName ?? 'default';
+  return option.nativeFileName ?? 'default';
 }
 
 async function ensureAndroidChannels() {
@@ -205,7 +254,7 @@ async function ensureAndroidChannels() {
         name: option.label,
         description: option.description,
         importance: Notifications.AndroidImportance.MAX,
-        sound: option.fileName ?? 'default',
+        sound: option.nativeFileName ?? 'default',
         vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
@@ -218,11 +267,39 @@ async function ensureAndroidChannels() {
             requestHardwareAudioVideoSynchronization: false,
           },
         },
-      }),
-    ),
+      })
+    )
   );
 
   channelsReady = true;
+}
+
+async function ensureNotificationCategories() {
+  if (categoriesReady) return;
+
+  await Notifications.setNotificationCategoryAsync(ALARM_CATEGORY, [
+    {
+      identifier: STOP_ALARM_ACTION,
+      buttonTitle: 'Stop Alarm',
+      options: {
+        opensAppToForeground: false,
+        isDestructive: true,
+      },
+    },
+  ]);
+
+  await Notifications.setNotificationCategoryAsync(REMINDER_CATEGORY, [
+    {
+      identifier: STOP_REMINDER_ACTION,
+      buttonTitle: 'Stop',
+      options: {
+        opensAppToForeground: false,
+        isDestructive: true,
+      },
+    },
+  ]);
+
+  categoriesReady = true;
 }
 
 export async function requestNotificationPermissions() {
@@ -230,24 +307,8 @@ export async function requestNotificationPermissions() {
     await ensureAndroidChannels();
   }
 
-  // Set up iOS notification categories with stop buttons
-  if (Platform.OS === 'ios') {
-    await Notifications.setNotificationCategoryAsync('alarm_category', [
-      {
-        identifier: 'stop_alarm',
-        buttonTitle: 'Stop Alarm',
-        options: { isDestructive: true },
-      },
-    ]);
-
-    await Notifications.setNotificationCategoryAsync('reminder_category', [
-      {
-        identifier: 'stop_reminder',
-        buttonTitle: 'Stop Reminder',
-        options: { isDestructive: true },
-      },
-    ]);
-  }
+  await ensureNotificationCategories();
+  await ensureBackgroundTaskRegistered();
 
   const current = await Notifications.getPermissionsAsync();
   let status = current.status;
@@ -259,7 +320,7 @@ export async function requestNotificationPermissions() {
         allowBadge: true,
         allowSound: true,
         allowDisplayInCarPlay: false,
-        allowCriticalAlerts: true, // Enable critical alerts for alarms
+        allowCriticalAlerts: false,
         provideAppNotificationSettings: true,
         allowProvisional: false,
       },
@@ -294,9 +355,8 @@ async function scheduleWithSound(options: ScheduleOptions) {
       ? { ...options.trigger, channelId: soundOption.channelId }
       : options.trigger;
 
-  const androidAction = options.kind === 'alarm' 
-    ? { title: 'Stop Alarm', actionId: 'stop_alarm' }
-    : { title: 'Stop Reminder', actionId: 'stop_reminder' };
+  const categoryIdentifier =
+    options.kind === 'alarm' ? ALARM_CATEGORY : REMINDER_CATEGORY;
 
   return Notifications.scheduleNotificationAsync({
     identifier: options.identifier,
@@ -305,21 +365,18 @@ async function scheduleWithSound(options: ScheduleOptions) {
       body: options.body,
       sound: notificationSoundValue(options.soundId),
       priority: Notifications.AndroidNotificationPriority.MAX,
-      data: options.data ?? {},
-      // Add Android action button
-      ...(Platform.OS === 'android' && {
-        android: {
-          channelId: soundOption.channelId,
-          actions: [androidAction],
-          // Make notification ongoing (not dismissible by swipe)
-          ongoing: true,
-          autoCancel: false,
-        },
-      }),
-      // Add iOS category
-      ...(Platform.OS === 'ios' && {
-        categoryIdentifier: options.kind === 'alarm' ? 'alarm_category' : 'reminder_category',
-      }),
+      categoryIdentifier,
+      data: {
+        ...(options.data ?? {}),
+        soundId: options.soundId,
+        ringSeconds: ALARM_RING_SECONDS,
+      },
+      ...(Platform.OS === 'android'
+        ? {
+            sticky: true,
+            autoDismiss: false,
+          }
+        : {}),
     },
     trigger,
   });
@@ -341,7 +398,7 @@ export async function cancelNotificationsByPrefix(prefix: string) {
   await Promise.all(
     scheduled
       .filter((item) => item.identifier.startsWith(prefix))
-      .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+      .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
   );
 }
 
@@ -359,12 +416,11 @@ export async function scheduleAlarmNotifications(alarm: AlarmItem) {
 
   await cancelNotificationsByPrefix(`alarm:${alarm.id}:`);
 
-  // All days → one daily trigger; otherwise one weekly trigger per selected day.
   if (days.length === 7) {
     await scheduleWithSound({
       identifier: `alarm:${alarm.id}:daily`,
       title: alarm.title,
-      body: 'Alarm is ringing',
+      body: 'Alarm is ringing — tap Stop Alarm to silence',
       soundId,
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -381,7 +437,7 @@ export async function scheduleAlarmNotifications(alarm: AlarmItem) {
     await scheduleWithSound({
       identifier: `alarm:${alarm.id}:day:${day}`,
       title: alarm.title,
-      body: 'Alarm is ringing',
+      body: 'Alarm is ringing — tap Stop Alarm to silence',
       soundId,
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
@@ -419,6 +475,7 @@ export async function scheduleReminderNotifications(reminder: ReminderItem) {
         minute: dueAt.getMinutes(),
       },
       data: { kind: 'reminder', id: reminder.id, soundId },
+      kind: 'reminder',
     });
     return;
   }
@@ -436,6 +493,7 @@ export async function scheduleReminderNotifications(reminder: ReminderItem) {
         minute: dueAt.getMinutes(),
       },
       data: { kind: 'reminder', id: reminder.id, soundId },
+      kind: 'reminder',
     });
     return;
   }
@@ -453,11 +511,11 @@ export async function scheduleReminderNotifications(reminder: ReminderItem) {
         minute: dueAt.getMinutes(),
       },
       data: { kind: 'reminder', id: reminder.id, soundId },
+      kind: 'reminder',
     });
     return;
   }
 
-  // One-shot
   if (dueAt.getTime() <= Date.now()) return;
 
   await scheduleWithSound({
@@ -470,6 +528,7 @@ export async function scheduleReminderNotifications(reminder: ReminderItem) {
       date: dueAt,
     },
     data: { kind: 'reminder', id: reminder.id, soundId },
+    kind: 'reminder',
   });
 }
 
@@ -489,10 +548,9 @@ export async function syncScheduledNotificationsFromBackend() {
     getReminders({ includeCompleted: false }),
   ]);
 
-  // Clear previous app schedules, then rebuild from server state.
   const existing = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
-    existing.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+    existing.map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
   );
 
   for (const alarm of alarmsRes.alarms) {

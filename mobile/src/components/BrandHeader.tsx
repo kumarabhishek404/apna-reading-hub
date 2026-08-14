@@ -16,12 +16,9 @@ export function BrandHeader({ title, subtitle }: { title?: string; subtitle?: st
 
 const styles = StyleSheet.create({
   headerWrap: {
-    marginTop: 4,
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  titleBlock: {
-    marginTop: 10,
-  },
+  titleBlock: {},
   title: {
     color: colors.text,
     fontSize: 28,

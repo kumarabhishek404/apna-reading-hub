@@ -26,6 +26,8 @@ const LinkSchema = new Schema<ILink>(
 );
 
 LinkSchema.index({ userId: 1, createdAt: -1 });
+LinkSchema.index({ userId: 1, tags: 1 });
+LinkSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
 
 const LinkModel: Model<ILink> = mongoose.models.Link || mongoose.model<ILink>("Link", LinkSchema);
 

@@ -26,6 +26,8 @@ const PdfSchema = new Schema<IPdf>(
 );
 
 PdfSchema.index({ userId: 1, createdAt: -1 });
+PdfSchema.index({ userId: 1, tags: 1 });
+PdfSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
 
 const PdfModel: Model<IPdf> = mongoose.models.Pdf || mongoose.model<IPdf>("Pdf", PdfSchema);
 

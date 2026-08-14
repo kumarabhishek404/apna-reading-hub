@@ -8,7 +8,11 @@ import { getPdfById } from '@/api/pdfs';
 import { ActionMenu } from '@/components/ActionMenu';
 import { API_BASE_URL } from '@/config/env';
 import { useToast } from '@/components/ToastContext';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
 import type { PdfItem } from '@/types';
+
+const theme = getTypeTheme('pdf');
 
 export default function ViewPdfScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,8 +48,6 @@ export default function ViewPdfScreen() {
 
   const viewerUri = useMemo(() => {
     if (!pdfUri) return null;
-    // Direct PDF works on iOS WebView; Google viewer is a reliable Android fallback path
-    // when the device WebView can't render application/pdf inline.
     return pdfUri;
   }, [pdfUri]);
 
@@ -67,28 +69,28 @@ export default function ViewPdfScreen() {
     {
       label: 'Edit',
       icon: 'create-outline' as const,
-      color: '#22409a',
+      color: theme.primary,
       onPress: () => router.push(`/pdfs/edit?id=${id}`),
     },
     {
       label: 'Add Reminder',
       icon: 'alarm-outline' as const,
-      color: '#22409a',
+      color: theme.primary,
       onPress: () => router.push(`/reminders/create?linkedId=${id}&linkedType=pdf`),
     },
     {
       label: 'Open in Browser',
       icon: 'open-outline' as const,
-      color: '#22409a',
+      color: theme.primary,
       onPress: () => openPdf(),
     },
   ];
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22409a" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading PDF...</Text>
         </View>
       </SafeAreaView>
@@ -97,7 +99,7 @@ export default function ViewPdfScreen() {
 
   if (!pdf) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>PDF not found</Text>
         </View>
@@ -106,16 +108,26 @@ export default function ViewPdfScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-          <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: theme.muted, borderColor: theme.soft }]}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={theme.primary} />
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: theme.dark }]} numberOfLines={1}>
           {pdf.title}
         </Text>
-        <Pressable style={styles.menuButton} onPress={() => setShowMenu(true)} accessibilityRole="button" accessibilityLabel="More options">
-          <AppIcon name="ellipsis-vertical" size={22} color="#1d2f5f" />
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: theme.muted, borderColor: theme.soft }]}
+          onPress={() => setShowMenu(true)}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+        >
+          <AppIcon name="ellipsis-vertical" size={22} color={theme.primary} />
         </Pressable>
       </View>
 
@@ -127,7 +139,7 @@ export default function ViewPdfScreen() {
             startInLoadingState
             renderLoading={() => (
               <View style={styles.webviewLoading}>
-                <ActivityIndicator size="large" color="#22409a" />
+                <ActivityIndicator size="large" color={theme.primary} />
               </View>
             )}
             onHttpError={() => {
@@ -143,12 +155,12 @@ export default function ViewPdfScreen() {
           />
         ) : (
           <View style={styles.fallbackContainer}>
-            <AppIcon name="document-outline" size={48} color="#94a3b8" />
+            <AppIcon name="document-outline" size={48} color={colors.textMuted} />
             <Text style={styles.fallbackText}>
               {pdfUri ? 'In-app preview unavailable' : 'PDF URL not available'}
             </Text>
             {pdfUri ? (
-              <Pressable style={styles.fallbackButton} onPress={openPdf}>
+              <Pressable style={[styles.fallbackButton, { backgroundColor: theme.primary }]} onPress={openPdf}>
                 <Text style={styles.fallbackButtonText}>Open in Browser</Text>
               </Pressable>
             ) : null}
@@ -162,7 +174,7 @@ export default function ViewPdfScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -177,27 +189,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '700',
-    color: '#1d2f5f',
   },
-  backButton: {
+  iconButton: {
     width: 38,
     height: 38,
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eef4ff',
     borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  menuButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
   },
   pdfContainer: {
     flex: 1,
@@ -221,11 +220,10 @@ const styles = StyleSheet.create({
   },
   fallbackText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   fallbackButton: {
-    backgroundColor: '#22409a',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -243,6 +241,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
   },
 });

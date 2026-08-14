@@ -30,6 +30,7 @@ const AlarmSchema = new Schema<IAlarm>(
 );
 
 AlarmSchema.index({ userId: 1, time: 1 });
+AlarmSchema.index({ userId: 1, isEnabled: 1 });
 
 const AlarmModel: Model<IAlarm> = mongoose.models.Alarm || mongoose.model<IAlarm>("Alarm", AlarmSchema);
 

@@ -1,11 +1,12 @@
 import { Blog, Link, Pdf, Note, Reminder, Alarm } from "../models";
 import type { DashboardStats, RecentItem, SearchResult } from "../lib/types";
+import { mapTags, toIso } from "../lib/query";
 import { getUpcomingAlarms } from "./alarm.service";
 import { getUpcomingReminders } from "./reminder.service";
 
 export async function getDashboardData(userId?: string) {
   const userFilter = userId ? { userId } : {};
-  
+
   const [totalBlogs, totalLinks, totalPdfs, totalNotes, totalReminders, totalAlarms] =
     await Promise.all([
       Blog.countDocuments(userFilter),
@@ -26,18 +27,10 @@ export async function getDashboardData(userId?: string) {
   };
 
   const [blogs, links, pdfs, notes, upcomingReminders, todayAlarms] = await Promise.all([
-    Blog.find(userFilter)
-      .sort({ createdAt: "desc" })
-      .limit(5),
-    Link.find(userFilter)
-      .sort({ createdAt: "desc" })
-      .limit(5),
-    Pdf.find(userFilter)
-      .sort({ createdAt: "desc" })
-      .limit(5),
-    Note.find(userFilter)
-      .sort({ createdAt: "desc" })
-      .limit(5),
+    Blog.find(userFilter).sort({ createdAt: -1 }).limit(5).lean(),
+    Link.find(userFilter).sort({ createdAt: -1 }).limit(5).lean(),
+    Pdf.find(userFilter).sort({ createdAt: -1 }).limit(5).lean(),
+    Note.find(userFilter).sort({ createdAt: -1 }).limit(5).lean(),
     getUpcomingReminders(5, userId),
     getUpcomingAlarms(5, userId),
   ]);
@@ -47,35 +40,32 @@ export async function getDashboardData(userId?: string) {
       id: b._id.toString(),
       type: "blog" as const,
       title: b.title,
-      createdAt: b.createdAt.toISOString(),
-      tags: b.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(b.createdAt),
+      tags: mapTags(b.tags),
     })),
     ...links.map((l) => ({
       id: l._id.toString(),
       type: "link" as const,
       title: l.title,
-      createdAt: l.createdAt.toISOString(),
-      tags: l.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(l.createdAt),
+      tags: mapTags(l.tags),
     })),
     ...pdfs.map((p) => ({
       id: p._id.toString(),
       type: "pdf" as const,
       title: p.title,
-      createdAt: p.createdAt.toISOString(),
-      tags: p.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(p.createdAt),
+      tags: mapTags(p.tags),
     })),
     ...notes.map((n) => ({
       id: n._id.toString(),
       type: "note" as const,
       title: n.title,
-      createdAt: n.createdAt.toISOString(),
-      tags: n.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(n.createdAt),
+      tags: mapTags(n.tags),
     })),
   ]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 10);
 
   const favorites = await getFavorites(userId);
@@ -85,16 +75,12 @@ export async function getDashboardData(userId?: string) {
 
 export async function getFavorites(userId?: string) {
   const userFilter = userId ? { userId } : {};
-  
+
   const [blogs, links, pdfs, notes] = await Promise.all([
-    Blog.find({ ...userFilter, isFavorite: true })
-      .sort({ updatedAt: "desc" }),
-    Link.find({ ...userFilter, isFavorite: true })
-      .sort({ updatedAt: "desc" }),
-    Pdf.find({ ...userFilter, isFavorite: true })
-      .sort({ updatedAt: "desc" }),
-    Note.find({ ...userFilter, isFavorite: true })
-      .sort({ updatedAt: "desc" }),
+    Blog.find({ ...userFilter, isFavorite: true }).sort({ updatedAt: -1 }).limit(50).lean(),
+    Link.find({ ...userFilter, isFavorite: true }).sort({ updatedAt: -1 }).limit(50).lean(),
+    Pdf.find({ ...userFilter, isFavorite: true }).sort({ updatedAt: -1 }).limit(50).lean(),
+    Note.find({ ...userFilter, isFavorite: true }).sort({ updatedAt: -1 }).limit(50).lean(),
   ]);
 
   return [
@@ -102,29 +88,29 @@ export async function getFavorites(userId?: string) {
       id: b._id.toString(),
       type: "blog" as const,
       title: b.title,
-      createdAt: b.createdAt.toISOString(),
-      tags: b.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(b.createdAt),
+      tags: mapTags(b.tags),
     })),
     ...links.map((l) => ({
       id: l._id.toString(),
       type: "link" as const,
       title: l.title,
-      createdAt: l.createdAt.toISOString(),
-      tags: l.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(l.createdAt),
+      tags: mapTags(l.tags),
     })),
     ...pdfs.map((p) => ({
       id: p._id.toString(),
       type: "pdf" as const,
       title: p.title,
-      createdAt: p.createdAt.toISOString(),
-      tags: p.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(p.createdAt),
+      tags: mapTags(p.tags),
     })),
     ...notes.map((n) => ({
       id: n._id.toString(),
       type: "note" as const,
       title: n.title,
-      createdAt: n.createdAt.toISOString(),
-      tags: n.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+      createdAt: toIso(n.createdAt),
+      tags: mapTags(n.tags),
     })),
   ];
 }
@@ -138,57 +124,46 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
   const [blogs, links, pdfs, notes, reminders, alarms] = await Promise.all([
     Blog.find({
       ...userFilter,
-      $or: [
-        { title: searchRegex },
-        { content: searchRegex },
-        { url: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { content: searchRegex }, { url: searchRegex }],
     })
       .limit(10)
-      .sort({ createdAt: "desc" }),
+      .sort({ createdAt: -1 })
+      .lean(),
     Link.find({
       ...userFilter,
-      $or: [
-        { title: searchRegex },
-        { description: searchRegex },
-        { url: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { description: searchRegex }, { url: searchRegex }],
     })
       .limit(10)
-      .sort({ createdAt: "desc" }),
+      .sort({ createdAt: -1 })
+      .lean(),
     Pdf.find({
       ...userFilter,
-      $or: [
-        { title: searchRegex },
-        { description: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { description: searchRegex }],
     })
       .limit(10)
-      .sort({ createdAt: "desc" }),
+      .sort({ createdAt: -1 })
+      .lean(),
     Note.find({
       ...userFilter,
-      $or: [
-        { title: searchRegex },
-        { content: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { content: searchRegex }],
     })
       .limit(10)
-      .sort({ createdAt: "desc" }),
+      .sort({ createdAt: -1 })
+      .lean(),
     Reminder.find({
       ...userFilter,
-      $or: [
-        { title: searchRegex },
-        { description: searchRegex },
-      ],
+      $or: [{ title: searchRegex }, { description: searchRegex }],
     })
       .limit(10)
-      .sort({ dueAt: "asc" }),
+      .sort({ dueAt: 1 })
+      .lean(),
     Alarm.find({
       ...userFilter,
       title: searchRegex,
     })
       .limit(10)
-      .sort({ time: "asc" }),
+      .sort({ time: 1 })
+      .lean(),
   ]);
 
   const results: SearchResult[] = [
@@ -198,8 +173,8 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
       title: b.title,
       subtitle: b.url ?? undefined,
       url: `/blogs/${b._id}/read`,
-      tags: b.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
-      createdAt: b.createdAt.toISOString(),
+      tags: mapTags(b.tags),
+      createdAt: toIso(b.createdAt),
     })),
     ...links.map((l) => ({
       id: l._id.toString(),
@@ -207,8 +182,8 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
       title: l.title,
       subtitle: l.url,
       url: `/links/${l._id}`,
-      tags: l.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
-      createdAt: l.createdAt.toISOString(),
+      tags: mapTags(l.tags),
+      createdAt: toIso(l.createdAt),
     })),
     ...pdfs.map((p) => ({
       id: p._id.toString(),
@@ -216,17 +191,17 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
       title: p.title,
       subtitle: p.description || undefined,
       url: `/pdfs/${p._id}`,
-      tags: p.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
-      createdAt: p.createdAt.toISOString(),
+      tags: mapTags(p.tags),
+      createdAt: toIso(p.createdAt),
     })),
     ...notes.map((n) => ({
       id: n._id.toString(),
       type: "note" as const,
       title: n.title,
-      subtitle: n.content.slice(0, 80) || undefined,
+      subtitle: (n.content || "").slice(0, 80) || undefined,
       url: `/notes/${n._id}/read`,
-      tags: n.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
-      createdAt: n.createdAt.toISOString(),
+      tags: mapTags(n.tags),
+      createdAt: toIso(n.createdAt),
     })),
     ...reminders.map((r) => ({
       id: r._id.toString(),
@@ -235,7 +210,7 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
       subtitle: r.description || undefined,
       url: `/reminders`,
       tags: [],
-      createdAt: r.dueAt.toISOString(),
+      createdAt: toIso(r.dueAt),
     })),
     ...alarms.map((a) => ({
       id: a._id.toString(),
@@ -244,7 +219,7 @@ export async function globalSearch(query: string, userId?: string): Promise<Sear
       subtitle: a.time,
       url: `/alarms`,
       tags: [],
-      createdAt: a.createdAt.toISOString(),
+      createdAt: toIso(a.createdAt),
     })),
   ];
 

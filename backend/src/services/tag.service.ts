@@ -1,107 +1,155 @@
 import { Tag, Blog, Link, Pdf, Note } from "../models";
 import { parseTags } from "../lib/utils";
+import { HttpError } from "../lib/errors";
+import mongoose from "mongoose";
+
+function mapDoc(doc: any) {
+  return {
+    id: doc._id.toString(),
+    title: doc.title,
+    content: doc.content,
+    url: doc.url,
+    description: doc.description,
+    pdfUrl: doc.pdfUrl,
+    isFavorite: doc.isFavorite,
+    isPinned: doc.isPinned,
+    createdAt: new Date(doc.createdAt).toISOString(),
+    updatedAt: new Date(doc.updatedAt).toISOString(),
+    tags: (doc.tags || []).map((name: string) => ({ id: name, name })),
+  };
+}
 
 export async function upsertTags(tagNames: string[]) {
-  console.log('[Tag Service] Upserting tags', { tagNames });
   const names = parseTags(tagNames);
+  if (names.length === 0) return [];
+
   const tags = await Promise.all(
-    names.map(async (name) => {
-      const tag = await Tag.findOneAndUpdate(
-        { name },
-        { name },
-        { upsert: true, new: true }
-      );
-      return tag;
-    })
+    names.map((name) =>
+      Tag.findOneAndUpdate({ name }, { name }, { upsert: true, new: true, setDefaultsOnInsert: true })
+    )
   );
-  console.log('[Tag Service] Tags upserted', { count: tags.length });
   return tags;
 }
 
+/**
+ * Efficient tag counts for the current user (avoids N+1 count queries).
+ */
 export async function getAllTagsWithCounts(userId?: string) {
-  console.log('[Tag Service] Getting all tags with counts', { userId });
-  const tags = await Tag.find().sort({ name: "asc" });
-  console.log('[Tag Service] Found tags', { count: tags.length });
+  const matchUser = userId
+    ? { userId: new mongoose.Types.ObjectId(userId) }
+    : {};
 
-  const filtered = userId
-    ? await Promise.all(
-        tags.map(async (tag) => {
-          const [blogs, links, pdfs, notes] = await Promise.all([
-            Blog.countDocuments({ tags: tag.name, userId }),
-            Link.countDocuments({ tags: tag.name, userId }),
-            Pdf.countDocuments({ tags: tag.name, userId }),
-            Note.countDocuments({ tags: tag.name, userId }),
-          ]);
-          return { id: (tag as any)._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
-        })
-      )
-    : await Promise.all(
-        tags.map(async (tag) => {
-          const [blogs, links, pdfs, notes] = await Promise.all([
-            Blog.countDocuments({ tags: tag.name }),
-            Link.countDocuments({ tags: tag.name }),
-            Pdf.countDocuments({ tags: tag.name }),
-            Note.countDocuments({ tags: tag.name }),
-          ]);
-          return { id: (tag as any)._id.toString(), name: tag.name, count: blogs + links + pdfs + notes };
-        })
-      );
+  const [blogAgg, linkAgg, pdfAgg, noteAgg] = await Promise.all([
+    Blog.aggregate([{ $match: matchUser }, { $unwind: "$tags" }, { $group: { _id: "$tags", count: { $sum: 1 } } }]),
+    Link.aggregate([{ $match: matchUser }, { $unwind: "$tags" }, { $group: { _id: "$tags", count: { $sum: 1 } } }]),
+    Pdf.aggregate([{ $match: matchUser }, { $unwind: "$tags" }, { $group: { _id: "$tags", count: { $sum: 1 } } }]),
+    Note.aggregate([{ $match: matchUser }, { $unwind: "$tags" }, { $group: { _id: "$tags", count: { $sum: 1 } } }]),
+  ]);
 
-  const result = filtered.filter((tag) => tag.count > 0);
-  console.log('[Tag Service] Tags with counts', { total: result.length });
-  return result;
+  const counts = new Map<string, number>();
+  for (const row of [...blogAgg, ...linkAgg, ...pdfAgg, ...noteAgg]) {
+    const name = String(row._id);
+    counts.set(name, (counts.get(name) || 0) + row.count);
+  }
+
+  if (counts.size === 0) return [];
+
+  const tags = await Tag.find({ name: { $in: [...counts.keys()] } })
+    .sort({ name: "asc" })
+    .lean();
+
+  const known = new Set(tags.map((t) => t.name));
+  const result = tags.map((tag) => ({
+    id: tag._id.toString(),
+    name: tag.name,
+    count: counts.get(tag.name) || 0,
+  }));
+
+  // Include tag names present on content but missing from Tag collection.
+  for (const [name, count] of counts) {
+    if (!known.has(name) && count > 0) {
+      result.push({ id: name, name, count });
+    }
+  }
+
+  return result
+    .filter((tag) => tag.count > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getTagByName(name: string) {
-  console.log('[Tag Service] Getting tag by name', { name });
-  return Tag.findOne({ name });
+  return Tag.findOne({ name }).lean();
 }
 
 export async function createTag(name: string) {
-  console.log('[Tag Service] Creating tag', { name });
-  const tag = await Tag.create({ name });
-  console.log('[Tag Service] Tag created', { id: (tag as any)._id.toString() });
-  return tag;
+  const trimmed = name.trim();
+  if (!trimmed) throw new HttpError(400, "Tag name is required");
+
+  try {
+    const tag = await Tag.create({ name: trimmed });
+    return {
+      id: tag._id.toString(),
+      name: tag.name,
+      count: 0,
+    };
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      throw new HttpError(409, "Tag already exists");
+    }
+    throw error;
+  }
 }
 
 export async function updateTag(id: string, name: string) {
-  console.log('[Tag Service] Updating tag', { id, name });
-  const tag = await Tag.findByIdAndUpdate(id, { name }, { new: true });
-  console.log('[Tag Service] Tag updated', { found: !!tag });
-  return tag;
+  const trimmed = name.trim();
+  if (!trimmed) throw new HttpError(400, "Tag name is required");
+
+  const tag = await Tag.findByIdAndUpdate(id, { name: trimmed }, { new: true });
+  if (!tag) throw new HttpError(404, "Tag not found");
+  return {
+    id: tag._id.toString(),
+    name: tag.name,
+    count: 0,
+  };
 }
 
 export async function deleteTag(id: string) {
-  console.log('[Tag Service] Deleting tag', { id });
-  await Tag.findByIdAndDelete(id);
-  console.log('[Tag Service] Tag deleted');
+  const tag = await Tag.findByIdAndDelete(id);
+  if (!tag) throw new HttpError(404, "Tag not found");
   return { success: true };
 }
 
+/**
+ * Returns a unified `items` list expected by the mobile client,
+ * plus legacy keys for compatibility.
+ */
 export async function getContentByTag(tagName: string, userId?: string) {
-  console.log('[Tag Service] Getting content by tag', { tagName, userId });
+  const filter = userId ? { tags: tagName, userId } : { tags: tagName };
+
   const [blogs, links, pdfs, notes] = await Promise.all([
-    Blog.find(userId ? { tags: tagName, userId } : { tags: tagName }),
-    Link.find(userId ? { tags: tagName, userId } : { tags: tagName }),
-    Pdf.find(userId ? { tags: tagName, userId } : { tags: tagName }),
-    Note.find(userId ? { tags: tagName, userId } : { tags: tagName }),
+    Blog.find(filter).sort({ createdAt: -1 }).lean(),
+    Link.find(filter).sort({ createdAt: -1 }).lean(),
+    Pdf.find(filter).sort({ createdAt: -1 }).lean(),
+    Note.find(filter).sort({ createdAt: -1 }).lean(),
   ]);
 
-  const result = {
-    blogs,
-    links,
-    pdfs,
-    notes,
-    total: blogs.length + links.length + pdfs.length + notes.length,
+  // Flat shape `{ kind, ...fields }` — matches mobile Tag Content screen.
+  const items = [
+    ...blogs.map((doc) => ({ kind: "blog" as const, ...mapDoc(doc) })),
+    ...links.map((doc) => ({ kind: "link" as const, ...mapDoc(doc) })),
+    ...pdfs.map((doc) => ({ kind: "pdf" as const, ...mapDoc(doc) })),
+    ...notes.map((doc) => ({ kind: "note" as const, ...mapDoc(doc) })),
+  ].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  return {
+    items,
+    blogs: items.filter((i) => i.kind === "blog"),
+    links: items.filter((i) => i.kind === "link"),
+    pdfs: items.filter((i) => i.kind === "pdf"),
+    notes: items.filter((i) => i.kind === "note"),
+    total: items.length,
   };
-  
-  console.log('[Tag Service] Content by tag', {
-    blogs: blogs.length,
-    links: links.length,
-    pdfs: pdfs.length,
-    notes: notes.length,
-    total: result.total,
-  });
-  
-  return result;
 }

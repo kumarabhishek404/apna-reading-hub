@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getLinkById, updateLink } from '@/api/links';
 import { Input } from '@/components/Input';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { linkOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { useIsOnline } from '@/lib/networkMonitor';
-import { OfflineStatusCompact } from '@/components/OfflineStatus';
-import type { LinkItem } from '@/types';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
+
+const TYPE = 'link' as const;
+const theme = getTypeTheme(TYPE);
 
 export default function EditLinkScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,14 +49,6 @@ export default function EditLinkScreen() {
     loadLink();
   }, [id]);
 
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/content');
-  };
-
   async function submit() {
     if (!id) return;
     
@@ -76,14 +73,12 @@ export default function EditLinkScreen() {
     setLoading(true);
     try {
       if (isOnline) {
-        // Online: Update via API
-        const result = await updateLink(id, { title, url, description, tags: tags as any });
+        await updateLink(id, { title, url, description, tags: tags as any });
         setLoading(false);
         showSuccess('Link updated successfully');
         router.back();
       } else {
-        // Offline: Update locally first
-        const link = await linkOfflineRepository.updateEntity('link', id, {
+        await linkOfflineRepository.updateEntity('link', id, {
           title,
           url,
           description,
@@ -109,7 +104,7 @@ export default function EditLinkScreen() {
 
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -118,73 +113,55 @@ export default function EditLinkScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-          <OfflineStatusCompact />
-        </View>
-        <Text style={styles.title}>Edit Link</Text>
-        <Input
-          label="Link Title"
-          placeholder="Enter link title"
-          value={title}
-          onChangeText={setTitle}
-          error={errors.title}
-        />
-        <Input
-          label="Link URL"
-          placeholder="https://example.com"
-          value={url}
-          onChangeText={setUrl}
-          error={errors.url}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <Input
-          label="Description"
-          placeholder="Enter description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-        />
-        <TagSelector
-          label="Tags"
-          placeholder="Select tags (optional)"
-          selectedTags={tags}
-          onTagsChange={(tagNames) => setTags(tagNames)}
-        />
-        <View style={styles.buttonRow}>
-          <Pressable style={styles.openButton} onPress={openLink}>
-            <AppIcon name="open-outline" size={18} color="#22409a" />
-            <Text style={styles.openButtonText}>Test Link</Text>
-          </Pressable>
-        </View>
-        <PrimaryButton title={loading ? 'Saving...' : 'Update Link'} onPress={submit} disabled={loading} />
-      </ScrollView>
-    </SafeAreaView>
+    <TypeThemedScreen type={TYPE} title="Edit Link" headerRight={<OfflineStatusCompact />} scroll>
+      <Input
+        label="Link Title"
+        placeholder="Enter link title"
+        value={title}
+        onChangeText={setTitle}
+        error={errors.title}
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Link URL"
+        placeholder="https://example.com"
+        value={url}
+        onChangeText={setUrl}
+        error={errors.url}
+        autoCapitalize="none"
+        keyboardType="url"
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Description"
+        placeholder="Enter description (optional)"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        numberOfLines={3}
+        accentColor={theme.primary}
+      />
+      <View style={styles.buttonRow}>
+        <Pressable
+          style={[styles.openButton, { backgroundColor: theme.muted, borderColor: theme.soft }]}
+          onPress={openLink}
+        >
+          <AppIcon name="open-outline" size={18} color={theme.primary} />
+          <Text style={[styles.openButtonText, { color: theme.primary }]}>Test Link</Text>
+        </Pressable>
+      </View>
+      <PrimaryButton
+        title={loading ? 'Saving...' : 'Update Link'}
+        onPress={submit}
+        disabled={loading}
+        color={theme.primary}
+      />
+    </TypeThemedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { padding: 20, gap: 14, paddingBottom: 40 },
-  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  safeArea: { flex: 1 },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -193,15 +170,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#eef4ff',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#dfe9ff',
   },
   openButtonText: {
-    color: '#22409a',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -212,6 +186,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
   },
 });

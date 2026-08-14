@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon } from '@/components/AppIcon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getBlogById, updateBlog } from '@/api/blogs';
 import { Input } from '@/components/Input';
+import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { blogOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { useIsOnline } from '@/lib/networkMonitor';
-import { OfflineStatusCompact } from '@/components/OfflineStatus';
-import type { BlogItem } from '@/types';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
+
+const TYPE = 'blog' as const;
+const theme = getTypeTheme(TYPE);
 
 export default function EditBlogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,14 +48,6 @@ export default function EditBlogScreen() {
     loadBlog();
   }, [id]);
 
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/content');
-  };
-
   async function submit() {
     if (!id) return;
     
@@ -74,14 +70,12 @@ export default function EditBlogScreen() {
     setLoading(true);
     try {
       if (isOnline) {
-        // Online: Update via API
-        const result = await updateBlog(id, { title, url, content, tags: tags as any });
+        await updateBlog(id, { title, url, content, tags: tags as any });
         setLoading(false);
         showSuccess('Blog updated successfully');
         router.back();
       } else {
-        // Offline: Update locally first
-        const blog = await blogOfflineRepository.updateEntity('blog', id, {
+        await blogOfflineRepository.updateEntity('blog', id, {
           title,
           url,
           content,
@@ -100,7 +94,7 @@ export default function EditBlogScreen() {
 
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -109,67 +103,53 @@ export default function EditBlogScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-          <OfflineStatusCompact />
-        </View>
-        <Text style={styles.title}>Edit Blog</Text>
-        <Input
-          label="Blog Title"
-          placeholder="Enter blog title"
-          value={title}
-          onChangeText={setTitle}
-          error={errors.title}
-        />
-        <Input
-          label="Blog URL"
-          placeholder="https://example.com (optional)"
-          value={url}
-          onChangeText={setUrl}
-          error={errors.url}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <Input
-          label="Content"
-          placeholder="Enter blog content (optional)"
-          value={content}
-          onChangeText={setContent}
-          multiline
-          numberOfLines={4}
-        />
-        <TagSelector
-          label="Tags"
-          placeholder="Select tags (optional)"
-          selectedTags={tags}
-          onTagsChange={(tagNames) => setTags(tagNames)}
-        />
-        <PrimaryButton title={loading ? 'Saving...' : 'Update Blog'} onPress={submit} disabled={loading} />
-      </ScrollView>
-    </SafeAreaView>
+    <TypeThemedScreen type={TYPE} title="Edit Blog" headerRight={<OfflineStatusCompact />} scroll>
+      <Input
+        label="Blog Title"
+        placeholder="Enter blog title"
+        value={title}
+        onChangeText={setTitle}
+        error={errors.title}
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Blog URL"
+        placeholder="https://example.com (optional)"
+        value={url}
+        onChangeText={setUrl}
+        error={errors.url}
+        autoCapitalize="none"
+        keyboardType="url"
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Content"
+        placeholder="Enter blog content (optional)"
+        value={content}
+        onChangeText={setContent}
+        multiline
+        numberOfLines={4}
+        accentColor={theme.primary}
+      />
+      <TagSelector
+        label="Tags"
+        placeholder="Select tags (optional)"
+        selectedTags={tags}
+        onTagsChange={(tagNames) => setTags(tagNames)}
+        accentColor={theme.primary}
+      />
+      <PrimaryButton
+        title={loading ? 'Saving...' : 'Update Blog'}
+        onPress={submit}
+        disabled={loading}
+        color={theme.primary}
+      />
+    </TypeThemedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { padding: 20, gap: 14, paddingBottom: 40 },
-  headerRow: { marginBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  safeArea: { flex: 1 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -177,6 +157,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
   },
 });

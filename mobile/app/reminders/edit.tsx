@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon } from '@/components/AppIcon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getReminders, updateReminder } from '@/api/reminders';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SoundPicker } from '@/components/SoundPicker';
 import { TimePicker } from '@/components/TimePicker';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import {
   DEFAULT_NOTIFICATION_SOUND,
@@ -17,7 +17,11 @@ import {
   ensureNotificationSetup,
   scheduleReminderNotifications,
 } from '@/services/notifications';
-import type { ReminderItem } from '@/types';
+import { colors } from '@/theme/colors';
+import { getTypeTheme } from '@/theme/typeColors';
+
+const TYPE = 'reminder' as const;
+const theme = getTypeTheme(TYPE);
 
 const REPEAT_OPTIONS: Array<{ id: 'none' | 'daily' | 'weekly' | 'monthly'; label: string }> = [
   { id: 'none', label: 'Once' },
@@ -100,14 +104,6 @@ export default function EditReminderScreen() {
     loadReminder();
   }, [id]);
 
-  const goBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/content');
-  };
-
   async function submit() {
     if (!id) return;
     
@@ -161,7 +157,7 @@ export default function EditReminderScreen() {
 
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -170,85 +166,74 @@ export default function EditReminderScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
-        </View>
-        <Text style={styles.title}>Edit Reminder</Text>
-        <Text style={styles.hint}>
-          Update your reminder settings.
-        </Text>
+    <TypeThemedScreen type={TYPE} title="Edit Reminder" scroll>
+      <Text style={styles.hint}>
+        Update your reminder settings.
+      </Text>
 
-        <Input
-          label="Reminder Title"
-          placeholder="Enter reminder title"
-          value={title}
-          onChangeText={setTitle}
-          error={errors.title}
-        />
-        <Input
-          label="Description"
-          placeholder="Enter description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-        />
-        <Input
-          label="Date"
-          placeholder="YYYY-MM-DD"
-          value={date}
-          onChangeText={setDate}
-          error={errors.date}
-          autoCapitalize="none"
-        />
-        <TimePicker value={time} onChange={setTime} label="Time" />
+      <Input
+        label="Reminder Title"
+        placeholder="Enter reminder title"
+        value={title}
+        onChangeText={setTitle}
+        error={errors.title}
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Description"
+        placeholder="Enter description (optional)"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        numberOfLines={3}
+        accentColor={theme.primary}
+      />
+      <Input
+        label="Date"
+        placeholder="YYYY-MM-DD"
+        value={date}
+        onChangeText={setDate}
+        error={errors.date}
+        autoCapitalize="none"
+        accentColor={theme.primary}
+      />
+      <TimePicker value={time} onChange={setTime} label="Time" accentColor={theme.primary} />
 
-        <Text style={styles.sectionLabel}>Repeat</Text>
-        <View style={styles.row}>
-          {REPEAT_OPTIONS.map((option) => {
-            const selected = option.id === repeat;
-            return (
-              <Pressable
-                key={option.id}
-                onPress={() => setRepeat(option.id)}
-                style={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      <Text style={[styles.sectionLabel, { color: theme.dark }]}>Repeat</Text>
+      <View style={styles.row}>
+        {REPEAT_OPTIONS.map((option) => {
+          const selected = option.id === repeat;
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => setRepeat(option.id)}
+              style={[
+                styles.chip,
+                selected && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+            >
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-        <SoundPicker value={sound} onChange={setSound} />
+      <SoundPicker value={sound} onChange={setSound} accentColor={theme.primary} />
 
-        <PrimaryButton title={loading ? 'Saving...' : 'Update Reminder'} onPress={submit} disabled={loading} />
-      </ScrollView>
-    </SafeAreaView>
+      <PrimaryButton
+        title={loading ? 'Saving...' : 'Update Reminder'}
+        onPress={submit}
+        disabled={loading}
+        color={theme.primary}
+      />
+    </TypeThemedScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
-  container: { padding: 20, gap: 14, paddingBottom: 40 },
-  headerRow: { marginBottom: 4 },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#dfe9ff',
-  },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
-  hint: { fontSize: 13, color: '#64748b', lineHeight: 18, marginTop: -4 },
-  sectionLabel: { fontSize: 14, fontWeight: '700', color: '#1d2f5f' },
+  safeArea: { flex: 1 },
+  hint: { fontSize: 13, color: colors.textMuted, lineHeight: 18, marginTop: -4 },
+  sectionLabel: { fontSize: 14, fontWeight: '700' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 12,
@@ -258,8 +243,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e3ebf7',
   },
-  chipSelected: { backgroundColor: '#22409a', borderColor: '#22409a' },
-  chipText: { fontWeight: '700', color: '#64748b', fontSize: 13 },
+  chipText: { fontWeight: '700', color: colors.textMuted, fontSize: 13 },
   chipTextSelected: { color: '#fff' },
   loadingContainer: {
     flex: 1,
@@ -268,6 +252,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.textMuted,
   },
 });

@@ -1,5 +1,6 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { GlobalHeader } from '@/components/GlobalHeader';
 import { Sidebar } from '@/components/Sidebar';
@@ -10,47 +11,87 @@ import { Ionicons } from '@expo/vector-icons';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
-const tabIcon = (
-  name: IoniconName,
-  activeName: IoniconName,
-  focused: boolean,
-  color: string,
-  size: number,
-) => (
-  <View style={{ width: size + 8, height: size + 8, justifyContent: 'center', alignItems: 'center' }}>
-    <AppIcon name={focused ? activeName : name} color={color} size={size} />
-  </View>
-);
-
-const tabButton = ({ children, style, ...props }: any) => {
-  const selected = !!props.accessibilityState?.selected;
-
-  return (
-    <Pressable
-      {...props}
-      style={[
-        {
-          borderRadius: 18,
-          backgroundColor: selected ? colors.primaryMuted : 'transparent',
-          minWidth: 70,
-          minHeight: 54,
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          borderWidth: selected ? 1 : 0,
-          borderColor: selected ? colors.primary : 'transparent',
-        },
-        style,
-      ]}
-    >
-      {children}
-    </Pressable>
-  );
+type TabTheme = {
+  primary: string;
+  muted: string;
+  soft: string;
 };
+
+const TAB_THEMES = {
+  home: {
+    primary: colors.primary,
+    muted: colors.primaryMuted,
+    soft: colors.note.soft,
+  },
+  notes: {
+    primary: colors.note.primary,
+    muted: colors.note.muted,
+    soft: colors.note.soft,
+  },
+  alarms: {
+    primary: colors.alarm.primary,
+    muted: colors.alarm.muted,
+    soft: colors.alarm.soft,
+  },
+  content: {
+    primary: colors.blog.primary,
+    muted: colors.blog.muted,
+    soft: colors.blog.soft,
+  },
+  settings: {
+    primary: colors.primaryDark,
+    muted: colors.primaryMuted,
+    soft: colors.note.soft,
+  },
+} as const satisfies Record<string, TabTheme>;
+
+function makeTabButton(theme: TabTheme) {
+  return function ThemedTabButton(props: any) {
+    const selected = !!props.accessibilityState?.selected;
+    const { children, style, ...rest } = props;
+
+    return (
+      <Pressable {...rest} style={[styles.tabButton, style]}>
+        <View
+          style={[
+            styles.tabButtonInner,
+            selected && {
+              backgroundColor: theme.muted,
+              borderColor: theme.soft,
+            },
+          ]}
+        >
+          {children}
+        </View>
+      </Pressable>
+    );
+  };
+}
+
+function TabIcon({
+  name,
+  activeName,
+  focused,
+  color,
+  size,
+}: {
+  name: IoniconName;
+  activeName: IoniconName;
+  focused: boolean;
+  color: string;
+  size: number;
+}) {
+  return (
+    <View style={styles.iconWrap}>
+      <AppIcon name={focused ? activeName : name} color={color} size={size} />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const { isOpen, closeSidebar } = useSidebar();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 62 + Math.max(insets.bottom, 8);
 
   return (
     <>
@@ -59,46 +100,36 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textLight,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: {
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
-            height: 74,
-            backgroundColor: '#f6f8fc',
-            borderRadius: 0,
+            height: tabBarHeight,
+            paddingTop: 6,
+            paddingBottom: Math.max(insets.bottom, 8),
+            paddingHorizontal: 6,
+            backgroundColor: colors.surface,
             borderTopWidth: 1,
-            borderTopColor: '#e2e8f0',
+            borderTopColor: colors.borderLight,
             borderLeftWidth: 0,
             borderRightWidth: 0,
             borderBottomWidth: 0,
-            paddingBottom: 8,
-            paddingTop: 8,
-            paddingHorizontal: 0,
-            shadowColor: 'transparent',
-            shadowOpacity: 0,
-            shadowRadius: 0,
-            shadowOffset: { width: 0, height: 0 },
             elevation: 0,
+            shadowOpacity: 0,
           },
           tabBarShowLabel: true,
           tabBarLabelStyle: {
             fontSize: 11,
-            fontWeight: '600',
+            fontWeight: '700',
             marginTop: 2,
-            color: colors.text,
           },
           tabBarIconStyle: {
             marginBottom: 0,
-            width: 24,
-            height: 24,
           },
           tabBarItemStyle: {
-            borderRadius: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingVertical: 4,
+            paddingVertical: 0,
             margin: 0,
           },
         }}
@@ -107,45 +138,85 @@ export default function TabsLayout() {
           name="home"
           options={{
             title: 'Home',
-            tabBarButton: tabButton,
-            tabBarIcon: ({ color, focused, size }) =>
-              tabIcon('home-outline', 'home', focused, color, size),
+            tabBarActiveTintColor: TAB_THEMES.home.primary,
+            tabBarButton: makeTabButton(TAB_THEMES.home),
+            tabBarIcon: ({ color, focused, size }) => (
+              <TabIcon
+                name="home-outline"
+                activeName="home"
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="notes"
           options={{
             title: 'Notes',
-            tabBarButton: tabButton,
-            tabBarIcon: ({ color, focused, size }) =>
-              tabIcon('document-text-outline', 'document-text', focused, color, size),
+            tabBarActiveTintColor: TAB_THEMES.notes.primary,
+            tabBarButton: makeTabButton(TAB_THEMES.notes),
+            tabBarIcon: ({ color, focused, size }) => (
+              <TabIcon
+                name="document-text-outline"
+                activeName="document-text"
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="alarms"
           options={{
             title: 'Alarm',
-            tabBarButton: tabButton,
-            tabBarIcon: ({ color, focused, size }) =>
-              tabIcon('alarm-outline', 'alarm', focused, color, size),
+            tabBarActiveTintColor: TAB_THEMES.alarms.primary,
+            tabBarButton: makeTabButton(TAB_THEMES.alarms),
+            tabBarIcon: ({ color, focused, size }) => (
+              <TabIcon
+                name="alarm-outline"
+                activeName="alarm"
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="content"
           options={{
             title: 'Library',
-            tabBarButton: tabButton,
-            tabBarIcon: ({ color, focused, size }) =>
-              tabIcon('book-outline', 'book', focused, color, size),
+            tabBarActiveTintColor: TAB_THEMES.content.primary,
+            tabBarButton: makeTabButton(TAB_THEMES.content),
+            tabBarIcon: ({ color, focused, size }) => (
+              <TabIcon
+                name="book-outline"
+                activeName="book"
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
             title: 'Settings',
-            tabBarButton: tabButton,
-            tabBarIcon: ({ color, focused, size }) =>
-              tabIcon('settings-outline', 'settings', focused, color, size),
+            tabBarActiveTintColor: TAB_THEMES.settings.primary,
+            tabBarButton: makeTabButton(TAB_THEMES.settings),
+            tabBarIcon: ({ color, focused, size }) => (
+              <TabIcon
+                name="settings-outline"
+                activeName="settings"
+                focused={focused}
+                color={color}
+                size={size}
+              />
+            ),
           }}
         />
       </Tabs>
@@ -153,3 +224,28 @@ export default function TabsLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonInner: {
+    minWidth: 64,
+    minHeight: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  iconWrap: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

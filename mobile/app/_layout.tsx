@@ -10,6 +10,9 @@ import { ToastProvider } from '@/components/ToastContext';
 import { SidebarProvider } from '@/components/SidebarContext';
 import { initDatabase } from '@/lib/storage';
 import { backgroundSync } from '@/lib/backgroundSync';
+// Registers notification listeners, Stop Alarm actions, and background task.
+import '@/services/notifications';
+import { ensureNotificationSetup } from '@/services/notifications';
 
 // Keep splash visible until icon fonts are ready.
 // @expo/vector-icons renders an empty <Text /> until the font is loaded.
@@ -27,6 +30,7 @@ export default function RootLayout() {
       try {
         await initDatabase();
         await backgroundSync.start();
+        await ensureNotificationSetup();
         console.log('[App] Offline services initialized');
       } catch (error) {
         console.error('[App] Failed to initialize offline services', error);

@@ -1,5 +1,7 @@
-import { Note, Tag } from "../models";
+import { Note } from "../models";
 import type { NoteItem } from "../lib/types";
+import { HttpError } from "../lib/errors";
+import { LIST_LIMIT, mapTags, toIso } from "../lib/query";
 import { upsertTags } from "./tag.service";
 
 function mapNote(note: any): NoteItem {
@@ -9,46 +11,42 @@ function mapNote(note: any): NoteItem {
     content: note.content,
     isPinned: note.isPinned,
     isFavorite: note.isFavorite,
-    createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
-    tags: note.tags.map((tagId: string) => ({ id: tagId, name: tagId })),
+    createdAt: toIso(note.createdAt),
+    updatedAt: toIso(note.updatedAt),
+    tags: mapTags(note.tags),
   };
 }
 
 export async function getNotes(search?: string, tag?: string, userId?: string) {
-  const filter: any = {};
-  
-  if (userId) {
-    filter.userId = userId;
-  }
-  
-  if (tag) {
-    filter.tags = tag;
-  }
-  
-  if (search) {
-    filter.$text = { $search: search };
-  }
+  const filter: Record<string, unknown> = {};
+  if (userId) filter.userId = userId;
+  if (tag) filter.tags = tag;
+  if (search) filter.$text = { $search: search };
 
   const notes = await Note.find(filter)
-    .sort({ isPinned: "desc", createdAt: "desc" });
-  
+    .sort({ isPinned: -1, createdAt: -1 })
+    .limit(LIST_LIMIT)
+    .lean();
+
   return notes.map(mapNote);
 }
 
 export async function getNoteById(id: string, userId?: string) {
-  const note = await Note.findById(id);
+  const note = await Note.findById(id).lean();
   if (!note || (userId && note.userId.toString() !== userId)) return null;
   return mapNote(note);
 }
 
-export async function createNote(data: {
-  title: string;
-  content?: string;
-  tags?: string[];
-  isPinned?: boolean;
-  isFavorite?: boolean;
-}, userId: string) {
+export async function createNote(
+  data: {
+    title: string;
+    content?: string;
+    tags?: string[];
+    isPinned?: boolean;
+    isFavorite?: boolean;
+  },
+  userId: string
+) {
   const tags = await upsertTags(data.tags ?? []);
   const note = await Note.create({
     userId,
@@ -73,9 +71,11 @@ export async function updateNote(
   userId?: string
 ) {
   const existing = await Note.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Note not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Note not found");
+  }
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.content !== undefined) updateData.content = data.content;
   if (data.isPinned !== undefined) updateData.isPinned = data.isPinned;
@@ -85,13 +85,15 @@ export async function updateNote(
     updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const note = await Note.findByIdAndUpdate(id, updateData, { new: true });
+  const note = await Note.findByIdAndUpdate(id, updateData, { new: true }).lean();
   return mapNote(note);
 }
 
 export async function deleteNote(id: string, userId?: string) {
   const existing = await Note.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) throw new Error("Note not found");
+  if (!existing || (userId && existing.userId.toString() !== userId)) {
+    throw new HttpError(404, "Note not found");
+  }
   await Note.findByIdAndDelete(id);
 }
 

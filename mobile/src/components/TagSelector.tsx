@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { getTags, createTag, type TagItem } from '@/api/tags';
+import { colors } from '@/theme/colors';
 import { useToast } from './ToastContext';
 
 interface TagSelectorProps {
@@ -10,9 +11,17 @@ interface TagSelectorProps {
   label?: string;
   placeholder?: string;
   error?: string;
+  accentColor?: string;
 }
 
-export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeholder = 'Select tags', error }: TagSelectorProps) {
+export function TagSelector({
+  selectedTags,
+  onTagsChange,
+  label = 'Tags',
+  placeholder = 'Select tags',
+  error,
+  accentColor = colors.primary,
+}: TagSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,7 +86,7 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={[styles.label, { color: accentColor }]}>{label}</Text> : null}
       
       <Pressable 
         style={[styles.selector, error && styles.selectorError]} 
@@ -92,7 +101,7 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectedTagsScroll}>
               <View style={styles.selectedTagsContainer}>
                 {selectedTags.map((tag, index) => (
-                  <View key={index} style={styles.selectedTag}>
+                  <View key={index} style={[styles.selectedTag, { backgroundColor: accentColor }]}>
                     <Text style={styles.selectedTagText}>{tag}</Text>
                     <Pressable
                       style={styles.removeTagButton}
@@ -108,7 +117,7 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
             </ScrollView>
           )}
         </View>
-        <AppIcon name="chevron-down" size={16} color="#64748b" />
+        <AppIcon name="chevron-down" size={16} color={colors.textMuted} />
       </Pressable>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -129,7 +138,7 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <AppIcon name="close" size={24} color="#1d2f5f" />
+                <AppIcon name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
 
@@ -138,34 +147,44 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
               placeholder="Search tags..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={colors.textMuted}
             />
 
             <ScrollView style={styles.tagsList} showsVerticalScrollIndicator={false}>
               {filteredTags.length === 0 ? (
                 <Text style={styles.noTagsText}>No tags found</Text>
               ) : (
-                filteredTags.map((tag) => (
+                filteredTags.map((tag) => {
+                  const selected = isTagSelected(tag.name);
+                  return (
                   <Pressable
                     key={tag.id}
-                    style={[styles.tagItem, isTagSelected(tag.name) && styles.tagItemSelected]}
+                    style={[
+                      styles.tagItem,
+                      selected && {
+                        backgroundColor: `${accentColor}14`,
+                        borderWidth: 1,
+                        borderColor: accentColor,
+                      },
+                    ]}
                     onPress={() => toggleTag(tag.name)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${tag.name} ${isTagSelected(tag.name) ? 'selected' : 'not selected'}, ${tag.count} items`}
+                    accessibilityLabel={`${tag.name} ${selected ? 'selected' : 'not selected'}, ${tag.count} items`}
                   >
                     <View style={styles.tagItemContent}>
                       <AppIcon 
-                        name={isTagSelected(tag.name) ? "checkbox" : "square-outline"} 
+                        name={selected ? "checkbox" : "square-outline"} 
                         size={20} 
-                        color={isTagSelected(tag.name) ? "#22409a" : "#94a3b8"} 
+                        color={selected ? accentColor : colors.textMuted} 
                       />
-                      <Text style={[styles.tagName, isTagSelected(tag.name) && styles.tagNameSelected]}>
+                      <Text style={[styles.tagName, selected && { fontWeight: '600', color: accentColor }]}>
                         {tag.name}
                       </Text>
                     </View>
                     <Text style={styles.tagCount}>{tag.count}</Text>
                   </Pressable>
-                ))
+                  );
+                })
               )}
             </ScrollView>
 
@@ -175,10 +194,14 @@ export function TagSelector({ selectedTags, onTagsChange, label = 'Tags', placeh
                 placeholder="Create new tag..."
                 value={newTagInput}
                 onChangeText={setNewTagInput}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textMuted}
               />
               <Pressable
-                style={[styles.createTagButton, !newTagInput.trim() && styles.createTagButtonDisabled]}
+                style={[
+                  styles.createTagButton,
+                  { backgroundColor: accentColor },
+                  !newTagInput.trim() && styles.createTagButtonDisabled,
+                ]}
                 onPress={handleCreateTag}
                 disabled={!newTagInput.trim() || loading}
                 accessibilityRole="button"
@@ -207,8 +230,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1d2f5f',
+    fontWeight: '700',
   },
   selector: {
     flexDirection: 'row',
@@ -230,7 +252,7 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: colors.textMuted,
   },
   selectedTagsScroll: {
     flex: 1,
@@ -244,7 +266,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#22409a',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -288,7 +309,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1d2f5f',
+    color: colors.text,
   },
   closeButton: {
     width: 32,
@@ -314,7 +335,7 @@ const styles = StyleSheet.create({
   },
   noTagsText: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 40,
   },
@@ -328,11 +349,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#f8fafc',
   },
-  tagItemSelected: {
-    backgroundColor: '#eef4ff',
-    borderWidth: 1,
-    borderColor: '#22409a',
-  },
   tagItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,15 +356,11 @@ const styles = StyleSheet.create({
   },
   tagName: {
     fontSize: 16,
-    color: '#1d2f5f',
-  },
-  tagNameSelected: {
-    fontWeight: '600',
-    color: '#22409a',
+    color: colors.text,
   },
   tagCount: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.textMuted,
     backgroundColor: '#e2e8f0',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -373,13 +385,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#22409a',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
   },
   createTagButtonDisabled: {
-    backgroundColor: '#94a3b8',
+    opacity: 0.5,
   },
   createTagButtonText: {
     color: '#fff',

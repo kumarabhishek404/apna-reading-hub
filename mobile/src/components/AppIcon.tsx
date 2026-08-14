@@ -2,6 +2,7 @@ import { Text, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { useIoniconsReady } from '@/components/IoniconsReadyContext';
+import { colors } from '@/theme/colors';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -33,7 +34,7 @@ const FALLBACK_GLYPHS: Partial<Record<IoniconName, string>> = {
   'chevron-back': '‹',
 };
 
-export function AppIcon({ name, size = 22, color = '#1d2f5f', style }: AppIconProps) {
+export function AppIcon({ name, size = 22, color = colors.primary, style }: AppIconProps) {
   const ioniconsReady = useIoniconsReady();
 
   if (ioniconsReady) {

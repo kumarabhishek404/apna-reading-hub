@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
-import { router } from 'expo-router';
 import { createTag, updateTag } from '@/api/tags';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useToast } from '@/components/ToastContext';
-import { useLocalSearchParams } from 'expo-router';
+import { colors } from '@/theme/colors';
 
 export default function CreateTagScreen() {
   const { id, name: initialName } = useLocalSearchParams<{ id?: string; name?: string }>();
@@ -28,7 +28,7 @@ export default function CreateTagScreen() {
 
   async function submit() {
     const newErrors: { name?: string } = {};
-    
+
     if (!name.trim()) {
       newErrors.name = 'Tag name is required';
     }
@@ -53,60 +53,116 @@ export default function CreateTagScreen() {
     } catch (error) {
       console.error('[Tag Create] API call failed', error);
       setLoading(false);
-      showError(isEditing ? 'Could not update tag. Please try again.' : 'Could not create tag. Please try again.');
+      showError(
+        isEditing
+          ? 'Could not update tag. Please try again.'
+          : 'Could not create tag. Please try again.',
+      );
     }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={goBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <AppIcon name="chevron-back" size={22} color="#1d2f5f" />
-          </Pressable>
+        <Pressable
+          style={styles.backButton}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <AppIcon name="chevron-back" size={22} color={colors.primary} />
+        </Pressable>
+
+        <View style={styles.badge}>
+          <View style={styles.badgeDot} />
+          <Text style={styles.badgeText}>Tag</Text>
         </View>
-        <Text style={styles.title}>{isEditing ? 'Edit Tag' : 'New Tag'}</Text>
+
+        <Text style={styles.title}>{isEditing ? 'Edit tag' : 'New tag'}</Text>
+        <Text style={styles.subtitle}>
+          Use short labels so you can filter library items later.
+        </Text>
+
         <Input
-          label="Tag Name"
-          placeholder="Enter tag name"
+          label="Tag name"
+          placeholder="e.g. work, ideas, research"
           value={name}
           onChangeText={setName}
           error={errors.name}
+          accentColor={colors.primary}
         />
-        <PrimaryButton title={loading ? 'Saving...' : isEditing ? 'Update Tag' : 'Create Tag'} onPress={submit} disabled={loading} />
+
+        <PrimaryButton
+          title={loading ? 'Saving…' : isEditing ? 'Update tag' : 'Create tag'}
+          onPress={submit}
+          disabled={loading}
+          color={colors.primary}
+        />
       </View>
-      {loading && (
+
+      {loading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#22409a" />
-          <Text style={styles.loadingText}>{isEditing ? 'Updating tag...' : 'Creating tag...'}</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>
+            {isEditing ? 'Updating tag…' : 'Creating tag…'}
+          </Text>
         </View>
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f3f6fb' },
+  safeArea: { flex: 1, backgroundColor: colors.note.background },
   container: { flex: 1, padding: 20, gap: 14 },
-  headerRow: { marginBottom: 4 },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#eef4ff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#dfe9ff',
+    borderColor: colors.note.soft,
   },
-  title: { fontSize: 30, fontWeight: '800', color: '#1d2f5f', letterSpacing: -0.5 },
+  badge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.primaryMuted,
+  },
+  badgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    marginTop: -6,
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
   loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -114,7 +170,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1d2f5f',
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
 });

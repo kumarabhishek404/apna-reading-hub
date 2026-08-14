@@ -1,15 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { BrandHeader } from '@/components/BrandHeader';
+import { AppIcon } from '@/components/AppIcon';
+import { useToast } from '@/components/ToastContext';
 import { clearSession, getStoredSession, type AuthSession } from '@/lib/auth';
 import { backgroundSync } from '@/lib/backgroundSync';
 import { useIsOnline } from '@/lib/networkMonitor';
 import { getSyncStats } from '@/lib/storage';
-import { AppIcon } from '@/components/AppIcon';
-import { useToast } from '@/components/ToastContext';
 import { colors } from '@/theme/colors';
+import { useTabContentPaddingBottom } from '@/theme/layout';
+import { getTypeTheme, TYPE_LABELS, type ItemType } from '@/theme/typeColors';
+
+const LIBRARY_TYPES: ItemType[] = ['note', 'blog', 'link', 'pdf', 'reminder'];
 
 export default function SettingsScreen() {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -22,6 +32,7 @@ export default function SettingsScreen() {
   });
   const { showSuccess, showError } = useToast();
   const isOnline = useIsOnline();
+  const tabPaddingBottom = useTabContentPaddingBottom();
 
   useEffect(() => {
     let active = true;
@@ -49,6 +60,7 @@ export default function SettingsScreen() {
 
   const user = session?.user;
   const initials = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'A';
+  const pendingCount = syncStats.pendingSyncItems + syncStats.failedSyncItems;
 
   const handleLogout = async () => {
     await clearSession();
@@ -76,30 +88,109 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <BrandHeader title="Settings" subtitle="Customize your reading experience" />
+    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.container, { paddingBottom: tabPaddingBottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.screenTitle}>Profile</Text>
+        <Text style={styles.screenSubtitle}>Your account and sync status</Text>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+        <View style={styles.profileHero}>
+          <View style={styles.profileTopRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.profileCopy}>
+              <Text style={styles.profileName}>{user?.fullName || 'Guest User'}</Text>
+              <Text style={styles.profileRole}>{user?.title || 'User'}</Text>
+              <View
+                style={[
+                  styles.statusChip,
+                  {
+                    backgroundColor: isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: isOnline ? colors.success : colors.error },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: isOnline ? colors.success : colors.error },
+                  ]}
+                >
+                  {isOnline ? 'Online' : 'Offline'}
+                </Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.fullName || 'Guest User'}</Text>
-            <Text style={styles.profileTitle}>{user?.title || 'User'}</Text>
-            <Text style={styles.profileMobile}>{user?.mobile || 'No mobile number'}</Text>
+          <View style={styles.detailBlock}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                <AppIcon name="call-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.detailCopy}>
+                <Text style={styles.detailLabel}>Mobile</Text>
+                <Text style={styles.detailValue}>{user?.mobile || 'Not set'}</Text>
+              </View>
+            </View>
+            <View style={styles.detailDivider} />
+            <View style={styles.detailRow}>
+              <View style={styles.detailIcon}>
+                <AppIcon name="briefcase-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.detailCopy}>
+                <Text style={styles.detailLabel}>Title</Text>
+                <Text style={styles.detailValue}>{user?.title || 'User'}</Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.list}>
-          <View style={styles.item}><Text style={styles.itemTitle}>Network</Text><Text style={[styles.itemValue, { color: isOnline ? '#22c55e' : '#ef4444' }]}>{isOnline ? 'Online' : 'Offline'}</Text></View>
-          <View style={styles.item}><Text style={styles.itemTitle}>Pending sync</Text><Text style={styles.itemValue}>{syncStats.pendingSyncItems + syncStats.failedSyncItems}</Text></View>
-          <View style={styles.item}><Text style={styles.itemTitle}>Total items</Text><Text style={styles.itemValue}>{syncStats.totalEntities}</Text></View>
+        <Text style={styles.sectionLabel}>Library types</Text>
+        <View style={styles.typeRow}>
+          {LIBRARY_TYPES.map((type) => {
+            const theme = getTypeTheme(type);
+            return (
+              <View key={type} style={[styles.typeChip, { backgroundColor: theme.muted }]}>
+                <View style={[styles.typeDot, { backgroundColor: theme.primary }]} />
+                <Text style={[styles.typeChipText, { color: theme.dark }]}>
+                  {TYPE_LABELS[type]}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
-        <Pressable 
-          style={[styles.syncButton, !isOnline && styles.syncButtonDisabled]} 
+        <Text style={styles.sectionLabel}>Sync</Text>
+        <View style={styles.syncPanel}>
+          <View style={styles.syncStat}>
+            <Text style={styles.syncStatValue}>{syncStats.totalEntities}</Text>
+            <Text style={styles.syncStatLabel}>Saved items</Text>
+          </View>
+          <View style={styles.syncStatDivider} />
+          <View style={styles.syncStat}>
+            <Text
+              style={[
+                styles.syncStatValue,
+                pendingCount > 0 && { color: colors.warning },
+              ]}
+            >
+              {pendingCount}
+            </Text>
+            <Text style={styles.syncStatLabel}>Pending sync</Text>
+          </View>
+        </View>
+
+        <Pressable
+          style={[styles.syncButton, (!isOnline || syncing) && styles.syncButtonDisabled]}
           onPress={handleManualSync}
           disabled={!isOnline || syncing}
         >
@@ -108,81 +199,235 @@ export default function SettingsScreen() {
           ) : (
             <>
               <AppIcon name="sync-outline" size={18} color="#fff" />
-              <Text style={styles.syncButtonText}>Sync Now</Text>
+              <Text style={styles.syncButtonText}>
+                {isOnline ? 'Sync now' : 'Connect to sync'}
+              </Text>
             </>
           )}
         </Pressable>
 
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <AppIcon name="log-out-outline" size={18} color={colors.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, padding: 20 },
-  profileCard: {
+  scroll: { flex: 1 },
+  container: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 12,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: -6,
+    marginBottom: 4,
+  },
+  profileHero: {
+    backgroundColor: colors.note.background,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.note.soft,
+    padding: 18,
+    gap: 16,
+  },
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: '800',
+  },
+  profileCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  profileName: {
+    color: colors.primaryDark,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  profileRole: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailBlock: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    overflow: 'hidden',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  detailIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailCopy: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  detailValue: {
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginLeft: 60,
+  },
+  sectionLabel: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  typeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  typeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  syncPanel: {
     backgroundColor: colors.surface,
     borderRadius: 18,
-    padding: 18,
     borderWidth: 1,
     borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  avatarText: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  profileInfo: { flex: 1 },
-  profileName: { color: '#1d2f5f', fontSize: 18, fontWeight: '800' },
-  profileTitle: { color: '#5f6d89', fontSize: 14, marginTop: 3 },
-  profileMobile: { color: '#ff8a00', fontSize: 14, fontWeight: '700', marginTop: 4 },
-  list: { gap: 12 },
-  item: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
     paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#edf1fa',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  itemTitle: { color: '#1d2f5f', fontWeight: '700', fontSize: 15 },
-  itemValue: { color: '#ff8a00', fontWeight: '700', fontSize: 13 },
-  syncButton: {
-    backgroundColor: '#22409a',
-    borderRadius: 16,
-    paddingVertical: 14,
+  syncStat: {
+    flex: 1,
     alignItems: 'center',
-    marginTop: 16,
+    gap: 4,
+  },
+  syncStatDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: colors.borderLight,
+  },
+  syncStatValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  syncStatLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  syncButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
+    marginTop: 4,
   },
   syncButtonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.55,
   },
-  syncButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  syncButtonText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 16,
+  },
   logoutButton: {
-    backgroundColor: '#22409a',
+    marginTop: 8,
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 22,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  logoutText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  logoutText: {
+    color: colors.error,
+    fontWeight: '800',
+    fontSize: 16,
+  },
 });
