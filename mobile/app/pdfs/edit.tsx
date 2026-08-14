@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getPdfById, updatePdf } from '@/api/pdfs';
@@ -106,6 +106,12 @@ export default function EditPdfScreen() {
         onTagsChange={setTags}
         accentColor={theme.primary}
       />
+      <Pressable
+        style={styles.reminderButton}
+        onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=pdf`)}
+      >
+        <Text style={styles.reminderButtonText}>+ Add Reminder</Text>
+      </Pressable>
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update PDF'}
         onPress={submit}
@@ -126,5 +132,17 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: colors.textMuted,
+  },
+  reminderButton: {
+    backgroundColor: colors.reminder.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  reminderButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

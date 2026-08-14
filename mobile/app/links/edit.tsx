@@ -150,6 +150,12 @@ export default function EditLinkScreen() {
           <Text style={[styles.openButtonText, { color: theme.primary }]}>Test Link</Text>
         </Pressable>
       </View>
+      <Pressable
+        style={styles.reminderButton}
+        onPress={() => router.push(`/reminders/create?linkedId=${id}&linkedType=link`)}
+      >
+        <Text style={styles.reminderButtonText}>+ Add Reminder</Text>
+      </Pressable>
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Link'}
         onPress={submit}
@@ -178,6 +184,18 @@ const styles = StyleSheet.create({
   openButtonText: {
     fontWeight: '600',
     fontSize: 14,
+  },
+  reminderButton: {
+    backgroundColor: colors.reminder.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  reminderButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,

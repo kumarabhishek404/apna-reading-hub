@@ -287,15 +287,6 @@ export default function ContentScreen() {
       },
     ];
 
-    if (entry.kind !== 'note') {
-      actions.splice(1, 0, {
-        icon: 'notifications-outline',
-        color: colors.reminder.primary,
-        onPress: () => router.push(`/reminders/create?linkedId=${entry.item.id}&linkedType=${entry.kind}`),
-        accessibilityLabel: `Add reminder to ${entry.kind}`,
-      });
-    }
-
     return actions;
   };
 
