@@ -6,6 +6,7 @@ import { deleteNote, getNotes } from '@/api/notes';
 import { deleteBlog, getBlogs } from '@/api/blogs';
 import { deleteLink, getLinks } from '@/api/links';
 import { deletePdf, getPdfs } from '@/api/pdfs';
+import { getReminders } from '@/api/reminders';
 import { getTags } from '@/api/tags';
 import { API_BASE_URL } from '@/config/env';
 import { ActionMenu } from '@/components/ActionMenu';
@@ -21,15 +22,16 @@ import { colors, typography, spacing, borderRadius, shadows } from '@/theme/colo
 import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
 import { noteOfflineRepository as genericNoteRepo } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { networkMonitor } from '@/lib/networkMonitor';
-import type { BlogItem, LinkItem, NoteItem, PdfItem } from '@/types';
+import type { BlogItem, LinkItem, NoteItem, PdfItem, ReminderItem } from '@/types';
 
 type ContentItem =
   | ({ kind: 'note'; item: NoteItem })
   | ({ kind: 'blog'; item: BlogItem })
   | ({ kind: 'link'; item: LinkItem })
-  | ({ kind: 'pdf'; item: PdfItem });
+  | ({ kind: 'pdf'; item: PdfItem })
+  | ({ kind: 'reminder'; item: ReminderItem });
 
-type FilterType = 'all' | 'note' | 'blog' | 'link' | 'pdf';
+type FilterType = 'all' | 'note' | 'blog' | 'link' | 'pdf' | 'reminder';
 
 export default function ContentScreen() {
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -48,11 +50,12 @@ export default function ContentScreen() {
     console.log('[Content] Loading data from database');
     try {
       // Try to load from server first
-      const [notesRes, blogsRes, linksRes, pdfsRes] = await Promise.all([
+      const [notesRes, blogsRes, linksRes, pdfsRes, remindersRes] = await Promise.all([
         getNotes(),
         getBlogs(),
         getLinks(),
         getPdfs(),
+        getReminders(),
       ]);
 
       const combined: ContentItem[] = [
@@ -60,6 +63,7 @@ export default function ContentScreen() {
         ...blogsRes.blogs.map((item) => ({ kind: 'blog' as const, item })),
         ...linksRes.links.map((item) => ({ kind: 'link' as const, item })),
         ...pdfsRes.pdfs.map((item) => ({ kind: 'pdf' as const, item })),
+        ...remindersRes.reminders.map((item) => ({ kind: 'reminder' as const, item })),
       ];
 
       // Sort by createdAt descending
@@ -163,6 +167,9 @@ export default function ContentScreen() {
         case 'pdf':
           await deletePdf(entry.item.id);
           break;
+        case 'reminder':
+          router.push(`/reminders/edit?id=${entry.item.id}`);
+          return;
       }
       showSuccess(`${entry.kind.charAt(0).toUpperCase() + entry.kind.slice(1)} deleted successfully`);
       void load();
@@ -177,7 +184,11 @@ export default function ContentScreen() {
         icon: 'create-outline',
         color: '#22409a',
         onPress: () => {
-          router.push(`/${entry.kind}s/edit?id=${entry.item.id}`);
+          if (entry.kind === 'reminder') {
+            router.push(`/reminders/edit?id=${entry.item.id}`);
+          } else {
+            router.push(`/${entry.kind}s/edit?id=${entry.item.id}`);
+          }
         },
         accessibilityLabel: `Edit ${entry.kind}`,
       },
@@ -207,7 +218,7 @@ export default function ContentScreen() {
       case 'blog': return 'Blog';
       case 'link': return 'Link';
       case 'pdf': return 'PDF';
-
+      case 'reminder': return 'Reminder';
     }
   }
 
@@ -233,6 +244,11 @@ export default function ContentScreen() {
       return;
     }
 
+    if (entry.kind === 'reminder') {
+      router.push(`/reminders/edit?id=${entry.item.id}`);
+      return;
+    }
+
     showInfo(entry.kind === 'note' ? entry.item.content || 'No content yet.' : 'Open this item from your library.');
   }
 
@@ -241,7 +257,7 @@ export default function ContentScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.screenTitle}>Library</Text>
-          <Text style={styles.screenSubtitle}>Notes, links, blogs, and PDFs</Text>
+          <Text style={styles.screenSubtitle}>Notes, links, blogs, PDFs, and reminders</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
@@ -263,6 +279,9 @@ export default function ContentScreen() {
         </Link>
         <Link href="/pdfs/create" asChild>
           <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ PDF</Text></Pressable>
+        </Link>
+        <Link href="/reminders/create" asChild>
+          <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Reminder</Text></Pressable>
         </Link>
         <Pressable 
           style={styles.tagsButton}
@@ -431,7 +450,13 @@ export default function ContentScreen() {
                 <Text style={[styles.filterItemText, filterType === 'pdf' && styles.filterItemTextActive]}>PDFs</Text>
                 {filterType === 'pdf' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
               </Pressable>
-
+              <Pressable
+                style={[styles.filterItem, filterType === 'reminder' && styles.filterItemActive]}
+                onPress={() => handleFilterChange('reminder')}
+              >
+                <Text style={[styles.filterItemText, filterType === 'reminder' && styles.filterItemTextActive]}>Reminders</Text>
+                {filterType === 'reminder' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+              </Pressable>
             </ScrollView>
           </View>
         </View>

@@ -49,6 +49,7 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
     { icon: 'document-outline', label: 'PDFs', route: '/(tabs)/content' },
     { icon: 'link-outline', label: 'Links', route: '/(tabs)/content' },
     { icon: 'alarm-outline', label: 'Alarm', route: '/(tabs)/alarms' },
+    { icon: 'notifications-outline', label: 'Reminders', route: '/(tabs)/content' },
     { icon: 'pricetag-outline', label: 'Tags', route: '/tags' },
   ];
 
