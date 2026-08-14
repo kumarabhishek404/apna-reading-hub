@@ -35,7 +35,13 @@ export function GlobalHeader({
           </Pressable>
         )}
 
-        {title && <Text style={styles.title}>{title}</Text>}
+        <View style={styles.titleContainer}>
+          {title ? (
+            <Text style={styles.title}>{title}</Text>
+          ) : (
+            <Text style={styles.brandName}>apna notes</Text>
+          )}
+        </View>
 
         {showProfile && (
           <View style={styles.profileContainer}>
@@ -68,12 +74,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
+  titleContainer: {
     flex: 1,
+    marginLeft: 8,
+  },
+  title: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    marginLeft: 8,
+  },
+  brandName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
   },
   profileContainer: {
     marginLeft: 'auto',
