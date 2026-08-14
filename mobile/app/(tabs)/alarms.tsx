@@ -131,7 +131,7 @@ export default function AlarmsScreen() {
                     accessibilityLabel={item.isEnabled ? "Turn off alarm" : "Turn on alarm"}
                   >
                     <AppIcon
-                      name={item.isEnabled ? "power" : "power-outline"}
+                      name={item.isEnabled ? "radio-button-on" : "radio-button-off"}
                       size={18}
                       color={alarmTheme.primary}
                     />
