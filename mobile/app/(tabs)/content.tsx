@@ -468,93 +468,95 @@ export default function ContentScreen() {
               </Pressable>
             </View>
             
-            <ScrollView style={styles.filterList}>
-              <Text style={styles.filterSectionTitle}>Type</Text>
-              <Pressable
-                style={[styles.filterItem, filterType === 'all' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('all')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'all' && styles.filterItemTextActive]}>All Items</Text>
-                {filterType === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, filterType === 'note' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('note')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'note' && styles.filterItemTextActive]}>Notes</Text>
-                {filterType === 'note' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, filterType === 'blog' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('blog')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'blog' && styles.filterItemTextActive]}>Blogs</Text>
-                {filterType === 'blog' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, filterType === 'link' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('link')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'link' && styles.filterItemTextActive]}>Links</Text>
-                {filterType === 'link' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, filterType === 'pdf' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('pdf')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'pdf' && styles.filterItemTextActive]}>PDFs</Text>
-                {filterType === 'pdf' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, filterType === 'reminder' && styles.filterItemActive]}
-                onPress={() => handleFilterChange('reminder')}
-              >
-                <Text style={[styles.filterItemText, filterType === 'reminder' && styles.filterItemTextActive]}>Reminders</Text>
-                {filterType === 'reminder' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-
-              <Text style={styles.filterSectionTitle}>Time Period</Text>
-              <Pressable
-                style={[styles.filterItem, timeFilter === 'all' && styles.filterItemActive]}
-                onPress={() => handleTimeFilterChange('all')}
-              >
-                <Text style={[styles.filterItemText, timeFilter === 'all' && styles.filterItemTextActive]}>All Time</Text>
-                {timeFilter === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, timeFilter === 'monthly' && styles.filterItemActive]}
-                onPress={() => handleTimeFilterChange('monthly')}
-              >
-                <Text style={[styles.filterItemText, timeFilter === 'monthly' && styles.filterItemTextActive]}>Last Month</Text>
-                {timeFilter === 'monthly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              <Pressable
-                style={[styles.filterItem, timeFilter === 'yearly' && styles.filterItemActive]}
-                onPress={() => handleTimeFilterChange('yearly')}
-              >
-                <Text style={[styles.filterItemText, timeFilter === 'yearly' && styles.filterItemTextActive]}>Last Year</Text>
-                {timeFilter === 'yearly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-
-              <Text style={styles.filterSectionTitle}>Tags</Text>
-              <Pressable
-                style={[styles.filterItem, selectedTag === null && styles.filterItemActive]}
-                onPress={() => handleTagChange(null)}
-              >
-                <Text style={[styles.filterItemText, selectedTag === null && styles.filterItemTextActive]}>All Tags</Text>
-                {selectedTag === null && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
-              </Pressable>
-              {tags.map((tag) => (
+            <View style={styles.filterScrollContainer}>
+              <ScrollView style={styles.filterList} contentContainerStyle={styles.filterListContent}>
+                <Text style={styles.filterSectionTitle}>Type</Text>
                 <Pressable
-                  key={tag.id}
-                  style={[styles.filterItem, selectedTag === tag.id && styles.filterItemActive]}
-                  onPress={() => handleTagChange(tag.id)}
+                  style={[styles.filterItem, filterType === 'all' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('all')}
                 >
-                  <Text style={[styles.filterItemText, selectedTag === tag.id && styles.filterItemTextActive]}>{tag.name}</Text>
-                  {selectedTag === tag.id && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  <Text style={[styles.filterItemText, filterType === 'all' && styles.filterItemTextActive]}>All Items</Text>
+                  {filterType === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
                 </Pressable>
-              ))}
-            </ScrollView>
+                <Pressable
+                  style={[styles.filterItem, filterType === 'note' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('note')}
+                >
+                  <Text style={[styles.filterItemText, filterType === 'note' && styles.filterItemTextActive]}>Notes</Text>
+                  {filterType === 'note' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, filterType === 'blog' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('blog')}
+                >
+                  <Text style={[styles.filterItemText, filterType === 'blog' && styles.filterItemTextActive]}>Blogs</Text>
+                  {filterType === 'blog' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, filterType === 'link' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('link')}
+                >
+                  <Text style={[styles.filterItemText, filterType === 'link' && styles.filterItemTextActive]}>Links</Text>
+                  {filterType === 'link' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, filterType === 'pdf' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('pdf')}
+                >
+                  <Text style={[styles.filterItemText, filterType === 'pdf' && styles.filterItemTextActive]}>PDFs</Text>
+                  {filterType === 'pdf' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, filterType === 'reminder' && styles.filterItemActive]}
+                  onPress={() => handleFilterChange('reminder')}
+                >
+                  <Text style={[styles.filterItemText, filterType === 'reminder' && styles.filterItemTextActive]}>Reminders</Text>
+                  {filterType === 'reminder' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+
+                <Text style={styles.filterSectionTitle}>Time Period</Text>
+                <Pressable
+                  style={[styles.filterItem, timeFilter === 'all' && styles.filterItemActive]}
+                  onPress={() => handleTimeFilterChange('all')}
+                >
+                  <Text style={[styles.filterItemText, timeFilter === 'all' && styles.filterItemTextActive]}>All Time</Text>
+                  {timeFilter === 'all' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, timeFilter === 'monthly' && styles.filterItemActive]}
+                  onPress={() => handleTimeFilterChange('monthly')}
+                >
+                  <Text style={[styles.filterItemText, timeFilter === 'monthly' && styles.filterItemTextActive]}>Last Month</Text>
+                  {timeFilter === 'monthly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                <Pressable
+                  style={[styles.filterItem, timeFilter === 'yearly' && styles.filterItemActive]}
+                  onPress={() => handleTimeFilterChange('yearly')}
+                >
+                  <Text style={[styles.filterItemText, timeFilter === 'yearly' && styles.filterItemTextActive]}>Last Year</Text>
+                  {timeFilter === 'yearly' && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+
+                <Text style={styles.filterSectionTitle}>Tags</Text>
+                <Pressable
+                  style={[styles.filterItem, selectedTag === null && styles.filterItemActive]}
+                  onPress={() => handleTagChange(null)}
+                >
+                  <Text style={[styles.filterItemText, selectedTag === null && styles.filterItemTextActive]}>All Tags</Text>
+                  {selectedTag === null && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                </Pressable>
+                {tags.map((tag) => (
+                  <Pressable
+                    key={tag.id}
+                    style={[styles.filterItem, selectedTag === tag.id && styles.filterItemActive]}
+                    onPress={() => handleTagChange(tag.id)}
+                  >
+                    <Text style={[styles.filterItemText, selectedTag === tag.id && styles.filterItemTextActive]}>{tag.name}</Text>
+                    {selectedTag === tag.id && <AppIcon name="checkmark-circle" size={20} color={colors.primary} />}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
 
             <View style={styles.filterModalFooter}>
               <Pressable
@@ -706,6 +708,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
+  filterScrollContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
+  filterList: {
+    flex: 1,
+  },
+  filterListContent: {
+    paddingBottom: 8,
+  },
   filterSectionTitle: {
     fontSize: 13,
     fontWeight: '700',
@@ -752,9 +764,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  filterList: {
-    flex: 1,
   },
   filterItem: {
     flexDirection: 'row',
