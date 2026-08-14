@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { IoniconsReadyProvider } from '@/components/IoniconsReadyContext';
 import { ToastProvider } from '@/components/ToastContext';
+import { SidebarProvider } from '@/components/SidebarContext';
 import { initDatabase } from '@/lib/storage';
 import { backgroundSync } from '@/lib/backgroundSync';
 
@@ -46,14 +47,16 @@ export default function RootLayout() {
   return (
     <IoniconsReadyProvider ready={!!fontsLoaded && !fontError}>
       <SafeAreaProvider>
-        <ToastProvider>
-          <StatusBar style="auto" />
-          <Stack 
-            screenOptions={{ 
-              headerShown: false,
-            }} 
-          />
-        </ToastProvider>
+        <SidebarProvider>
+          <ToastProvider>
+            <StatusBar style="auto" />
+            <Stack 
+              screenOptions={{ 
+                headerShown: false,
+              }} 
+            />
+          </ToastProvider>
+        </SidebarProvider>
       </SafeAreaProvider>
     </IoniconsReadyProvider>
   );

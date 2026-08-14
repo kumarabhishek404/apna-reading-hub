@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
-import { BrandHeader } from '@/components/BrandHeader';
 import { AppIcon } from '@/components/AppIcon';
 import { colors } from '@/theme/colors';
 
@@ -64,7 +63,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <BrandHeader title="Create" subtitle="Quickly add new content to your library" />
+        <Text style={styles.screenTitle}>Create</Text>
+        <Text style={styles.screenSubtitle}>Quickly add new content to your library</Text>
 
         <View style={styles.createGrid}>
           {createOptions.map((option) => (
@@ -104,6 +104,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
   },
   createCard: {
     width: '47%',

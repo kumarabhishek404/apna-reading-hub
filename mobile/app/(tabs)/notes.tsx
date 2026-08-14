@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { deleteNote, getNotes } from '@/api/notes';
 import { AppIcon } from '@/components/AppIcon';
-import { BrandHeader } from '@/components/BrandHeader';
 import { useToast } from '@/components/ToastContext';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { colors } from '@/theme/colors';
@@ -92,13 +91,6 @@ export default function NotesScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <BrandHeader title="Notes" subtitle="All your notes in one place" />
-        </View>
-        <OfflineStatusCompact />
-      </View>
-      
       <View style={styles.createButtons}>
         <Link href="/notes/create" asChild>
           <Pressable style={styles.createButton}><Text style={styles.createButtonText}>+ Note</Text></Pressable>
@@ -170,8 +162,18 @@ export default function NotesScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerContent: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 16 },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
   createButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',

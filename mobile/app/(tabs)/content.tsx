@@ -11,7 +11,6 @@ import { getTags } from '@/api/tags';
 import { API_BASE_URL } from '@/config/env';
 import { ActionMenu } from '@/components/ActionMenu';
 import { AppIcon } from '@/components/AppIcon';
-import { BrandHeader } from '@/components/BrandHeader';
 import { useToast } from '@/components/ToastContext';
 import { dataSyncManager, useDataSync } from '@/lib/dataSync';
 import { ModernHeader } from '@/components/ModernHeader';
@@ -251,8 +250,9 @@ export default function ContentScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <BrandHeader title="Library" subtitle="Notes, links, blogs, PDFs, and reminders" />
+        <View style={styles.headerText}>
+          <Text style={styles.screenTitle}>Library</Text>
+          <Text style={styles.screenSubtitle}>Notes, links, blogs, PDFs, and reminders</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
@@ -462,9 +462,20 @@ export default function ContentScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerContent: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 12, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerText: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
   filterButton: {
     width: 36,
     height: 36,
