@@ -206,9 +206,19 @@ export default function HomeScreen() {
           <Text style={styles.brandMark}>apna notes</Text>
           <Text style={styles.screenTitle}>Create</Text>
           <Text style={styles.screenSubtitle}>
-            Start something new, or jump back into your library.
+            Add anything — NoName will understand it automatically.
           </Text>
         </View>
+
+        <Pressable
+          style={styles.universalAddButton}
+          onPress={() => router.push('/(tabs)/home/add' as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Add new item"
+        >
+          <AppIcon name="add" size={28} color="#fff" />
+          <Text style={styles.universalAddText}>Add Anything</Text>
+        </Pressable>
 
         <View style={styles.overviewRow}>
           <Pressable
@@ -234,7 +244,32 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.sectionLabel}>New item</Text>
+        <Text style={styles.sectionLabel}>Quick access</Text>
+        <View style={styles.overviewRow}>
+          <Pressable
+            style={[styles.overviewChip, { backgroundColor: colors.note.muted }]}
+            onPress={() => router.push('/(tabs)/notes')}
+          >
+            <Text style={[styles.overviewValue, { color: colors.note.primary }]}>{noteCount}</Text>
+            <Text style={[styles.overviewLabel, { color: colors.note.dark }]}>Notes</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.overviewChip, { backgroundColor: colors.alarm.muted }]}
+            onPress={() => router.push('/(tabs)/alarms')}
+          >
+            <Text style={[styles.overviewValue, { color: colors.alarm.primary }]}>{alarmCount}</Text>
+            <Text style={[styles.overviewLabel, { color: colors.alarm.dark }]}>Alarms</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.overviewChip, { backgroundColor: colors.blog.muted }]}
+            onPress={() => router.push('/(tabs)/content')}
+          >
+            <AppIcon name="book-outline" size={18} color={colors.blog.primary} />
+            <Text style={[styles.overviewLabel, { color: colors.blog.dark }]}>Library</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionLabel}>Or create manually</Text>
         <View style={[styles.createGrid, { gap }]}>
           {CREATE_OPTIONS.map((option) => {
             const theme = getTypeTheme(option.type);
@@ -362,6 +397,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 20,
     marginTop: 2,
+  },
+  universalAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: 18,
+    borderRadius: 18,
+    marginBottom: 16,
+  },
+  universalAddText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
   },
   overviewRow: {
     flexDirection: 'row',
