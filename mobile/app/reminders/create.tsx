@@ -4,15 +4,20 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { createReminder } from '@/api/reminders';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { SoundPicker } from '@/components/SoundPicker';
 import { TimePicker } from '@/components/TimePicker';
 import { DatePicker } from '@/components/DatePicker';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
-import {
-  DEFAULT_NOTIFICATION_SOUND,
-  type NotificationSoundId,
-} from '@/constants/notificationSounds';
+import { getPreferredReminderSound } from '@/lib/notificationSoundPreference';
+import { reminderOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { networkMonitor } from '@/lib/networkMonitor';
+import { Input } from '@/components/Input';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { TimePicker } from '@/components/TimePicker';
+import { DatePicker } from '@/components/DatePicker';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
+import { useToast } from '@/components/ToastContext';
+import { getPreferredReminderSound } from '@/lib/notificationSoundPreference';
 import {
   ensureNotificationSetup,
   scheduleReminderNotifications,
@@ -73,7 +78,6 @@ export default function CreateReminderScreen() {
   const [date, setDate] = useState(toLocalDateInput(initial));
   const [time, setTime] = useState(toLocalTimeInput(initial));
   const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
-  const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; date?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
@@ -121,18 +125,25 @@ export default function CreateReminderScreen() {
         showWarning('Enable notifications in system settings for reliable reminders');
       }
 
-      const result = await createReminder({
+      const payload = {
         title: title.trim(),
         description: description.trim(),
         dueAt: dueAt!.toISOString(),
-        priority: 'medium',
+        priority: 'medium' as const,
         repeat,
-        sound,
-      });
+        sound: await getPreferredReminderSound(),
+        isCompleted: false,
+      };
 
-      await scheduleReminderNotifications(result.reminder);
+      const created = networkMonitor.isOnline()
+        ? await createReminder(payload).then((result) => result.reminder).catch(async () =>
+            reminderOfflineRepository.createEntity('reminder', payload),
+          )
+        : await reminderOfflineRepository.createEntity('reminder', payload);
+
+      await scheduleReminderNotifications(created as any);
       setLoading(false);
-      showSuccess('Reminder created successfully');
+      showSuccess(networkMonitor.isOnline() ? 'Reminder created successfully' : 'Reminder saved on this device');
       router.back();
     } catch (error) {
       console.error('[Reminder Create] Failed', error);
@@ -144,7 +155,7 @@ export default function CreateReminderScreen() {
   return (
     <TypeThemedScreen type={TYPE} title="New Reminder" scroll>
       <Text style={styles.hint}>
-        Fires on this device at the due time with your selected sound.
+        Fires on this device at the due time. Change the sound in Settings.
       </Text>
 
       <Input
@@ -185,8 +196,6 @@ export default function CreateReminderScreen() {
           );
         })}
       </View>
-
-      <SoundPicker value={sound} onChange={setSound} accentColor={theme.primary} />
 
       <PrimaryButton
         title={loading ? 'Saving...' : 'Create Reminder'}

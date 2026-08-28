@@ -4,14 +4,18 @@ import { router } from 'expo-router';
 import { createAlarm } from '@/api/alarms';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { SoundPicker } from '@/components/SoundPicker';
 import { TimePicker } from '@/components/TimePicker';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
-import {
-  DEFAULT_NOTIFICATION_SOUND,
-  type NotificationSoundId,
-} from '@/constants/notificationSounds';
+import { getPreferredAlarmSound } from '@/lib/notificationSoundPreference';
+import { alarmOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { networkMonitor } from '@/lib/networkMonitor';
+import { Input } from '@/components/Input';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { TimePicker } from '@/components/TimePicker';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
+import { useToast } from '@/components/ToastContext';
+import { getPreferredAlarmSound } from '@/lib/notificationSoundPreference';
 import {
   ensureNotificationSetup,
   scheduleAlarmNotifications,
@@ -36,7 +40,6 @@ export default function CreateAlarmScreen() {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('07:00');
   const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string }>({});
@@ -74,17 +77,23 @@ export default function CreateAlarmScreen() {
         showWarning('Enable notifications in system settings for reliable alarms');
       }
 
-      const result = await createAlarm({
+      const payload = {
         title: title.trim(),
         time: time.trim(),
         repeatDays,
         isEnabled,
-        sound,
-      });
+        sound: await getPreferredAlarmSound(),
+      };
 
-      await scheduleAlarmNotifications(result.alarm);
+      const created = networkMonitor.isOnline()
+        ? await createAlarm(payload).then((result) => result.alarm).catch(async () =>
+            alarmOfflineRepository.createEntity('alarm', payload),
+          )
+        : await alarmOfflineRepository.createEntity('alarm', payload);
+
+      await scheduleAlarmNotifications(created as any);
       setLoading(false);
-      showSuccess('Alarm created successfully');
+      showSuccess(networkMonitor.isOnline() ? 'Alarm created successfully' : 'Alarm saved on this device');
       router.back();
     } catch (error) {
       console.error('[Alarm Create] Failed', error);
@@ -96,7 +105,7 @@ export default function CreateAlarmScreen() {
   return (
     <TypeThemedScreen type={TYPE} title="New Alarm" scroll fallbackHref="/(tabs)/alarms">
       <Text style={styles.hint}>
-        Scheduled on this device with your chosen sound. Keep notifications allowed for reliable ringing.
+        Scheduled on this device. Change the ring sound in Settings.
       </Text>
 
       <Input
@@ -150,8 +159,6 @@ export default function CreateAlarmScreen() {
         })}
       </View>
       <Text style={styles.meta}>{allDaysSelected ? 'Every day' : `${repeatDays.length} day(s) selected`}</Text>
-
-      <SoundPicker value={sound} onChange={setSound} accentColor={theme.primary} />
 
       <PrimaryButton
         title={loading ? 'Saving...' : 'Create Alarm'}

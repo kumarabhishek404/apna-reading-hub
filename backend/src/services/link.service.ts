@@ -1,7 +1,7 @@
 import { Link } from "../models";
 import type { LinkItem } from "../lib/types";
 import { HttpError } from "../lib/errors";
-import { LIST_LIMIT, mapTags, toIso } from "../lib/query";
+import { LIST_LIMIT, mapTags, ownedFilter, toIso } from "../lib/query";
 import { upsertTags } from "./tag.service";
 
 function mapLink(link: any): LinkItem {
@@ -38,8 +38,8 @@ export async function getLinks(search?: string, tag?: string, userId?: string) {
 }
 
 export async function getLinkById(id: string, userId?: string) {
-  const link = await Link.findById(id).lean();
-  if (!link || (userId && link.userId.toString() !== userId)) return null;
+  const link = await Link.findOne(ownedFilter(id, userId)).lean();
+  if (!link) return null;
   return mapLink(link);
 }
 
@@ -76,11 +76,6 @@ export async function updateLink(
   },
   userId?: string
 ) {
-  const existing = await Link.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Link not found");
-  }
-
   const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.url !== undefined) updateData.url = data.url;
@@ -91,20 +86,24 @@ export async function updateLink(
     updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const link = await Link.findByIdAndUpdate(id, updateData, { new: true }).lean();
+  const link = await Link.findOneAndUpdate(ownedFilter(id, userId), updateData, {
+    new: true,
+  }).lean();
+  if (!link) throw new HttpError(404, "Link not found");
   return mapLink(link);
 }
 
 export async function deleteLink(id: string, userId?: string) {
-  const existing = await Link.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Link not found");
-  }
-  await Link.findByIdAndDelete(id);
+  const result = await Link.findOneAndDelete(ownedFilter(id, userId)).lean();
+  if (!result) throw new HttpError(404, "Link not found");
 }
 
 export async function toggleLinkFavorite(id: string, userId?: string) {
-  const current = await Link.findById(id);
-  if (!current || (userId && current.userId.toString() !== userId)) return null;
-  return updateLink(id, { isFavorite: !current.isFavorite }, userId);
+  const link = await Link.findOneAndUpdate(
+    ownedFilter(id, userId),
+    [{ $set: { isFavorite: { $eq: ["$isFavorite", false] } } }],
+    { new: true }
+  ).lean();
+  if (!link) return null;
+  return mapLink(link);
 }

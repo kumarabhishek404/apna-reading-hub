@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getPdfById, updatePdf } from '@/api/pdfs';
+import { deletePdf, getPdfById, updatePdf } from '@/api/pdfs';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
@@ -20,6 +21,7 @@ export default function EditPdfScreen() {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError } = useToast();
@@ -67,6 +69,28 @@ export default function EditPdfScreen() {
       console.error('[PDF Edit] API call failed', error);
       setLoading(false);
       showError('Could not update PDF. Please try again.');
+    }
+  }
+
+  function confirmDelete() {
+    if (!id || deleting) return;
+    Alert.alert('Delete this PDF?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void removePdf() },
+    ]);
+  }
+
+  async function removePdf() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await deletePdf(id);
+      showSuccess('PDF deleted');
+      router.back();
+    } catch (error) {
+      console.error('[PDF Edit] Delete failed', error);
+      setDeleting(false);
+      showError('Could not delete this PDF');
     }
   }
 
@@ -123,9 +147,19 @@ export default function EditPdfScreen() {
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update PDF'}
         onPress={submit}
-        disabled={loading}
+        disabled={loading || deleting}
         color={theme.primary}
       />
+      <Pressable
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+        disabled={deleting || loading}
+        accessibilityRole="button"
+        accessibilityLabel="Delete PDF"
+      >
+        <AppIcon name="trash-outline" size={16} color="#BE123C" />
+        <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete PDF'}</Text>
+      </Pressable>
     </TypeThemedScreen>
   );
 }
@@ -149,6 +183,20 @@ const styles = StyleSheet.create({
   },
   reminderButtonText: {
     fontSize: 13,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(190,18,60,0.08)',
+  },
+  deleteButtonText: {
+    color: '#BE123C',
+    fontSize: 15,
     fontWeight: '700',
   },
 });

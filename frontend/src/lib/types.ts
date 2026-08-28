@@ -47,6 +47,15 @@ export interface NoteItem {
   createdAt: string;
   updatedAt: string;
   tags: TagItem[];
+  blocks?: Array<{
+    type: "text" | "image" | "pdf" | "url" | "checklist" | "handwriting" | "video";
+    content?: string | null;
+    url?: string | null;
+    checked?: boolean;
+    order: number;
+    format?: "body" | "heading" | "subheading" | "bold" | "italic";
+    color?: string;
+  }>;
 }
 
 export interface SearchResult {
@@ -91,6 +100,7 @@ export interface AlarmItem {
   repeatDays: number[];
   isEnabled: boolean;
   sound?: "default" | "apna_chime" | "apna_alert";
+  oneShotDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

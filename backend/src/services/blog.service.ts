@@ -1,7 +1,7 @@
 import { Blog } from "../models";
 import type { BlogItem } from "../lib/types";
 import { HttpError } from "../lib/errors";
-import { LIST_LIMIT, mapTags, toIso } from "../lib/query";
+import { LIST_LIMIT, mapTags, ownedFilter, toIso } from "../lib/query";
 import { upsertTags } from "./tag.service";
 
 function mapBlog(blog: any): BlogItem {
@@ -32,8 +32,8 @@ export async function getBlogs(search?: string, tag?: string, userId?: string) {
 }
 
 export async function getBlogById(id: string, userId?: string) {
-  const blog = await Blog.findById(id).lean();
-  if (!blog || (userId && blog.userId.toString() !== userId)) return null;
+  const blog = await Blog.findOne(ownedFilter(id, userId)).lean();
+  if (!blog) return null;
   return mapBlog(blog);
 }
 
@@ -70,11 +70,6 @@ export async function updateBlog(
   },
   userId?: string
 ) {
-  const existing = await Blog.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Blog not found");
-  }
-
   const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.url !== undefined) updateData.url = data.url;
@@ -85,20 +80,24 @@ export async function updateBlog(
     updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const blog = await Blog.findByIdAndUpdate(id, updateData, { new: true }).lean();
+  const blog = await Blog.findOneAndUpdate(ownedFilter(id, userId), updateData, {
+    new: true,
+  }).lean();
+  if (!blog) throw new HttpError(404, "Blog not found");
   return mapBlog(blog);
 }
 
 export async function deleteBlog(id: string, userId?: string) {
-  const existing = await Blog.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Blog not found");
-  }
-  await Blog.findByIdAndDelete(id);
+  const result = await Blog.findOneAndDelete(ownedFilter(id, userId)).lean();
+  if (!result) throw new HttpError(404, "Blog not found");
 }
 
 export async function toggleBlogFavorite(id: string, userId?: string) {
-  const current = await Blog.findById(id);
-  if (!current || (userId && current.userId.toString() !== userId)) return null;
-  return updateBlog(id, { isFavorite: !current.isFavorite }, userId);
+  const blog = await Blog.findOneAndUpdate(
+    ownedFilter(id, userId),
+    [{ $set: { isFavorite: { $eq: ["$isFavorite", false] } } }],
+    { new: true }
+  ).lean();
+  if (!blog) return null;
+  return mapBlog(blog);
 }

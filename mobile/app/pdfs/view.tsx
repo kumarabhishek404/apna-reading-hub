@@ -56,7 +56,7 @@ export default function ViewPdfScreen() {
       router.back();
       return;
     }
-    router.replace('/(tabs)/content');
+    router.replace('/(tabs)/notes');
   };
 
   const openPdf = async () => {

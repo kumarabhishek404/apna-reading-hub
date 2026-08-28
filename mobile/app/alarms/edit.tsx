@@ -1,21 +1,27 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getAlarms, updateAlarm } from '@/api/alarms';
+import { deleteAlarm, getAlarms, updateAlarm } from '@/api/alarms';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { SoundPicker } from '@/components/SoundPicker';
+import { TimePicker } from '@/components/TimePicker';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
+import { useToast } from '@/components/ToastContext';
+import { alarmOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { isLocalEntityId } from '@/lib/offlineMerge';
+import { networkMonitor } from '@/lib/networkMonitor';
+import { AppIcon } from '@/components/AppIcon';
+import { Input } from '@/components/Input';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { TimePicker } from '@/components/TimePicker';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import {
-  DEFAULT_NOTIFICATION_SOUND,
-  type NotificationSoundId,
-} from '@/constants/notificationSounds';
-import {
   ensureNotificationSetup,
   scheduleAlarmNotifications,
+  syncScheduledNotificationsFromBackend,
 } from '@/services/notifications';
 import { colors } from '@/theme/colors';
 import { getTypeTheme } from '@/theme/typeColors';
@@ -38,9 +44,9 @@ export default function EditAlarmScreen() {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('07:00');
   const [repeatDays, setRepeatDays] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
@@ -51,14 +57,20 @@ export default function EditAlarmScreen() {
     async function loadAlarm() {
       if (!id) return;
       try {
-        const data = await getAlarms();
-        const alarm = data.alarms.find((a) => a.id === id);
+        let alarm = await alarmOfflineRepository.getEntity('alarm', id);
+        if (!alarm && !isLocalEntityId(id, 'alarm')) {
+          const data = await getAlarms();
+          alarm = data.alarms.find((a) => a.id === id) || null;
+          if (alarm) await alarmOfflineRepository.syncFromServer('alarm', alarm);
+        }
         if (alarm) {
           setTitle(alarm.title);
           setTime(alarm.time);
           setRepeatDays(alarm.repeatDays);
-          setSound((alarm.sound || DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId);
           setIsEnabled(alarm.isEnabled);
+        } else {
+          showError('Could not load alarm');
+          router.back();
         }
       } catch (error) {
         showError('Could not load alarm');
@@ -102,22 +114,76 @@ export default function EditAlarmScreen() {
         showWarning('Enable notifications in system settings for reliable alarms');
       }
 
-      const result = await updateAlarm(id, {
+      const payload = {
         title: title.trim(),
         time: time.trim(),
         repeatDays,
         isEnabled,
-        sound,
-      });
+      };
 
-      await scheduleAlarmNotifications(result.alarm);
-      setLoading(false);
-      showSuccess('Alarm updated successfully');
-      router.back();
+      const saveOffline = async () => {
+        const alarm = await alarmOfflineRepository.updateEntity('alarm', id, payload);
+        await scheduleAlarmNotifications(alarm as any);
+        setLoading(false);
+        showSuccess('Alarm saved on this device');
+        router.back();
+      };
+
+      if (isLocalEntityId(id, 'alarm') || !networkMonitor.isOnline()) {
+        await saveOffline();
+        return;
+      }
+
+      try {
+        const result = await updateAlarm(id, payload);
+        await scheduleAlarmNotifications(result.alarm);
+        setLoading(false);
+        showSuccess('Alarm updated successfully');
+        router.back();
+      } catch (error) {
+        console.error('[Alarm Edit] Failed, saving offline', error);
+        try {
+          await saveOffline();
+        } catch {
+          setLoading(false);
+          showError('Could not update alarm. Please try again.');
+        }
+      }
     } catch (error) {
       console.error('[Alarm Edit] Failed', error);
       setLoading(false);
       showError('Could not update alarm. Please try again.');
+    }
+  }
+
+  function confirmDelete() {
+    if (!id || deleting) return;
+    Alert.alert('Delete this alarm?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void removeAlarm() },
+    ]);
+  }
+
+  async function removeAlarm() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      if (isLocalEntityId(id, 'alarm') || !networkMonitor.isOnline()) {
+        await alarmOfflineRepository.deleteEntity('alarm', id);
+      } else {
+        try {
+          await deleteAlarm(id);
+        } catch {
+          await alarmOfflineRepository.deleteEntity('alarm', id);
+        }
+      }
+      await syncScheduledNotificationsFromBackend();
+      showSuccess('Alarm deleted');
+      router.back();
+    } catch (error) {
+      console.error('[Alarm Edit] Delete failed', error);
+      setDeleting(false);
+      showError('Could not delete this alarm');
     }
   }
 
@@ -189,14 +255,22 @@ export default function EditAlarmScreen() {
       </View>
       <Text style={styles.meta}>{allDaysSelected ? 'Every day' : `${repeatDays.length} day(s) selected`}</Text>
 
-      <SoundPicker value={sound} onChange={setSound} accentColor={theme.primary} />
-
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Alarm'}
         onPress={submit}
-        disabled={loading}
+        disabled={loading || deleting}
         color={theme.primary}
       />
+      <Pressable
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+        disabled={deleting || loading}
+        accessibilityRole="button"
+        accessibilityLabel="Delete alarm"
+      >
+        <AppIcon name="trash-outline" size={16} color="#BE123C" />
+        <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete alarm'}</Text>
+      </Pressable>
     </TypeThemedScreen>
   );
 }
@@ -239,5 +313,19 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: colors.textMuted,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(190,18,60,0.08)',
+  },
+  deleteButtonText: {
+    color: '#BE123C',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

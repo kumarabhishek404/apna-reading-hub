@@ -21,7 +21,7 @@ export default function LoginScreen() {
     try {
       const session = await loginAccount({ mobile, password });
       await saveSession(session);
-      router.replace('/(tabs)/home');
+      router.replace('/capture');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);

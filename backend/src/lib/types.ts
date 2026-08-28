@@ -47,6 +47,15 @@ export interface NoteItem {
   createdAt: string;
   updatedAt: string;
   tags: TagItem[];
+  blocks?: Array<{
+    type: "text" | "image" | "pdf" | "url" | "checklist" | "handwriting" | "video";
+    content?: string | null;
+    url?: string | null;
+    checked?: boolean;
+    order: number;
+    format?: "body" | "heading" | "subheading" | "bold" | "italic";
+    color?: string;
+  }>;
 }
 
 export interface SearchResult {
@@ -89,6 +98,8 @@ export interface AlarmItem {
   repeatDays: number[];
   isEnabled: boolean;
   sound: NotificationSoundId;
+  /** YYYY-MM-DD. When set, the alarm rings once on this date instead of repeating. */
+  oneShotDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

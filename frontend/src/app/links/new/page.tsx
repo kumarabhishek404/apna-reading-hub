@@ -32,7 +32,7 @@ export default function NewLinkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <Card>
         <CardHeader><CardTitle>Add Link</CardTitle></CardHeader>
         <CardContent>

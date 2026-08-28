@@ -7,7 +7,18 @@ import { AppIcon } from '@/components/AppIcon';
 import { BrandHeader } from '@/components/BrandHeader';
 import { TypeContentCard } from '@/components/TypeContentCard';
 import { useToast } from '@/components/ToastContext';
-import { getSoundOption } from '@/constants/notificationSounds';
+import { colors } from '@/theme/colors';
+import { useTabContentPaddingBottom } from '@/theme/layout';
+import { getTypeTheme } from '@/theme/typeColors';
+import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
+import { useDataSync } from '@/lib/dataSync';
+import { alarmOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { mergeServerAndLocal } from '@/lib/offlineMerge';
+import type { AlarmItem } from '@/types';
+import { AppIcon } from '@/components/AppIcon';
+import { BrandHeader } from '@/components/BrandHeader';
+import { TypeContentCard } from '@/components/TypeContentCard';
+import { useToast } from '@/components/ToastContext';
 import { colors } from '@/theme/colors';
 import { useTabContentPaddingBottom } from '@/theme/layout';
 import { getTypeTheme } from '@/theme/typeColors';
@@ -25,43 +36,59 @@ export default function AlarmsScreen() {
   const { showSuccess, showError } = useToast();
   const tabPaddingBottom = useTabContentPaddingBottom();
 
-  async function load() {
+  const load = useCallback(async () => {
     console.log('[Alarms] Loading alarms from database');
     try {
       const data = await getAlarms();
-      setAlarms(data.alarms);
+      await alarmOfflineRepository.hydrateFromServer('alarm', data.alarms);
+      const local = await alarmOfflineRepository.getAllEntities('alarm');
+      setAlarms(mergeServerAndLocal(data.alarms, local as AlarmItem[], 'alarm'));
       setError(null);
       console.log('[Alarms] Alarms loaded successfully', { count: data.alarms.length });
     } catch {
       console.error('[Alarms] Failed to load alarms');
-      setError('Could not load alarms');
+      try {
+        const local = await alarmOfflineRepository.getAllEntities('alarm');
+        setAlarms(local as AlarmItem[]);
+        setError(null);
+      } catch {
+        setError('Could not load alarms');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     void load();
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     void load();
     void syncScheduledNotificationsFromBackend();
-  }, []);
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [])
+    }, [load])
   );
 
-  useDataSync(load, { immediate: false, interval: 45000 });
+  useDataSync(load, { immediate: false, interval: 60000 });
 
   async function onDelete(id: string) {
     try {
-      await deleteAlarm(id);
+      if (id.startsWith('alarm_')) {
+        await alarmOfflineRepository.deleteEntity('alarm', id);
+      } else {
+        try {
+          await deleteAlarm(id);
+        } catch {
+          await alarmOfflineRepository.deleteEntity('alarm', id);
+        }
+      }
       setAlarms((current) => current.filter((item) => item.id !== id));
       await syncScheduledNotificationsFromBackend();
       showSuccess('Alarm deleted successfully');
@@ -71,7 +98,7 @@ export default function AlarmsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <BrandHeader title="Alarms" subtitle="Stay on schedule" />
         <Link href="/alarms/create" asChild>
@@ -101,7 +128,7 @@ export default function AlarmsScreen() {
             <TypeContentCard
               type="alarm"
               title={item.title}
-              meta={`${item.time} · ${getSoundOption(item.sound).label}`}
+              meta={`${item.time}${item.oneShotDate ? ` · ${item.oneShotDate}` : ''}`}
               showKindBadge={false}
               actions={
                 <>
@@ -132,7 +159,7 @@ export default function AlarmsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.alarm.background },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   header: { 
     paddingHorizontal: 20, 
     paddingTop: 12,
@@ -145,7 +172,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    marginTop: 4,
     alignItems: 'center',
     elevation: 2,
     shadowColor: 'rgba(0, 0, 0, 0.1)',

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Linking,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -16,7 +15,6 @@ import { TypeContentCard } from '@/components/TypeContentCard';
 import { getContentByTag } from '@/api/tags';
 import { useDataSync } from '@/lib/dataSync';
 import { colors } from '@/theme/colors';
-import type { ItemType } from '@/theme/typeColors';
 
 type ContentItem = {
   kind: 'blog' | 'link' | 'pdf' | 'note';
@@ -75,22 +73,12 @@ export default function TagContentScreen() {
 
   const openItem = async (entry: ContentItem) => {
     if (entry.kind === 'link') {
-      const url = entry.item.url.startsWith('http')
-        ? entry.item.url
-        : `https://${entry.item.url}`;
-      await Linking.openURL(url);
+      router.push(`/links/edit?id=${entry.item.id}`);
       return;
     }
 
     if (entry.kind === 'blog') {
-      if (entry.item.url) {
-        const url = entry.item.url.startsWith('http')
-          ? entry.item.url
-          : `https://${entry.item.url}`;
-        await Linking.openURL(url);
-      } else {
-        router.push(`/blogs/read?id=${entry.item.id}`);
-      }
+      router.push(`/blogs/edit?id=${entry.item.id}`);
       return;
     }
 
@@ -160,20 +148,17 @@ export default function TagContentScreen() {
             }
             renderItem={({ item }) => (
               <TypeContentCard
-                type={item.kind as ItemType}
+                type="note"
                 title={item.item.title}
                 meta={
                   item.kind === 'link'
                     ? item.item.url
                     : item.kind === 'pdf'
-                      ? item.item.description || 'Uploaded PDF'
-                      : 'Saved to your library'
+                      ? item.item.description || 'PDF in this note'
+                      : item.item.content || item.item.url || 'Saved to Notes'
                 }
-                onPress={
-                  item.kind === 'blog' || item.kind === 'pdf' || item.kind === 'link'
-                    ? () => void openItem(item)
-                    : undefined
-                }
+                showKindBadge={false}
+                onPress={() => void openItem(item)}
               />
             )}
           />

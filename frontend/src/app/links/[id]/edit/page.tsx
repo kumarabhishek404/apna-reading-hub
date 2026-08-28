@@ -45,7 +45,7 @@ export default function EditLinkPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <Card>
         <CardHeader><CardTitle>Edit Link</CardTitle></CardHeader>
         <CardContent>

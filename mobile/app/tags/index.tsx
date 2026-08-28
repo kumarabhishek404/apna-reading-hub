@@ -64,7 +64,7 @@ export default function TagsScreen() {
       router.back();
       return;
     }
-    router.replace('/(tabs)/content');
+    router.replace('/(tabs)/notes');
   };
 
   const navigateToTagContent = (tag: TagItem) => {

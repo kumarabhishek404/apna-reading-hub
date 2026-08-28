@@ -50,20 +50,30 @@ export function GlobalHeader({
 
         <Pressable
           style={styles.titleContainer}
-          onPress={() => router.push('/(tabs)/home')}
+          onPress={() => router.push('/capture')}
           accessibilityRole="button"
-          accessibilityLabel="Go home"
+          accessibilityLabel="Write something"
         >
           {title ? (
             <Text style={styles.title}>{title}</Text>
           ) : (
             <View>
-              <Text style={styles.brandName}>apna notes</Text>
-              <Text style={styles.brandHint}>your reading hub</Text>
+              <Text style={styles.brandName}>Apna Notes</Text>
+              <Text style={styles.brandHint}>Your Personal Notebook</Text>
             </View>
           )}
         </Pressable>
 
+        {showProfile ? (
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/capture')}
+            accessibilityRole="button"
+            accessibilityLabel="Write"
+          >
+            <AppIcon name="create-outline" size={22} color={colors.primary} />
+          </Pressable>
+        ) : null}
         {showProfile ? (
           <Pressable
             style={styles.iconButton}

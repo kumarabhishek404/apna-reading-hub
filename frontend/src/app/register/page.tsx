@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { AlertCircle, ArrowRight, UserPlus } from "lucide-react";
-import { apiUrl } from "@/lib/api";
+import { AlertCircle, ArrowRight } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import { saveAuthSession } from "@/lib/auth";
+import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -31,7 +32,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const res = await fetch(apiUrl("/api/auth/register"), {
+      const res = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -55,14 +56,13 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#fff7ef_0%,_#f8fafc_42%,_#eef4ff_100%)] px-4 py-10">
       <div className="w-full max-w-xl rounded-3xl border border-brand/10 bg-white/90 p-6 shadow-[0_24px_80px_rgba(31,41,55,0.12)] backdrop-blur-sm sm:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-orange text-white shadow-lg shadow-brand-orange/20">
-            <UserPlus className="h-5 w-5" />
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow-[0_12px_32px_rgba(34,64,154,0.16)] ring-1 ring-brand/10">
+            <LogoMark size="xl" />
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-orange/80">Start today</p>
-            <h1 className="text-2xl font-bold text-brand">Create your account</h1>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand/70">Start today</p>
+          <h1 className="mt-1 text-2xl font-bold text-brand">Apna Notes</h1>
+          <p className="text-sm text-muted">Your Personal Notebook</p>
         </div>
 
         <form className="space-y-4" onSubmit={onSubmit}>

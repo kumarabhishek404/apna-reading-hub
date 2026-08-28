@@ -6,32 +6,24 @@ import { motion } from "framer-motion";
 import {
   AlarmClock,
   Bell,
-  Bookmark,
-  FileText,
-  LayoutDashboard,
-  Link2,
+  PenLine,
   Settings,
   StickyNote,
   User,
-  X,
   Tag,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Capture", icon: PenLine },
   { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/pdfs", label: "PDFs", icon: FileText },
-  { href: "/links", label: "Links", icon: Link2 },
-  { href: "/reminders", label: "Reminders", icon: Bell },
   { href: "/alarms", label: "Alarms", icon: AlarmClock },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { href: "/reminders", label: "Reminders", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -41,7 +33,7 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ onMobileClose }: SidebarProps) {
   const pathname = usePathname() ?? "";
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tags, setTags] = useState<{ id: string; name: string; count: number }[]>([]);
@@ -57,11 +49,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     <div className="flex h-full flex-col bg-white">
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
         <Logo onClick={onMobileClose} size="sm" />
-        {onMobileClose && (
-          <Button variant="ghost" size="icon" onClick={onMobileClose} className="lg:hidden">
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
       <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
@@ -145,40 +132,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       <div className="border-t border-border p-4">
         <p className="text-center text-[11px] leading-relaxed text-muted">
-          Apna Sathi — free productivity by{" "}
-          <span className="font-medium text-brand">Apna Rojgar</span>
+          Apna Notes — Your Personal Notebook
         </p>
       </div>
     </div>
   );
 
   return (
-    <>
-      <aside className="hidden w-64 shrink-0 border-r border-border lg:block">
-        <div className="sticky top-0 h-screen">{content}</div>
-      </aside>
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-brand/20 backdrop-blur-sm" onClick={onMobileClose} />
-          <motion.aside
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            className="absolute left-0 top-0 h-full w-72 border-r border-border bg-white shadow-2xl"
-          >
-            {content}
-          </motion.aside>
-        </div>
-      )}
-    </>
-  );
-}
-
-export function MobileMenuButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Button variant="outline" size="icon" onClick={onClick} className="lg:hidden">
-      <LayoutDashboard className="h-4 w-4" />
-    </Button>
+    <aside className="hidden w-64 shrink-0 border-r border-border lg:block">
+      <div className="sticky top-0 h-screen">{content}</div>
+    </aside>
   );
 }

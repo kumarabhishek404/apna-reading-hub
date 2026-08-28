@@ -12,8 +12,10 @@ import remindersRouter from "./routes/reminders";
 import alarmsRouter from "./routes/alarms";
 import tagsRouter from "./routes/tags";
 import miscRouter from "./routes/misc";
+import mediaRouter from "./routes/media";
 import authRouter from "./routes/auth";
 import { UPLOADS_DIR } from "./lib/uploads";
+import { gzipJson } from "./lib/gzipJson";
 
 // Validate env early so misconfigured production fails fast.
 const env = getEnv();
@@ -65,8 +67,9 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(gzipJson);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -112,6 +115,7 @@ app.use("/api/notes", notesRouter);
 app.use("/api/reminders", remindersRouter);
 app.use("/api/alarms", alarmsRouter);
 app.use("/api/tags", tagsRouter);
+app.use("/api/media", mediaRouter);
 app.use("/api", miscRouter);
 
 app.use(notFoundHandler);

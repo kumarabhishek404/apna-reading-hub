@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Apna Sathi",
+    "name": "Apna Notes",
     "slug": "apna-sathi",
     "scheme": "apna-sathi",
     "version": "1.0.0",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f5f7ff"
+      "backgroundColor": "#EEF2FA"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -18,18 +18,32 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.apna.sathi",
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#EEF2FA"
+      },
       "infoPlist": {
         "UIBackgroundModes": [
           "audio",
           "remote-notification"
-        ]
+        ],
+        "NSPhotoLibraryUsageDescription": "Allow Apna Notes to access your photos so you can save them from the home board.",
+        "NSCameraUsageDescription": "Allow Apna Notes to use the camera so you can snap photos into notes.",
+        "NSMicrophoneUsageDescription": "Allow Apna Notes to use the microphone so you can speak notes, alarms, and reminders.",
+        "NSSpeechRecognitionUsageDescription": "Allow Apna Notes to convert your speech into text for notes, alarms, and reminders."
       }
     },
     "android": {
       "package": "com.apna.sathi",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#EEF2FA"
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f5f7ff"
+        "backgroundColor": "#EEF2FA"
       },
       "permissions": [
         "android.permission.INTERNET",
@@ -40,11 +54,29 @@
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#EEF2FA",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT"
+        }
+      ],
       [
         "expo-font",
         {
@@ -57,6 +89,20 @@
       "expo-secure-store",
       "expo-av",
       "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Apna Notes to access your photos so you can save them from the home board.",
+          "cameraPermission": "Allow Apna Notes to use the camera so you can snap photos into notes."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Apna Notes to use the microphone so you can speak notes, alarms, and reminders.",
+          "speechRecognitionPermission": "Allow Apna Notes to convert your speech into text for notes, alarms, and reminders."
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -82,7 +128,7 @@
       },
       "apiUrl": "https://apna-reading-hub.vercel.app",
       "eas": {
-        "projectId": "fb40dde5-bea0-406a-bd01-3b98a11028b4"
+        "projectId": "0f23abf7-6767-45d0-aece-1785e0584f7c"
       }
     }
   }

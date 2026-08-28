@@ -16,6 +16,7 @@ export async function createAlarm(payload: {
   repeatDays?: number[];
   isEnabled?: boolean;
   sound?: string;
+  oneShotDate?: string | null;
 }) {
   console.log('[API createAlarm] Starting alarm creation', { payload });
   const result = await apiClient.post<{ alarm: AlarmItem }>('/api/alarms', payload);

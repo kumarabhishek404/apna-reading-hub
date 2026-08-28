@@ -10,19 +10,33 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
+import { SoundPicker } from '@/components/SoundPicker';
 import { useToast } from '@/components/ToastContext';
 import { clearSession, getStoredSession, type AuthSession } from '@/lib/auth';
 import { backgroundSync } from '@/lib/backgroundSync';
 import { useIsOnline } from '@/lib/networkMonitor';
+import {
+  getPreferredAlarmSound,
+  getPreferredReminderSound,
+  setPreferredAlarmSound,
+  setPreferredReminderSound,
+} from '@/lib/notificationSoundPreference';
 import { getSyncStats } from '@/lib/storage';
+import { DEFAULT_NOTIFICATION_SOUND, type NotificationSoundId } from '@/constants/notificationSounds';
+import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
 import { colors } from '@/theme/colors';
+import { useTabContentPaddingBottom } from '@/theme/layout';
 import { getTypeTheme, TYPE_LABELS, type ItemType } from '@/theme/typeColors';
 
 const LIBRARY_TYPES: ItemType[] = ['note', 'blog', 'link', 'pdf', 'reminder'];
+const alarmTheme = getTypeTheme('alarm');
+const reminderTheme = getTypeTheme('reminder');
 
 export default function SettingsScreen() {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [alarmSound, setAlarmSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
+  const [reminderSound, setReminderSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [syncStats, setSyncStats] = useState({
     totalEntities: 0,
     dirtyEntities: 0,
@@ -31,6 +45,7 @@ export default function SettingsScreen() {
   });
   const { showSuccess, showError } = useToast();
   const isOnline = useIsOnline();
+  const tabPaddingBottom = useTabContentPaddingBottom();
 
   useEffect(() => {
     let active = true;
@@ -45,8 +60,20 @@ export default function SettingsScreen() {
       if (active) setSyncStats(stats);
     };
 
+    const loadSounds = async () => {
+      const [nextAlarm, nextReminder] = await Promise.all([
+        getPreferredAlarmSound(),
+        getPreferredReminderSound(),
+      ]);
+      if (active) {
+        setAlarmSound(nextAlarm);
+        setReminderSound(nextReminder);
+      }
+    };
+
     loadSession();
     loadSyncStats();
+    loadSounds();
 
     const interval = setInterval(loadSyncStats, 5000);
 
@@ -59,6 +86,26 @@ export default function SettingsScreen() {
   const user = session?.user;
   const initials = user?.fullName?.trim()?.charAt(0)?.toUpperCase() || 'A';
   const pendingCount = syncStats.pendingSyncItems + syncStats.failedSyncItems;
+
+  const handleAlarmSound = async (sound: NotificationSoundId) => {
+    setAlarmSound(sound);
+    await setPreferredAlarmSound(sound);
+    try {
+      await syncScheduledNotificationsFromBackend();
+    } catch (error) {
+      console.error('[Settings] Failed to reschedule alarms', error);
+    }
+  };
+
+  const handleReminderSound = async (sound: NotificationSoundId) => {
+    setReminderSound(sound);
+    await setPreferredReminderSound(sound);
+    try {
+      await syncScheduledNotificationsFromBackend();
+    } catch (error) {
+      console.error('[Settings] Failed to reschedule reminders', error);
+    }
+  };
 
   const handleLogout = async () => {
     await clearSession();
@@ -86,26 +133,14 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <AppIcon name="chevron-back" size={22} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: tabPaddingBottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.screenTitle}>Profile</Text>
-        <Text style={styles.screenSubtitle}>Your account and sync status</Text>
+        <Text style={styles.screenTitle}>Settings</Text>
+        <Text style={styles.screenSubtitle}>Account, alarm sounds, and sync</Text>
 
         <View style={styles.profileHero}>
           <View style={styles.profileTopRow}>
@@ -162,6 +197,24 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+        <Text style={styles.sectionLabel}>Sounds</Text>
+        <View style={[styles.soundCard, { backgroundColor: alarmTheme.background }]}>
+          <SoundPicker
+            label="Alarm sound"
+            value={alarmSound}
+            onChange={(sound) => void handleAlarmSound(sound)}
+            accentColor={alarmTheme.primary}
+          />
+        </View>
+        <View style={[styles.soundCard, { backgroundColor: reminderTheme.background }]}>
+          <SoundPicker
+            label="Reminder sound"
+            value={reminderSound}
+            onChange={(sound) => void handleReminderSound(sound)}
+            accentColor={reminderTheme.primary}
+          />
         </View>
 
         <Text style={styles.sectionLabel}>Library types</Text>
@@ -227,36 +280,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    minHeight: 56,
-    gap: 8,
-    backgroundColor: colors.note.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.note.soft,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.note.soft,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primaryDark,
-    flex: 1,
-  },
-  headerSpacer: {
-    width: 40,
-  },
   scroll: { flex: 1 },
   container: {
     paddingHorizontal: 20,
@@ -406,6 +429,11 @@ const styles = StyleSheet.create({
   typeChipText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  soundCard: {
+    borderRadius: 18,
+    padding: 16,
+    gap: 4,
   },
   syncPanel: {
     backgroundColor: colors.surface,

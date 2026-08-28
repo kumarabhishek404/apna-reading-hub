@@ -12,18 +12,21 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Apna Sathi",
+  title: "Apna Notes",
   description:
-    "Free productivity platform by Apna Rojgar — organize notes, PDFs, links, reminders, and alarms in one place.",
+    "Your Personal Notebook — notes, PDFs, links, reminders, and alarms in one place.",
   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: "/icons/apna-sathi-logo.png", type: "image/png" }],
-    apple: [{ url: "/icons/apna-sathi-logo.png", type: "image/png" }],
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icons/apna-notes-logo.png", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apna-notes-logo.png", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Apna Sathi",
+    title: "Apna Notes",
   },
 };
 

@@ -1,31 +1,36 @@
 import 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppSplash } from '@/components/AppSplash';
 import { IoniconsReadyProvider } from '@/components/IoniconsReadyContext';
 import { ToastProvider } from '@/components/ToastContext';
 import { SidebarProvider } from '@/components/SidebarContext';
 import { initDatabase } from '@/lib/storage';
 import { backgroundSync } from '@/lib/backgroundSync';
+import { colors } from '@/theme/colors';
 // Registers notification listeners, Stop Alarm actions, and background task.
 import '@/services/notifications';
 import { ensureNotificationSetup } from '@/services/notifications';
 
-// Keep splash visible until icon fonts are ready.
-// @expo/vector-icons renders an empty <Text /> until the font is loaded.
 SplashScreen.preventAutoHideAsync().catch(() => {});
+const splashApi = SplashScreen as typeof SplashScreen & {
+  setOptions?: (options: { duration?: number; fade?: boolean }) => void;
+};
+splashApi.setOptions?.({ duration: 0, fade: false });
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    // Must match the family name used by @expo/vector-icons Ionicons ('ionicons').
     ionicons: require('../assets/fonts/ionicons.ttf'),
   });
+  const [splashGone, setSplashGone] = useState(false);
+  const fontsReady = fontsLoaded || Boolean(fontError);
 
   useEffect(() => {
-    // Initialize offline services
     const initOfflineServices = async () => {
       try {
         await initDatabase();
@@ -37,15 +42,24 @@ export default function RootLayout() {
       }
     };
 
-    initOfflineServices();
+    void initOfflineServices();
+  }, []);
 
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded, fontError]);
+  const hideNativeSplash = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
-  if (!fontsLoaded && !fontError) {
-    return null;
+  const finishSplash = useCallback(() => {
+    setSplashGone(true);
+  }, []);
+
+  if (!splashGone) {
+    return (
+      <View style={styles.boot}>
+        <StatusBar style="dark" />
+        <AppSplash ready={fontsReady} onPainted={hideNativeSplash} onFinished={finishSplash} />
+      </View>
+    );
   }
 
   return (
@@ -54,10 +68,10 @@ export default function RootLayout() {
         <SidebarProvider>
           <ToastProvider>
             <StatusBar style="auto" />
-            <Stack 
-              screenOptions={{ 
+            <Stack
+              screenOptions={{
                 headerShown: false,
-              }} 
+              }}
             />
           </ToastProvider>
         </SidebarProvider>
@@ -65,3 +79,10 @@ export default function RootLayout() {
     </IoniconsReadyProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    backgroundColor: colors.note.background,
+  },
+});

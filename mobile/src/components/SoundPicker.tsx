@@ -12,12 +12,16 @@ type SoundPickerProps = {
   value: NotificationSoundId;
   onChange: (sound: NotificationSoundId) => void;
   accentColor?: string;
+  label?: string;
+  hint?: string;
 };
 
 export function SoundPicker({
   value,
   onChange,
   accentColor = colors.primary,
+  label = 'Alarm sound',
+  hint = 'Custom tracks ring for up to 30 seconds',
 }: SoundPickerProps) {
   const [visible, setVisible] = useState(false);
   const [previewing, setPreviewing] = useState<string | null>(null);
@@ -52,8 +56,8 @@ export function SoundPicker({
 
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.label, { color: accentColor }]}>Alarm sound</Text>
-      <Text style={styles.hint}>Custom tracks ring for up to 30 seconds</Text>
+      <Text style={[styles.label, { color: accentColor }]}>{label}</Text>
+      <Text style={styles.hint}>{hint}</Text>
       <Pressable style={styles.dropdown} onPress={() => setVisible(true)}>
         <Text style={styles.dropdownText}>{selectedSound?.label || 'Select sound'}</Text>
         <AppIcon name="chevron-down" size={20} color={colors.textMuted} />

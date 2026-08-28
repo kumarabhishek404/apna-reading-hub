@@ -9,6 +9,16 @@ export interface INote extends Document {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  // Mixed content support
+  blocks?: Array<{
+    type: 'text' | 'image' | 'pdf' | 'url' | 'checklist' | 'handwriting' | 'video';
+    content?: string | null;
+    url?: string | null;
+    checked?: boolean;
+    order: number;
+    format?: 'body' | 'heading' | 'subheading' | 'bold' | 'italic';
+    color?: string;
+  }>;
 }
 
 const NoteSchema = new Schema<INote>(
@@ -19,6 +29,15 @@ const NoteSchema = new Schema<INote>(
     isFavorite: { type: Boolean, default: false },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     tags: [{ type: String }],
+    blocks: [{
+      type: { type: String, enum: ['text', 'image', 'pdf', 'url', 'checklist', 'handwriting', 'video'], required: true },
+      content: { type: String, default: null },
+      url: { type: String, default: null },
+      checked: { type: Boolean, default: false },
+      order: { type: Number, required: true },
+      format: { type: String, enum: ['body', 'heading', 'subheading', 'bold', 'italic'], default: 'body' },
+      color: { type: String }
+    }]
   },
   {
     timestamps: true,
@@ -28,6 +47,7 @@ const NoteSchema = new Schema<INote>(
 NoteSchema.index({ userId: 1, isPinned: -1, createdAt: -1 });
 NoteSchema.index({ userId: 1, tags: 1 });
 NoteSchema.index({ userId: 1, isFavorite: 1, updatedAt: -1 });
+NoteSchema.index({ userId: 1, "blocks.type": 1 });
 NoteSchema.index({ title: "text", content: "text" });
 
 const NoteModel: Model<INote> = mongoose.models.Note || mongoose.model<INote>("Note", NoteSchema);

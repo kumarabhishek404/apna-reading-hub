@@ -14,7 +14,7 @@ const typeConfig: Record<ContentType, { label: string; href: (id: string) => str
   blog: { label: "Blog", href: (id) => `/blogs/${id}/read`, icon: StickyNote },
   link: { label: "Link", href: (id) => `/links/${id}`, icon: Link2 },
   pdf: { label: "PDF", href: (id) => `/pdfs/${id}`, icon: FileText },
-  note: { label: "Note", href: (id) => `/notes/${id}/read`, icon: StickyNote },
+  note: { label: "Note", href: (id) => `/notes/${id}/edit`, icon: StickyNote },
   reminder: { label: "Reminder", href: () => `/reminders`, icon: Bell },
   alarm: { label: "Alarm", href: () => `/alarms`, icon: AlarmClock },
 };
@@ -40,14 +40,14 @@ export default function BookmarksPage() {
         icon={Bookmark}
         title="No Bookmarks Yet"
         description="Star your notes, PDFs, and links to save them here for quick access."
-        actionLabel="Go to Dashboard"
-        actionHref="/"
+        actionLabel="Go to Notes"
+        actionHref="/notes"
       />
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand">Bookmarks</h1>
         <p className="text-muted">Your starred items in one place</p>

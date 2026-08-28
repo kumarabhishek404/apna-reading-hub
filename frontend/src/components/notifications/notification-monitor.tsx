@@ -44,9 +44,9 @@ export function NotificationMonitor() {
               duration: 10000,
             });
             if (Notification.permission === "granted") {
-              new Notification("Apna Sathi Reminder", {
+              new Notification("Apna Notes Reminder", {
                 body: reminder.title,
-                icon: "/icons/apna-sathi-logo.png",
+                icon: "/icons/apna-notes-logo.png",
               });
             }
           }
@@ -68,9 +68,9 @@ export function NotificationMonitor() {
               duration: 15000,
             });
             if (Notification.permission === "granted") {
-              new Notification("Apna Sathi Alarm", {
+              new Notification("Apna Notes Alarm", {
                 body: `${alarm.title} — ${formatTime12h(alarm.time)}`,
-                icon: "/icons/apna-sathi-logo.png",
+                icon: "/icons/apna-notes-logo.png",
               });
             }
           }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getBlogById, updateBlog } from '@/api/blogs';
+import { deleteBlog, getBlogById, updateBlog } from '@/api/blogs';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -24,6 +25,7 @@ export default function EditBlogScreen() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
@@ -89,6 +91,32 @@ export default function EditBlogScreen() {
       console.error('[Blog Edit] Failed', error);
       setLoading(false);
       showError('Could not update blog. Please try again.');
+    }
+  }
+
+  function confirmDelete() {
+    if (!id || deleting) return;
+    Alert.alert('Delete this blog?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void removeBlog() },
+    ]);
+  }
+
+  async function removeBlog() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      if (isOnline) {
+        await deleteBlog(id);
+      } else {
+        await blogOfflineRepository.deleteEntity('blog', id);
+      }
+      showSuccess('Blog deleted');
+      router.back();
+    } catch (error) {
+      console.error('[Blog Edit] Delete failed', error);
+      setDeleting(false);
+      showError('Could not delete this blog');
     }
   }
 
@@ -158,9 +186,19 @@ export default function EditBlogScreen() {
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Blog'}
         onPress={submit}
-        disabled={loading}
+        disabled={loading || deleting}
         color={theme.primary}
       />
+      <Pressable
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+        disabled={deleting || loading}
+        accessibilityRole="button"
+        accessibilityLabel="Delete blog"
+      >
+        <AppIcon name="trash-outline" size={16} color="#BE123C" />
+        <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete blog'}</Text>
+      </Pressable>
     </TypeThemedScreen>
   );
 }
@@ -189,6 +227,20 @@ const styles = StyleSheet.create({
   },
   reminderButtonText: {
     fontSize: 13,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(190,18,60,0.08)',
+  },
+  deleteButtonText: {
+    color: '#BE123C',
+    fontSize: 15,
     fontWeight: '700',
   },
 });

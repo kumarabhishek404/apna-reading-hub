@@ -35,14 +35,10 @@ type MenuItem = {
 };
 
 const CONTENT_ITEMS: MenuItem[] = [
-  { icon: 'home-outline', label: 'Home', route: '/(tabs)/home', tone: 'brand' },
-  { icon: 'document-text-outline', label: 'Notes', route: '/(tabs)/notes', tone: 'note' },
-  { icon: 'newspaper-outline', label: 'Blogs', route: '/(tabs)/content', tone: 'blog' },
-  { icon: 'document-outline', label: 'PDFs', route: '/(tabs)/content', tone: 'pdf' },
-  { icon: 'link-outline', label: 'Links', route: '/(tabs)/content', tone: 'link' },
+  { icon: 'create-outline', label: 'Write', route: '/capture', tone: 'brand' },
+  { icon: 'book-outline', label: 'Notebook', route: '/(tabs)/notes', tone: 'note' },
   { icon: 'alarm-outline', label: 'Alarms', route: '/(tabs)/alarms', tone: 'alarm' },
-  { icon: 'notifications-outline', label: 'Reminders', route: '/(tabs)/content', tone: 'reminder' },
-  { icon: 'book-outline', label: 'Library', route: '/(tabs)/content', tone: 'blog' },
+  { icon: 'notifications-outline', label: 'Reminders', route: '/(tabs)/notes', tone: 'reminder' },
   { icon: 'pricetag-outline', label: 'Tags', route: '/tags', tone: 'brand' },
 ];
 
@@ -269,7 +265,8 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
                   <Text style={styles.profileText}>{initials}</Text>
                 </View>
                 <View style={styles.userInfo}>
-                  <Text style={styles.brandMark}>apna notes</Text>
+                  <Text style={styles.brandMark}>Apna Notes</Text>
+                  <Text style={styles.brandHint}>Your Personal Notebook</Text>
                   <Text style={styles.userName} numberOfLines={1}>
                     {user?.fullName || 'Guest User'}
                   </Text>
@@ -391,6 +388,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: 0.4,
     marginBottom: 2,
+  },
+  brandHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginBottom: 4,
   },
   userName: {
     fontSize: 17,

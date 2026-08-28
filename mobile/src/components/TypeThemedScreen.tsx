@@ -29,7 +29,7 @@ export function TypeThemedScreen({
   children,
   headerRight,
   scroll = false,
-  fallbackHref = '/(tabs)/content',
+  fallbackHref = '/(tabs)/notes',
 }: TypeThemedScreenProps) {
   const theme = getTypeTheme(type);
   const insets = useSafeAreaInsets();

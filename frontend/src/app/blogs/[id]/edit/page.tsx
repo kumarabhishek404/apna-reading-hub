@@ -53,7 +53,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <Card>
         <CardHeader>
           <CardTitle>Edit Blog</CardTitle>

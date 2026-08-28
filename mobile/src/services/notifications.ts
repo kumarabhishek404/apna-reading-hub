@@ -7,11 +7,11 @@ import { getAlarms } from '@/api/alarms';
 import { getReminders } from '@/api/reminders';
 import {
   ALARM_RING_SECONDS,
-  DEFAULT_NOTIFICATION_SOUND,
   NOTIFICATION_SOUNDS,
   getSoundOption,
   type NotificationSoundId,
 } from '@/constants/notificationSounds';
+import { getPreferredAlarmSound, getPreferredReminderSound } from '@/lib/notificationSoundPreference';
 import type { AlarmItem, ReminderItem } from '@/types';
 
 const BACKGROUND_NOTIFICATION_TASK = 'APNA_BACKGROUND_NOTIFICATION_TASK';
@@ -411,10 +411,32 @@ export async function scheduleAlarmNotifications(alarm: AlarmItem) {
   const parsed = parseAlarmTime(alarm.time);
   if (!parsed) return;
 
-  const soundId = (alarm.sound ?? DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId;
+  const soundId = await getPreferredAlarmSound();
   const days = alarm.repeatDays?.length ? alarm.repeatDays : [0, 1, 2, 3, 4, 5, 6];
 
   await cancelNotificationsByPrefix(`alarm:${alarm.id}:`);
+
+  if (alarm.oneShotDate) {
+    const [year, month, day] = alarm.oneShotDate.split('-').map(Number);
+    if (year && month && day) {
+      const when = new Date(year, month - 1, day, parsed.hour, parsed.minute, 0, 0);
+      if (when.getTime() > Date.now()) {
+        await scheduleWithSound({
+          identifier: `alarm:${alarm.id}:once`,
+          title: alarm.title,
+          body: 'Alarm is ringing — tap Stop Alarm to silence',
+          soundId,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: when,
+          },
+          data: { kind: 'alarm', id: alarm.id, soundId },
+          kind: 'alarm',
+        });
+      }
+    }
+    return;
+  }
 
   if (days.length === 7) {
     await scheduleWithSound({
@@ -456,7 +478,7 @@ export async function scheduleReminderNotifications(reminder: ReminderItem) {
 
   if (reminder.isCompleted) return;
 
-  const soundId = (reminder.sound ?? DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId;
+  const soundId = await getPreferredReminderSound();
   const dueAt = new Date(reminder.dueAt);
   if (Number.isNaN(dueAt.getTime())) return;
 

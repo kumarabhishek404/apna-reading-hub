@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getLinkById, updateLink } from '@/api/links';
+import { deleteLink, getLinkById, updateLink } from '@/api/links';
 import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { OfflineStatusCompact } from '@/components/OfflineStatus';
@@ -25,6 +25,7 @@ export default function EditLinkScreen() {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
@@ -92,6 +93,32 @@ export default function EditLinkScreen() {
       console.error('[Link Edit] Failed', error);
       setLoading(false);
       showError('Could not update link. Please try again.');
+    }
+  }
+
+  function confirmDelete() {
+    if (!id || deleting) return;
+    Alert.alert('Delete this link?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void removeLink() },
+    ]);
+  }
+
+  async function removeLink() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      if (isOnline) {
+        await deleteLink(id);
+      } else {
+        await linkOfflineRepository.deleteEntity('link', id);
+      }
+      showSuccess('Link deleted');
+      router.back();
+    } catch (error) {
+      console.error('[Link Edit] Delete failed', error);
+      setDeleting(false);
+      showError('Could not delete this link');
     }
   }
 
@@ -170,9 +197,19 @@ export default function EditLinkScreen() {
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Link'}
         onPress={submit}
-        disabled={loading}
+        disabled={loading || deleting}
         color={theme.primary}
       />
+      <Pressable
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+        disabled={deleting || loading}
+        accessibilityRole="button"
+        accessibilityLabel="Delete link"
+      >
+        <AppIcon name="trash-outline" size={16} color="#BE123C" />
+        <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete link'}</Text>
+      </Pressable>
     </TypeThemedScreen>
   );
 }
@@ -219,5 +256,19 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: colors.textMuted,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(190,18,60,0.08)',
+  },
+  deleteButtonText: {
+    color: '#BE123C',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

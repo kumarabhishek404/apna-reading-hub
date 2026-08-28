@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -74,17 +75,15 @@ export function AuthShell({
         >
           <View style={styles.brandBlock}>
             <View style={styles.logoMark}>
-              <LinearGradient
-                colors={[colors.note.primary, colors.note.light]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoGradient}
-              >
-                <AppIcon name="book-outline" size={22} color="#fff" />
-              </LinearGradient>
+              <Image
+                source={require('../../assets/splash-icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </View>
-            <Text style={styles.brandName}>apna notes</Text>
-            <Text style={styles.brandHint}>your reading hub</Text>
+            <Text style={styles.brandName}>Apna Notes</Text>
+            <Text style={styles.brandHint}>Your Personal Notebook</Text>
 
             <View style={styles.chipRow}>
               {TYPE_CHIPS.map(({ type, icon }) => {
@@ -182,7 +181,11 @@ const styles = StyleSheet.create({
   },
   logoMark: {
     marginBottom: 4,
-    borderRadius: 18,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       ios: {
         shadowColor: colors.shadowPrimary,
@@ -193,12 +196,9 @@ const styles = StyleSheet.create({
       android: { elevation: 4 },
     }),
   },
-  logoGradient: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 88,
+    height: 88,
   },
   brandName: {
     fontSize: 30,

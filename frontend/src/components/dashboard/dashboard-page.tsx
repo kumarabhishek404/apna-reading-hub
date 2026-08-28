@@ -6,8 +6,6 @@ import { motion } from "framer-motion";
 import {
   AlarmClock,
   Bell,
-  FileText,
-  Link2,
   Plus,
   StickyNote,
   Star,
@@ -31,9 +29,9 @@ const typeConfig: Record<
   ContentType,
   { label: string; href: (id: string) => string; icon: typeof StickyNote }
 > = {
-  blog: { label: "Blog", href: (id) => `/blogs/${id}/read`, icon: StickyNote },
-  link: { label: "Link", href: (id) => `/links/${id}`, icon: Link2 },
-  pdf: { label: "PDF", href: (id) => `/pdfs/${id}`, icon: FileText },
+  blog: { label: "Note", href: (id) => `/blogs/${id}/read`, icon: StickyNote },
+  link: { label: "Note", href: (id) => `/links/${id}`, icon: StickyNote },
+  pdf: { label: "Note", href: (id) => `/pdfs/${id}`, icon: StickyNote },
   note: { label: "Note", href: (id) => `/notes/${id}/read`, icon: StickyNote },
   reminder: { label: "Reminder", href: () => `/reminders`, icon: Bell },
   alarm: { label: "Alarm", href: () => `/alarms`, icon: AlarmClock },
@@ -41,9 +39,8 @@ const typeConfig: Record<
 
 const quickActions = [
   { label: "New Note", href: "/notes/new", icon: StickyNote },
-  { label: "Upload PDF", href: "/pdfs", icon: FileText },
-  { label: "Save Link", href: "/links/new", icon: Link2 },
   { label: "Add Reminder", href: "/reminders", icon: Bell },
+  { label: "Add Alarm", href: "/alarms", icon: AlarmClock },
 ];
 
 export function DashboardPage() {
@@ -52,6 +49,8 @@ export function DashboardPage() {
     totalLinks: 0,
     totalPdfs: 0,
     totalNotes: 0,
+    totalReminders: 0,
+    totalAlarms: 0,
   });
   const [recent, setRecent] = useState<
     { id: string; type: ContentType; title: string; createdAt: string }[]
@@ -79,7 +78,7 @@ export function DashboardPage() {
         return true;
       } catch {
         if (!cancelled) {
-          setError("Could not reach Apna Sathi. Please check your connection.");
+          setError("Could not reach Apna Notes. Please check your connection.");
           setLoading(false);
         }
         return false;
@@ -93,19 +92,24 @@ export function DashboardPage() {
   }, []);
 
   const statCards = [
-    { label: "Notes", value: stats.totalNotes, href: "/notes", icon: StickyNote },
-    { label: "PDFs", value: stats.totalPdfs, href: "/pdfs", icon: FileText },
-    { label: "Links", value: stats.totalLinks, href: "/links", icon: Link2 },
+    {
+      label: "Notes",
+      value: stats.totalNotes + stats.totalPdfs + stats.totalLinks + stats.totalBlogs,
+      href: "/notes",
+      icon: StickyNote,
+    },
+    { label: "Reminders", value: stats.totalReminders, href: "/reminders", icon: Bell },
+    { label: "Alarms", value: stats.totalAlarms, href: "/alarms", icon: AlarmClock },
     { label: "Bookmarks", value: favorites.length, href: "/bookmarks", icon: Star },
   ];
 
-  const recentNotes = recent.filter((r) => r.type === "note").slice(0, 4);
-  const recentPdfs = recent.filter((r) => r.type === "pdf").slice(0, 4);
-  const recentLinks = recent.filter((r) => r.type === "link").slice(0, 4);
+  const recentNotes = recent
+    .filter((r) => r.type === "note" || r.type === "blog" || r.type === "link" || r.type === "pdf")
+    .slice(0, 8);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl">
+      <div>
         <DashboardSkeleton />
       </div>
     );
@@ -113,23 +117,22 @@ export function DashboardPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-6xl rounded-2xl border border-border bg-white p-12 text-center">
+      <div className="rounded-2xl border border-border bg-white p-12 text-center">
         <p className="text-brand">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="space-y-8">
       <FadeIn>
         <section className="overflow-hidden rounded-2xl border border-border bg-brand p-6 text-white shadow-lg md:p-8">
-          <p className="text-sm font-medium text-white/80">Welcome to Apna Sathi</p>
+          <p className="text-sm font-medium text-white/80">Welcome to Apna Notes</p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
             Organize Everything In One Place
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-white/85 md:text-base">
-            Your free personal productivity workspace by Apna Rojgar — store notes,
-            PDFs, links, reminders, and alarms beautifully.
+            Your Personal Notebook — notes, reminders, and alarms in one place. Search for pdfs or links when you need them.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             {quickActions.map((action) => (
@@ -171,8 +174,6 @@ export function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <RecentSection title="Recent Notes" items={recentNotes} empty="No notes yet" href="/notes/new" />
-        <RecentSection title="Recent PDFs" items={recentPdfs} empty="No PDFs yet" href="/pdfs" />
-        <RecentSection title="Recent Links" items={recentLinks} empty="No links yet" href="/links/new" />
         <ComingSoonCard
           title="Upcoming Reminders"
           description="Set reminders and never miss important tasks."

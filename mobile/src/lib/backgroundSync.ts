@@ -49,6 +49,7 @@ import {
 export class BackgroundSyncService {
   private isRunning = false;
   private syncInterval: NodeJS.Timeout | null = null;
+  private queueLock = false;
 
   /**
    * Start the background sync service
@@ -64,6 +65,8 @@ export class BackgroundSyncService {
 
     // Initialize network monitor
     await networkMonitor.init();
+
+    syncQueue.setProcessor(() => this.processQueue());
 
     // Start processing the sync queue
     await syncQueue.startProcessing();
@@ -108,33 +111,39 @@ export class BackgroundSyncService {
   /**
    * Process the sync queue
    */
-  private async processQueue(): Promise<void> {
+  async processQueue(): Promise<void> {
+    if (this.queueLock) {
+      return;
+    }
     if (!networkMonitor.isOnline()) {
       console.log('[BackgroundSync] Offline, skipping sync');
       return;
     }
 
-    const pending = await syncQueue.getPendingOperations();
-    if (pending.length === 0) {
-      return;
-    }
-
-    console.log('[BackgroundSync] Processing queue', { count: pending.length });
-
-    // Process operations one by one
-    for (const item of pending) {
-      try {
-        await this.processItem(item);
-      } catch (error) {
-        console.error('[BackgroundSync] Failed to process item', {
-          id: item.id,
-          error,
-        });
+    this.queueLock = true;
+    try {
+      const pending = await syncQueue.getPendingOperations();
+      if (pending.length === 0) {
+        return;
       }
-    }
 
-    // Clean up old completed items
-    await syncQueue.clearOldCompleted(7);
+      console.log('[BackgroundSync] Processing queue', { count: pending.length });
+
+      for (const item of pending) {
+        try {
+          await this.processItem(item);
+        } catch (error) {
+          console.error('[BackgroundSync] Failed to process item', {
+            id: item.id,
+            error,
+          });
+        }
+      }
+
+      await syncQueue.clearOldCompleted(7);
+    } finally {
+      this.queueLock = false;
+    }
   }
 
   /**

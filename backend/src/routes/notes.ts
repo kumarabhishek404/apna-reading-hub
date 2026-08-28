@@ -22,8 +22,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const search = (req.query.search as string) || undefined;
     const tag = (req.query.tag as string) || undefined;
+    const contains = (req.query.contains as string) || undefined;
     const userId = (req as any).user?.userId as string;
-    const notes = await getNotes(search, tag, userId);
+    const notes = await getNotes(search, tag, userId, contains);
     res.json({ notes });
   })
 );

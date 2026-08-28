@@ -142,8 +142,8 @@ export async function getEntity(id: string): Promise<EntityData | null> {
   const database = await ensureDb();
 
   const result = await database.getFirstAsync<any>(
-    `SELECT * FROM entities WHERE id = ?`,
-    [id]
+    `SELECT * FROM entities WHERE id = ? OR serverId = ? LIMIT 1`,
+    [id, id]
   );
 
   if (!result) return null;

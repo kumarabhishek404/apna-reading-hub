@@ -16,7 +16,7 @@ export function ReadingLayout({
   backHref = "/",
 }: ReadingLayoutProps) {
   return (
-    <div className="mx-auto flex max-w-6xl gap-8">
+    <div className="flex gap-8">
       <aside className="hidden w-56 shrink-0 lg:block">
         <div className="sticky top-24 space-y-4">
           <Button variant="ghost" size="sm" asChild className="w-full justify-start text-brand">
@@ -43,7 +43,7 @@ export function ReadingLayout({
           </h1>
           <div className="mt-4 lg:hidden">{meta}</div>
         </header>
-        <div className="prose-reading mx-auto rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="prose-reading rounded-2xl border border-border bg-white p-6 shadow-sm">
           {children}
         </div>
       </article>

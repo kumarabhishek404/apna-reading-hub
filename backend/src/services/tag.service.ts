@@ -23,12 +23,18 @@ export async function upsertTags(tagNames: string[]) {
   const names = parseTags(tagNames);
   if (names.length === 0) return [];
 
-  const tags = await Promise.all(
-    names.map((name) =>
-      Tag.findOneAndUpdate({ name }, { name }, { upsert: true, new: true, setDefaultsOnInsert: true })
-    )
+  await Tag.bulkWrite(
+    names.map((name) => ({
+      updateOne: {
+        filter: { name },
+        update: { $setOnInsert: { name } },
+        upsert: true,
+      },
+    })),
+    { ordered: false }
   );
-  return tags;
+
+  return Tag.find({ name: { $in: names } }).lean();
 }
 
 /**

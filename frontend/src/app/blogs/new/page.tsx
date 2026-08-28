@@ -37,7 +37,7 @@ export default function NewBlogPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <Card>
         <CardHeader>
           <CardTitle>Add Blog</CardTitle>

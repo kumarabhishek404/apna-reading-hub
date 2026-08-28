@@ -1,19 +1,25 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getReminders, updateReminder } from '@/api/reminders';
+import { deleteReminder, getReminders, updateReminder } from '@/api/reminders';
+import { AppIcon } from '@/components/AppIcon';
 import { Input } from '@/components/Input';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { SoundPicker } from '@/components/SoundPicker';
 import { TimePicker } from '@/components/TimePicker';
 import { DatePicker } from '@/components/DatePicker';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
-import {
-  DEFAULT_NOTIFICATION_SOUND,
-  type NotificationSoundId,
-} from '@/constants/notificationSounds';
+import { reminderOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { isLocalEntityId } from '@/lib/offlineMerge';
+import { networkMonitor } from '@/lib/networkMonitor';
+import { AppIcon } from '@/components/AppIcon';
+import { Input } from '@/components/Input';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { TimePicker } from '@/components/TimePicker';
+import { DatePicker } from '@/components/DatePicker';
+import { TypeThemedScreen } from '@/components/TypeThemedScreen';
+import { useToast } from '@/components/ToastContext';
 import {
   ensureNotificationSetup,
   scheduleReminderNotifications,
@@ -74,8 +80,8 @@ export default function EditReminderScreen() {
   const [date, setDate] = useState(toLocalDateInput(initial));
   const [time, setTime] = useState(toLocalTimeInput(initial));
   const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
-  const [sound, setSound] = useState<NotificationSoundId>(DEFAULT_NOTIFICATION_SOUND);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; date?: string }>({});
   const { showSuccess, showError, showWarning } = useToast();
@@ -84,8 +90,12 @@ export default function EditReminderScreen() {
     async function loadReminder() {
       if (!id) return;
       try {
-        const data = await getReminders();
-        const reminder = data.reminders.find((r) => r.id === id);
+        let reminder = await reminderOfflineRepository.getEntity('reminder', id);
+        if (!reminder && !isLocalEntityId(id, 'reminder')) {
+          const data = await getReminders();
+          reminder = data.reminders.find((r) => r.id === id) || null;
+          if (reminder) await reminderOfflineRepository.syncFromServer('reminder', reminder);
+        }
         if (reminder) {
           setTitle(reminder.title);
           setDescription(reminder.description || '');
@@ -93,7 +103,9 @@ export default function EditReminderScreen() {
           setDate(toLocalDateInput(dueDate));
           setTime(toLocalTimeInput(dueDate));
           setRepeat((reminder.repeat as any) || 'none');
-          setSound((reminder.sound || DEFAULT_NOTIFICATION_SOUND) as NotificationSoundId);
+        } else {
+          showError('Could not load reminder');
+          router.back();
         }
       } catch (error) {
         showError('Could not load reminder');
@@ -136,23 +148,76 @@ export default function EditReminderScreen() {
         showWarning('Enable notifications in system settings for reliable reminders');
       }
 
-      const result = await updateReminder(id, {
+      const payload = {
         title: title.trim(),
         description: description.trim(),
         dueAt: dueAt!.toISOString(),
-        priority: 'medium',
+        priority: 'medium' as const,
         repeat,
-        sound,
-      });
+      };
 
-      await scheduleReminderNotifications(result.reminder);
-      setLoading(false);
-      showSuccess('Reminder updated successfully');
-      router.back();
+      const saveOffline = async () => {
+        const reminder = await reminderOfflineRepository.updateEntity('reminder', id, payload);
+        await scheduleReminderNotifications(reminder as any);
+        setLoading(false);
+        showSuccess('Reminder saved on this device');
+        router.back();
+      };
+
+      if (isLocalEntityId(id, 'reminder') || !networkMonitor.isOnline()) {
+        await saveOffline();
+        return;
+      }
+
+      try {
+        const result = await updateReminder(id, payload);
+        await scheduleReminderNotifications(result.reminder);
+        setLoading(false);
+        showSuccess('Reminder updated successfully');
+        router.back();
+      } catch (error) {
+        console.error('[Reminder Edit] Failed, saving offline', error);
+        try {
+          await saveOffline();
+        } catch {
+          setLoading(false);
+          showError('Could not update reminder. Please try again.');
+        }
+      }
     } catch (error) {
       console.error('[Reminder Edit] Failed', error);
       setLoading(false);
       showError('Could not update reminder. Please try again.');
+    }
+  }
+
+  function confirmDelete() {
+    if (!id || deleting) return;
+    Alert.alert('Delete this reminder?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void removeReminder() },
+    ]);
+  }
+
+  async function removeReminder() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      if (isLocalEntityId(id, 'reminder') || !networkMonitor.isOnline()) {
+        await reminderOfflineRepository.deleteEntity('reminder', id);
+      } else {
+        try {
+          await deleteReminder(id);
+        } catch {
+          await reminderOfflineRepository.deleteEntity('reminder', id);
+        }
+      }
+      showSuccess('Reminder deleted');
+      router.back();
+    } catch (error) {
+      console.error('[Reminder Edit] Delete failed', error);
+      setDeleting(false);
+      showError('Could not delete this reminder');
     }
   }
 
@@ -211,14 +276,22 @@ export default function EditReminderScreen() {
         })}
       </View>
 
-      <SoundPicker value={sound} onChange={setSound} accentColor={theme.primary} />
-
       <PrimaryButton
         title={loading ? 'Saving...' : 'Update Reminder'}
         onPress={submit}
-        disabled={loading}
+        disabled={loading || deleting}
         color={theme.primary}
       />
+      <Pressable
+        style={styles.deleteButton}
+        onPress={confirmDelete}
+        disabled={deleting || loading}
+        accessibilityRole="button"
+        accessibilityLabel="Delete reminder"
+      >
+        <AppIcon name="trash-outline" size={16} color="#BE123C" />
+        <Text style={styles.deleteButtonText}>{deleting ? 'Deleting…' : 'Delete reminder'}</Text>
+      </Pressable>
     </TypeThemedScreen>
   );
 }
@@ -246,5 +319,19 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: colors.textMuted,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(190,18,60,0.08)',
+  },
+  deleteButtonText: {
+    color: '#BE123C',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

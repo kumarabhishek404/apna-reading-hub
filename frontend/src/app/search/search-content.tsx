@@ -34,7 +34,7 @@ export default function SearchPage() {
   }, [q]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Search Results</h1>
         <p className="text-stone-500">

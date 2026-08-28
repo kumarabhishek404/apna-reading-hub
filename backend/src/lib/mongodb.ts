@@ -39,9 +39,10 @@ export async function connectDB() {
       .connect(mongodbUri, {
         bufferCommands: false,
         serverSelectionTimeoutMS: isProd || isVercel ? 8_000 : 10_000,
-        // Keep pools modest on serverless; larger on long-lived hosts.
-        maxPoolSize: isVercel ? 5 : 20,
+        socketTimeoutMS: 20_000,
+        maxPoolSize: isVercel ? 5 : 30,
         minPoolSize: isVercel ? 0 : 2,
+        maxIdleTimeMS: isVercel ? 10_000 : 60_000,
         retryWrites: true,
       })
       .then((instance) => instance);

@@ -27,5 +27,5 @@ export default function IndexPage() {
     return null;
   }
 
-  return <Redirect href={sessionExists ? '/(tabs)/home' : '/login'} />;
+  return <Redirect href={sessionExists ? '/capture' : '/login'} />;
 }

@@ -45,6 +45,7 @@ export class GenericOfflineRepository {
 
     // Queue sync operation
     await syncQueue.addOperation('create', entityType, entity, { localId });
+    void syncQueue.triggerSync();
 
     console.log(`[OfflineRepository] ${entityType} created offline`, { localId });
     return entity;
@@ -87,6 +88,7 @@ export class GenericOfflineRepository {
       await syncQueue.addOperation('create', entityType, updatedEntity, { localId });
     }
 
+    void syncQueue.triggerSync();
     console.log(`[OfflineRepository] ${entityType} updated offline`, { localId });
     return updatedEntity;
   }
@@ -114,6 +116,7 @@ export class GenericOfflineRepository {
       await markDeletedEntity(localId);
     }
 
+    void syncQueue.triggerSync();
     console.log(`[OfflineRepository] ${entityType} deleted offline`, { localId });
   }
 
@@ -180,6 +183,20 @@ export class GenericOfflineRepository {
 
       await saveEntity(entityData);
       console.log(`[OfflineRepository] ${entityType} synced from server (new)`, { id: serverEntity.id });
+    }
+  }
+
+  /**
+   * Cache a server list locally so screens can render offline later.
+   */
+  async hydrateFromServer<T extends EntityDataType>(
+    entityType: EntityType,
+    serverEntities: T[]
+  ): Promise<void> {
+    const chunkSize = 25;
+    for (let i = 0; i < serverEntities.length; i += chunkSize) {
+      const chunk = serverEntities.slice(i, i + chunkSize);
+      await Promise.all(chunk.map((item) => this.syncFromServer(entityType, item)));
     }
   }
 

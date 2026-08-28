@@ -1,7 +1,7 @@
 import { Reminder } from "../models";
 import type { ReminderItem } from "../lib/types";
 import { HttpError } from "../lib/errors";
-import { LIST_LIMIT, toIso } from "../lib/query";
+import { LIST_LIMIT, ownedFilter, toIso } from "../lib/query";
 
 function mapReminder(r: any): ReminderItem {
   return {
@@ -46,8 +46,8 @@ export async function getReminders(options?: {
 }
 
 export async function getReminderById(id: string, userId?: string) {
-  const reminder = await Reminder.findById(id).lean();
-  if (!reminder || (userId && reminder.userId.toString() !== userId)) return null;
+  const reminder = await Reminder.findOne(ownedFilter(id, userId)).lean();
+  if (!reminder) return null;
   return mapReminder(reminder);
 }
 
@@ -87,11 +87,6 @@ export async function updateReminder(
   },
   userId?: string
 ) {
-  const existing = await Reminder.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Reminder not found");
-  }
-
   const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
@@ -101,41 +96,38 @@ export async function updateReminder(
   if (data.isCompleted !== undefined) updateData.isCompleted = data.isCompleted;
   if (data.sound !== undefined) updateData.sound = data.sound;
 
-  const reminder = await Reminder.findByIdAndUpdate(id, updateData, { new: true }).lean();
+  const reminder = await Reminder.findOneAndUpdate(ownedFilter(id, userId), updateData, {
+    new: true,
+  }).lean();
+  if (!reminder) throw new HttpError(404, "Reminder not found");
   return mapReminder(reminder);
 }
 
 export async function deleteReminder(id: string, userId?: string) {
-  const existing = await Reminder.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "Reminder not found");
-  }
-  await Reminder.findByIdAndDelete(id);
+  const result = await Reminder.findOneAndDelete(ownedFilter(id, userId)).lean();
+  if (!result) throw new HttpError(404, "Reminder not found");
 }
 
 export async function toggleReminderComplete(id: string, userId?: string) {
-  const current = await Reminder.findById(id);
-  if (!current || (userId && current.userId.toString() !== userId)) return null;
+  const current = await Reminder.findOne(ownedFilter(id, userId)).lean();
+  if (!current) return null;
 
-  if (!current.isCompleted) {
-    if (current.repeat !== "none") {
-      const next = new Date(current.dueAt);
-      if (current.repeat === "daily") next.setDate(next.getDate() + 1);
-      else if (current.repeat === "weekly") next.setDate(next.getDate() + 7);
-      else if (current.repeat === "monthly") next.setMonth(next.getMonth() + 1);
-      return updateReminder(
-        id,
-        {
-          dueAt: next.toISOString(),
-          isCompleted: false,
-        },
-        userId
-      );
-    }
-    return updateReminder(id, { isCompleted: true }, userId);
+  if (!current.isCompleted && current.repeat !== "none") {
+    const next = new Date(current.dueAt);
+    if (current.repeat === "daily") next.setDate(next.getDate() + 1);
+    else if (current.repeat === "weekly") next.setDate(next.getDate() + 7);
+    else if (current.repeat === "monthly") next.setMonth(next.getMonth() + 1);
+    return updateReminder(
+      id,
+      {
+        dueAt: next.toISOString(),
+        isCompleted: false,
+      },
+      userId
+    );
   }
 
-  return updateReminder(id, { isCompleted: false }, userId);
+  return updateReminder(id, { isCompleted: !current.isCompleted }, userId);
 }
 
 export async function getUpcomingReminders(limit = 5, userId?: string) {

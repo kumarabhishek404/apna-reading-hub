@@ -2,14 +2,21 @@
 
 :root {
   --brand-blue: #22409a;
-  --brand-orange: #ff8a00;
+  --brand-orange: #ea580c;
   --brand-white: #ffffff;
-  --background: #f8f9fc;
-  --foreground: #22409a;
-  --muted: #5a6b8c;
-  --border: #e2e8f4;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
   --card: #ffffff;
   --reading-max: 800px;
+  --page-max: 72rem;
+  --note: #22409a;
+  --blog: #0284c7;
+  --link: #15803d;
+  --pdf: #be123c;
+  --reminder: #ea580c;
+  --alarm: #a16207;
 }
 
 @theme inline {
@@ -20,6 +27,12 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-card: var(--card);
+  --color-note: var(--note);
+  --color-blog: var(--blog);
+  --color-link: var(--link);
+  --color-pdf: var(--pdf);
+  --color-reminder: var(--reminder);
+  --color-alarm: var(--alarm);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -64,8 +77,21 @@ body {
   }
 }
 
+.page-frame {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .page-frame {
+    padding-inline: 2rem;
+  }
+}
+
 .prose-reading {
-  max-width: var(--reading-max);
+  max-width: none;
   color: var(--brand-blue);
   line-height: 1.8;
   font-size: 1.0625rem;

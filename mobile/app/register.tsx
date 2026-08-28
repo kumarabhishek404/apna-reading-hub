@@ -30,7 +30,7 @@ export default function RegisterScreen() {
     try {
       const session = await registerAccount(form);
       await saveSession(session);
-      router.replace('/(tabs)/home');
+      router.replace('/capture');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed';
       setError(message);
@@ -42,7 +42,7 @@ export default function RegisterScreen() {
   return (
     <AuthShell
       eyebrow="Create account"
-      title="Join apna notes"
+      title="Join Apna Notes"
       subtitle="One hub for notes, blogs, links, PDFs, reminders, and alarms."
       accent={colors.blog.primary}
     >

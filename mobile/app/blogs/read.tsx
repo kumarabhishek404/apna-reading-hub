@@ -40,7 +40,7 @@ export default function ReadBlogScreen() {
       router.back();
       return;
     }
-    router.replace('/(tabs)/content');
+    router.replace('/(tabs)/notes');
   };
 
   const openUrl = async () => {

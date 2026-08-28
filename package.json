@@ -11,7 +11,7 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @reading-hub/backend\" \"npx wait-on http://localhost:4000/health -t 30000 && npm run dev -w @reading-hub/frontend\"",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @reading-hub/backend\" \"npx wait-on http://localhost:4001/health -t 30000 && npm run dev -w @reading-hub/frontend\"",
     "dev:backend": "npm run dev -w @reading-hub/backend",
     "dev:frontend": "npm run dev -w @reading-hub/frontend",
     "dev:mobile": "npm --prefix mobile run start",
@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

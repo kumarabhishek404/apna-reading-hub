@@ -15,6 +15,11 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000, 60000]; // Exponential back
 export class SyncQueue {
   private isProcessing = false;
   private processingInterval: NodeJS.Timeout | null = null;
+  private processor: (() => Promise<void>) | null = null;
+
+  setProcessor(processor: () => Promise<void>) {
+    this.processor = processor;
+  }
 
   /**
    * Add an operation to the sync queue
@@ -194,20 +199,15 @@ export class SyncQueue {
    * This is called by the sync service when network is available
    */
   async triggerSync(): Promise<void> {
-    if (!this.isProcessing) {
-      console.log('[SyncQueue] Not processing, ignoring trigger');
+    if (!this.processor) {
       return;
     }
 
-    const pending = await this.getPendingOperations();
-    if (pending.length === 0) {
-      return;
+    try {
+      await this.processor();
+    } catch (error) {
+      console.error('[SyncQueue] Processor failed', error);
     }
-
-    console.log('[SyncQueue] Triggering sync', { count: pending.length });
-
-    // The actual sync will be handled by the background sync service
-    // This is just a signal that there are pending operations
   }
 
   /**

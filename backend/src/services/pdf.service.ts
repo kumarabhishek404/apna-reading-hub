@@ -1,7 +1,7 @@
 import { Pdf } from "../models";
 import type { PdfItem } from "../lib/types";
 import { HttpError } from "../lib/errors";
-import { LIST_LIMIT, mapTags, toIso } from "../lib/query";
+import { LIST_LIMIT, mapTags, ownedFilter, toIso } from "../lib/query";
 import { upsertTags } from "./tag.service";
 
 function mapPdf(pdf: any): PdfItem {
@@ -37,8 +37,8 @@ export async function getPdfs(search?: string, tag?: string, userId?: string) {
 }
 
 export async function getPdfById(id: string, userId?: string) {
-  const pdf = await Pdf.findById(id).lean();
-  if (!pdf || (userId && pdf.userId.toString() !== userId)) return null;
+  const pdf = await Pdf.findOne(ownedFilter(id, userId)).lean();
+  if (!pdf) return null;
   return mapPdf(pdf);
 }
 
@@ -75,11 +75,6 @@ export async function updatePdf(
   },
   userId?: string
 ) {
-  const existing = await Pdf.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "PDF not found");
-  }
-
   const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.pdfUrl !== undefined) updateData.pdfUrl = data.pdfUrl;
@@ -90,20 +85,24 @@ export async function updatePdf(
     updateData.tags = tags.map((tag) => tag.name);
   }
 
-  const pdf = await Pdf.findByIdAndUpdate(id, updateData, { new: true }).lean();
+  const pdf = await Pdf.findOneAndUpdate(ownedFilter(id, userId), updateData, {
+    new: true,
+  }).lean();
+  if (!pdf) throw new HttpError(404, "PDF not found");
   return mapPdf(pdf);
 }
 
 export async function deletePdf(id: string, userId?: string) {
-  const existing = await Pdf.findById(id);
-  if (!existing || (userId && existing.userId.toString() !== userId)) {
-    throw new HttpError(404, "PDF not found");
-  }
-  await Pdf.findByIdAndDelete(id);
+  const result = await Pdf.findOneAndDelete(ownedFilter(id, userId)).lean();
+  if (!result) throw new HttpError(404, "PDF not found");
 }
 
 export async function togglePdfFavorite(id: string, userId?: string) {
-  const current = await Pdf.findById(id);
-  if (!current || (userId && current.userId.toString() !== userId)) return null;
-  return updatePdf(id, { isFavorite: !current.isFavorite }, userId);
+  const pdf = await Pdf.findOneAndUpdate(
+    ownedFilter(id, userId),
+    [{ $set: { isFavorite: { $eq: ["$isFavorite", false] } } }],
+    { new: true }
+  ).lean();
+  if (!pdf) return null;
+  return mapPdf(pdf);
 }

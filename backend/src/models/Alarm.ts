@@ -6,6 +6,7 @@ export interface IAlarm extends Document {
   repeatDays: string;
   isEnabled: boolean;
   sound: string;
+  oneShotDate?: string | null;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const AlarmSchema = new Schema<IAlarm>(
       enum: ["default", "apna_chime", "apna_alert"],
       default: "default",
     },
+    oneShotDate: { type: String, default: null },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   {
@@ -30,7 +32,8 @@ const AlarmSchema = new Schema<IAlarm>(
 );
 
 AlarmSchema.index({ userId: 1, time: 1 });
-AlarmSchema.index({ userId: 1, isEnabled: 1 });
+AlarmSchema.index({ userId: 1, isEnabled: 1, time: 1 });
+AlarmSchema.index({ userId: 1, isEnabled: 1, oneShotDate: 1 });
 
 const AlarmModel: Model<IAlarm> = mongoose.models.Alarm || mongoose.model<IAlarm>("Alarm", AlarmSchema);
 

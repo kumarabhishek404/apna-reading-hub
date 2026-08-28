@@ -50,6 +50,15 @@ export interface NoteItem {
   createdAt: string;
   updatedAt: string;
   tags: Array<{ id: string; name: string }>;
+  blocks?: Array<{
+    type: 'text' | 'image' | 'pdf' | 'url' | 'checklist' | 'handwriting' | 'video';
+    content?: string | null;
+    url?: string | null;
+    checked?: boolean;
+    order: number;
+    format?: 'body' | 'heading' | 'subheading' | 'bold' | 'italic';
+    color?: string;
+  }>;
 }
 
 export interface ReminderItem {
@@ -72,6 +81,8 @@ export interface AlarmItem {
   repeatDays: number[];
   isEnabled: boolean;
   sound: 'default' | 'apna_chime' | 'apna_alert';
+  /** YYYY-MM-DD. When set, the alarm rings once on this date instead of repeating. */
+  oneShotDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

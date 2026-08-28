@@ -1,7 +1,7 @@
 {
-  "name": "Apna Sathi",
-  "short_name": "Apna Sathi",
-  "description": "Free productivity platform by Apna Rojgar — notes, PDFs, links, reminders, and alarms.",
+  "name": "Apna Notes",
+  "short_name": "Apna Notes",
+  "description": "Your Personal Notebook — notes, PDFs, links, reminders, and alarms.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
@@ -9,8 +9,8 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/apna-sathi-logo.png",
-      "sizes": "512x512",
+      "src": "/icons/apna-notes-logo.png",
+      "sizes": "1254x1254",
       "type": "image/png",
       "purpose": "any maskable"
     }

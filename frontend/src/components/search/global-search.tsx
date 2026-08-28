@@ -52,7 +52,7 @@ export function GlobalSearch({ className }: { className?: string }) {
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
-          placeholder="Search notes, PDFs, links..."
+          placeholder="Search notes, or type pdfs / links / reminders"
           className="pl-9 pr-9"
         />
         {query && (
