@@ -28,6 +28,14 @@ function mapBlocks(blocks: NoteBlock[] | undefined, clip = false): NoteItem["blo
   return (blocks || []).map((block) => ({
     ...block,
     content: clip ? clipText(block.content, LIST_BLOCK_CHARS) : block.content,
+    url:
+      clip &&
+      typeof block.url === "string" &&
+      block.url.startsWith("data:") &&
+      block.type !== "image" &&
+      block.type !== "handwriting"
+        ? null
+        : block.url,
   }));
 }
 

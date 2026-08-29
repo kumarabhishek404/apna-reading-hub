@@ -14,16 +14,7 @@ import { syncScheduledNotificationsFromBackend } from '@/services/notifications'
 import { useDataSync } from '@/lib/dataSync';
 import { alarmOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { mergeServerAndLocal } from '@/lib/offlineMerge';
-import type { AlarmItem } from '@/types';
-import { AppIcon } from '@/components/AppIcon';
-import { BrandHeader } from '@/components/BrandHeader';
-import { TypeContentCard } from '@/components/TypeContentCard';
-import { useToast } from '@/components/ToastContext';
-import { colors } from '@/theme/colors';
-import { useTabContentPaddingBottom } from '@/theme/layout';
-import { getTypeTheme } from '@/theme/typeColors';
-import { syncScheduledNotificationsFromBackend } from '@/services/notifications';
-import { useDataSync } from '@/lib/dataSync';
+import { networkMonitor } from '@/lib/networkMonitor';
 import type { AlarmItem } from '@/types';
 
 const alarmTheme = getTypeTheme('alarm');
@@ -39,6 +30,12 @@ export default function AlarmsScreen() {
   const load = useCallback(async () => {
     console.log('[Alarms] Loading alarms from database');
     try {
+      if (!networkMonitor.isOnline()) {
+        const local = await alarmOfflineRepository.getAllEntities('alarm');
+        setAlarms(local as AlarmItem[]);
+        setError(null);
+        return;
+      }
       const data = await getAlarms();
       await alarmOfflineRepository.hydrateFromServer('alarm', data.alarms);
       const local = await alarmOfflineRepository.getAllEntities('alarm');
@@ -46,7 +43,7 @@ export default function AlarmsScreen() {
       setError(null);
       console.log('[Alarms] Alarms loaded successfully', { count: data.alarms.length });
     } catch {
-      console.error('[Alarms] Failed to load alarms');
+      console.warn('[Alarms] Failed to load alarms');
       try {
         const local = await alarmOfflineRepository.getAllEntities('alarm');
         setAlarms(local as AlarmItem[]);

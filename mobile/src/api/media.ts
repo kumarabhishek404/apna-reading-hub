@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { apiClient } from '@/api/client';
 
 export async function uploadMediaFile(payload: {
@@ -5,15 +6,17 @@ export async function uploadMediaFile(payload: {
   name: string;
   mimeType: string;
 }) {
-  const formData = new FormData();
-  formData.append('file', {
-    uri: payload.uri,
-    name: payload.name,
-    type: payload.mimeType,
-  } as unknown as Blob);
+  // JSON (not multipart) so the Vercel/Next catch-all keeps the /api/media/upload path.
+  const base64 = await FileSystem.readAsStringAsync(payload.uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   return apiClient.post<{ url: string; name: string; mimeType: string }>(
     '/api/media/upload',
-    formData,
+    {
+      name: payload.name,
+      mimeType: payload.mimeType,
+      data: base64,
+    },
   );
 }

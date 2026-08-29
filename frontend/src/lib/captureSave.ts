@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { uploadOrEmbed } from "@/lib/mediaUpload";
 import {
   drawingAttachments,
   imageAttachments,
@@ -20,12 +21,8 @@ export type CaptureSaveResult = {
 
 async function uploadFile(item: WebCaptureAttachment) {
   if (item.file) {
-    const form = new FormData();
-    form.append("file", item.file);
-    const res = await apiFetch("/api/media/upload", { method: "POST", body: form });
-    if (!res.ok) throw new Error("Upload failed");
-    const data = (await res.json()) as { url: string; name?: string };
-    return { url: data.url, name: data.name || item.name || "file" };
+    const uploaded = await uploadOrEmbed(item.file);
+    return { url: uploaded.url, name: uploaded.name || item.name || "file" };
   }
   return { url: item.uri, name: item.name || "file" };
 }

@@ -1,7 +1,7 @@
 import { apiClient } from '@/api/client';
 import type { NoteItem } from '@/types';
 
-export async function getNotes(options?: { search?: string; tag?: string; contains?: 'pdf' | 'link' | 'image' }) {
+export async function getNotes(options?: { search?: string; tag?: string; contains?: 'pdf' | 'link' | 'image' | 'handwriting' }) {
   const params = new URLSearchParams();
   if (options?.search) params.set('search', options.search);
   if (options?.tag) params.set('tag', options.tag);

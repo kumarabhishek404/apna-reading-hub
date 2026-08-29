@@ -1,7 +1,8 @@
 import { createAlarm } from '@/api/alarms';
 import { createNote, updateNote } from '@/api/notes';
 import { createReminder } from '@/api/reminders';
-import { uploadMediaFile } from '@/api/media';
+import { persistMediaUrl } from '@/lib/persistMedia';
+import { networkMonitor } from '@/lib/networkMonitor';
 import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
 import { GenericOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
 import {
@@ -37,24 +38,21 @@ async function uploadFile(
 ) {
   const name = file.name || fileNameFromUri(file.uri, fallbackName);
   const mimeType = file.mimeType || fallbackMime;
-  if (isOnline) {
-    try {
-      const uploaded = await uploadMediaFile({ uri: file.uri, name, mimeType });
-      return { url: uploaded.url, name: uploaded.name || name };
-    } catch (error) {
-      console.warn('[Capture] Upload failed, keeping local file', error);
-    }
-  }
-  return { url: file.uri, name };
+  const url = await persistMediaUrl(file.uri, {
+    name,
+    mimeType,
+    upload: isOnline && file.type !== 'drawing',
+  });
+  return { url, name };
 }
 
 async function saveNoteFromCapture(options: {
   intent: CaptureIntent;
   attachments: CaptureAttachment[];
-  isOnline: boolean;
   draftNoteId?: string | null;
 }): Promise<CaptureSaveResult> {
-  const { intent, attachments, isOnline, draftNoteId } = options;
+  const { intent, attachments, draftNoteId } = options;
+  const isOnline = networkMonitor.isOnline();
   const images = imageAttachments(attachments);
   const drawings = drawingAttachments(attachments);
   const pdfs = pdfAttachments(attachments);
@@ -63,7 +61,7 @@ async function saveNoteFromCapture(options: {
     images.map((image) => uploadFile(image, 'photo.jpg', 'image/jpeg', isOnline)),
   );
   const uploadedDrawings = await Promise.all(
-    drawings.map((drawing) => uploadFile(drawing, 'drawing.png', 'image/png', isOnline)),
+    drawings.map((drawing) => uploadFile(drawing, 'drawing.jpg', 'image/jpeg', isOnline)),
   );
   const uploadedPdfs = await Promise.all(
     pdfs.map((pdf) => uploadFile(pdf, 'document.pdf', 'application/pdf', isOnline)),
@@ -168,10 +166,10 @@ async function saveNoteFromCapture(options: {
 export async function saveCapture(options: {
   intent: CaptureIntent;
   attachments: CaptureAttachment[];
-  isOnline: boolean;
   draftNoteId?: string | null;
 }): Promise<CaptureSaveResult> {
-  const { intent, attachments, isOnline, draftNoteId } = options;
+  const { intent, attachments, draftNoteId } = options;
+  const isOnline = networkMonitor.isOnline();
 
   if (intent.kind === 'alarm') {
     const granted = await ensureNotificationSetup();
@@ -234,7 +232,6 @@ export async function saveCapture(options: {
   return saveNoteFromCapture({
     intent,
     attachments,
-    isOnline,
     draftNoteId,
   });
 }

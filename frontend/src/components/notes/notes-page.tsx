@@ -49,6 +49,7 @@ const FILTERS: Array<{ id: FilterId; label: string; color: string }> = [
   { id: "link", label: "Links", color: "#15803D" },
   { id: "pdf", label: "PDFs", color: "#BE123C" },
   { id: "image", label: "Photos", color: "#0284C7" },
+  { id: "handwriting", label: "Handwritten", color: "#1A327A" },
   { id: "reminder", label: "Reminders", color: "#EA580C" },
 ];
 
@@ -110,6 +111,10 @@ function entryMatches(entry: BoardEntry, filter: FilterId, query: string, time: 
     if (!(entry.kind === "note" && noteContains(entry.item, "image"))) return false;
     return !text || noteMatchesText(entry.item, text);
   }
+  if (kind === "handwriting") {
+    if (!(entry.kind === "note" && noteContains(entry.item, "handwriting"))) return false;
+    return !text || noteMatchesText(entry.item, text);
+  }
   if (!text) return true;
   if (entry.kind === "note") return noteMatchesText(entry.item, text);
   return entry.item.title.toLowerCase().includes(text.toLowerCase());
@@ -142,7 +147,7 @@ export function NotesPageClient() {
 
   useEffect(() => {
     const queryFilter = searchParams?.get("filter");
-    if (queryFilter === "reminder" || queryFilter === "link" || queryFilter === "pdf" || queryFilter === "image") {
+    if (queryFilter === "reminder" || queryFilter === "link" || queryFilter === "pdf" || queryFilter === "image" || queryFilter === "handwriting") {
       setFilter(queryFilter);
     }
   }, [searchParams]);

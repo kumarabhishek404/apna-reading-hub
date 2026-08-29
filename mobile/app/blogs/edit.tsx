@@ -11,9 +11,11 @@ import { TagSelector } from '@/components/TagSelector';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { blogOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
-import { useIsOnline } from '@/lib/networkMonitor';
+import { runOnlineOrLocal } from '@/lib/offlineSave';
+import { isLocalEntityId } from '@/lib/offlineMerge';
 import { colors } from '@/theme/colors';
 import { getTypeTheme } from '@/theme/typeColors';
+import type { BlogItem } from '@/types';
 
 const TYPE = 'blog' as const;
 const theme = getTypeTheme(TYPE);
@@ -29,13 +31,21 @@ export default function EditBlogScreen() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
-  const isOnline = useIsOnline();
 
   useEffect(() => {
     async function loadBlog() {
       if (!id) return;
       try {
-        const data = await getBlogById(id);
+        const data = isLocalEntityId(id, 'blog')
+          ? { blog: await blogOfflineRepository.getEntity<BlogItem>('blog', id) }
+          : await getBlogById(id).catch(async () => ({
+              blog: await blogOfflineRepository.getEntity<BlogItem>('blog', id),
+            }));
+        if (!data.blog) {
+          showError('Could not load blog');
+          router.back();
+          return;
+        }
         setTitle(data.blog.title);
         setUrl(data.blog.url || '');
         setContent(data.blog.content || '');
@@ -71,24 +81,25 @@ export default function EditBlogScreen() {
     setErrors({});
     setLoading(true);
     try {
-      if (isOnline) {
-        await updateBlog(id, { title, url, content, tags: tags as any });
-        setLoading(false);
-        showSuccess('Blog updated successfully');
-        router.back();
-      } else {
-        await blogOfflineRepository.updateEntity('blog', id, {
-          title,
-          url,
-          content,
-          tags: tags.map(t => ({ id: t, name: t })),
-        });
-        setLoading(false);
+      const { savedLocally } = await runOnlineOrLocal(
+        () => updateBlog(id, { title, url, content, tags: tags as any }),
+        () =>
+          blogOfflineRepository.updateEntity('blog', id, {
+            title,
+            url,
+            content,
+            tags: tags.map((t) => ({ id: t, name: t })),
+          }),
+      );
+      setLoading(false);
+      if (savedLocally) {
         showInfo('Blog saved locally. Will sync when online.');
-        router.back();
+      } else {
+        showSuccess('Blog updated successfully');
       }
+      router.back();
     } catch (error) {
-      console.error('[Blog Edit] Failed', error);
+      console.warn('[Blog Edit] Failed', error);
       setLoading(false);
       showError('Could not update blog. Please try again.');
     }
@@ -106,12 +117,11 @@ export default function EditBlogScreen() {
     if (!id) return;
     setDeleting(true);
     try {
-      if (isOnline) {
-        await deleteBlog(id);
-      } else {
-        await blogOfflineRepository.deleteEntity('blog', id);
-      }
-      showSuccess('Blog deleted');
+      const { savedLocally } = await runOnlineOrLocal(
+        () => deleteBlog(id).then(() => undefined),
+        () => blogOfflineRepository.deleteEntity('blog', id),
+      );
+      showSuccess(savedLocally ? 'Blog deleted on this device' : 'Blog deleted');
       router.back();
     } catch (error) {
       console.error('[Blog Edit] Delete failed', error);

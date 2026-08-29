@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppIcon } from './AppIcon';
 import { getTags, createTag, type TagItem } from '@/api/tags';
+import { tagOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { networkMonitor } from '@/lib/networkMonitor';
 import { colors } from '@/theme/colors';
 import { useToast } from './ToastContext';
 
@@ -35,10 +37,18 @@ export function TagSelector({
 
   async function loadTags() {
     try {
+      if (!networkMonitor.isOnline()) {
+        const local = await tagOfflineRepository.getAllEntities('tag');
+        setTags(local as TagItem[]);
+        return;
+      }
       const data = await getTags();
       setTags(data.tags);
+      void tagOfflineRepository.hydrateFromServer('tag', data.tags);
     } catch (err) {
-      console.error('[TagSelector] Failed to load tags:', err);
+      console.warn('[TagSelector] Failed to load tags:', err);
+      const local = await tagOfflineRepository.getAllEntities('tag').catch(() => []);
+      setTags(local as TagItem[]);
     }
   }
 
@@ -63,6 +73,18 @@ export function TagSelector({
 
     setLoading(true);
     try {
+      if (!networkMonitor.isOnline()) {
+        onTagsChange([...selectedTags, trimmedName]);
+        setTags((current) =>
+          current.some((tag) => tag.name === trimmedName)
+            ? current
+            : [...current, { id: trimmedName, name: trimmedName, count: 0 }],
+        );
+        setNewTagInput('');
+        setShowNewTagInput(false);
+        showSuccess('Tag added. It will sync when you are online.');
+        return;
+      }
       await createTag(trimmedName);
       onTagsChange([...selectedTags, trimmedName]);
       setNewTagInput('');
@@ -70,8 +92,11 @@ export function TagSelector({
       showSuccess('Tag created successfully');
       await loadTags();
     } catch (err) {
-      console.error('[TagSelector] Failed to create tag:', err);
-      showError('Could not create tag');
+      console.warn('[TagSelector] Failed to create tag:', err);
+      onTagsChange([...selectedTags, trimmedName]);
+      setNewTagInput('');
+      setShowNewTagInput(false);
+      showSuccess('Tag added on this device');
     } finally {
       setLoading(false);
     }

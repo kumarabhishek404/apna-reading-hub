@@ -51,6 +51,7 @@ const FALLBACK_GLYPHS: Partial<Record<IoniconName, string>> = {
   'chevron-forward': '›',
   'text-outline': 'T',
   'document-outline': '📄',
+  'attach-outline': '📎',
   'link-outline': '🔗',
   'checkbox-outline': '☐',
   'checkmark-outline': '✓',

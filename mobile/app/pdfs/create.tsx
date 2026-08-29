@@ -9,6 +9,9 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { TagSelector } from '@/components/TagSelector';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
+import { pdfOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { runOnlineOrLocal } from '@/lib/offlineSave';
+import { saveFileLocally } from '@/lib/storage';
 import { colors } from '@/theme/colors';
 import { getTypeTheme } from '@/theme/typeColors';
 
@@ -22,7 +25,7 @@ export default function CreatePdfScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; pdfFile?: string }>({});
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
 
   const pickPdfFile = async () => {
     console.log('[PDF Create] File picker started');
@@ -113,15 +116,36 @@ export default function CreatePdfScreen() {
         fileSize: pdfFile.size,
       });
 
-      await createPdf(formData);
-      console.log('[PDF Create] Upload successful');
+      const { savedLocally } = await runOnlineOrLocal(
+        async () => {
+          await createPdf(formData);
+        },
+        async () => {
+          const localUri = await saveFileLocally(
+            pdfFile.uri,
+            pdfFile.name || `document-${Date.now()}.pdf`,
+          );
+          await pdfOfflineRepository.createEntity('pdf', {
+            title: title.trim(),
+            pdfUrl: localUri,
+            description: description.trim(),
+            tags: tags.map((t) => ({ id: t, name: t })),
+            isFavorite: false,
+          });
+        },
+      );
+      console.log('[PDF Create] Saved');
       setLoading(false);
-      showSuccess('PDF uploaded successfully');
+      if (savedLocally) {
+        showInfo('PDF saved locally. Will sync when online.');
+      } else {
+        showSuccess('PDF uploaded successfully');
+      }
       router.back();
     } catch (error) {
-      console.error('[PDF Create] API call failed', error);
+      console.warn('[PDF Create] Save failed', error);
       setLoading(false);
-      showError('Could not upload PDF. Please try again.');
+      showError('Could not save PDF. Please try again.');
     }
   }
 

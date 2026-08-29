@@ -9,7 +9,14 @@ import {
   type EntityType,
 } from '../storage';
 import { syncQueue } from '../syncQueue';
+import { networkMonitor } from '../networkMonitor';
 import type { NoteItem, BlogItem, LinkItem, PdfItem, TagItem, AlarmItem, ReminderItem } from '@/types';
+
+function enqueueSync() {
+  if (networkMonitor.isOnline()) {
+    void syncQueue.triggerSync();
+  }
+}
 
 type EntityDataType = NoteItem | BlogItem | LinkItem | PdfItem | TagItem | AlarmItem | ReminderItem;
 
@@ -45,7 +52,7 @@ export class GenericOfflineRepository {
 
     // Queue sync operation
     await syncQueue.addOperation('create', entityType, entity, { localId });
-    void syncQueue.triggerSync();
+    enqueueSync();
 
     console.log(`[OfflineRepository] ${entityType} created offline`, { localId });
     return entity;
@@ -88,7 +95,7 @@ export class GenericOfflineRepository {
       await syncQueue.addOperation('create', entityType, updatedEntity, { localId });
     }
 
-    void syncQueue.triggerSync();
+    enqueueSync();
     console.log(`[OfflineRepository] ${entityType} updated offline`, { localId });
     return updatedEntity;
   }
@@ -116,7 +123,7 @@ export class GenericOfflineRepository {
       await markDeletedEntity(localId);
     }
 
-    void syncQueue.triggerSync();
+    enqueueSync();
     console.log(`[OfflineRepository] ${entityType} deleted offline`, { localId });
   }
 

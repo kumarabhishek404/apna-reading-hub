@@ -15,6 +15,8 @@ import { AppIcon } from '@/components/AppIcon';
 import { ActionMenu } from '@/components/ActionMenu';
 import { useToast } from '@/components/ToastContext';
 import { getTags, deleteTag, type TagItem } from '@/api/tags';
+import { tagOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
+import { networkMonitor } from '@/lib/networkMonitor';
 import { useDataSync } from '@/lib/dataSync';
 import { colors } from '@/theme/colors';
 
@@ -31,11 +33,22 @@ export default function TagsScreen() {
     setLoading(true);
     setError(null);
     try {
+      if (!networkMonitor.isOnline()) {
+        const local = await tagOfflineRepository.getAllEntities('tag');
+        setTags(local as TagItem[]);
+        return;
+      }
       const data = await getTags();
       setTags(data.tags);
+      void tagOfflineRepository.hydrateFromServer('tag', data.tags);
     } catch (err) {
-      console.error('[Tags] Failed to load tags:', err);
-      setError('Could not load tags');
+      console.warn('[Tags] Failed to load tags:', err);
+      try {
+        const local = await tagOfflineRepository.getAllEntities('tag');
+        setTags(local as TagItem[]);
+      } catch {
+        setError('Could not load tags');
+      }
     } finally {
       setLoading(false);
     }

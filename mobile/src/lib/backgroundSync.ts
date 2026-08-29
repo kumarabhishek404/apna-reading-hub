@@ -46,6 +46,24 @@ import {
   deleteReminder as deleteReminderApi,
 } from '@/api/reminders';
 
+function tagNames(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .map((tag) => (typeof tag === 'string' ? tag : tag && typeof tag === 'object' && 'name' in tag ? String((tag as { name: unknown }).name) : ''))
+    .filter(Boolean);
+}
+
+function noteSyncPayload(data: Record<string, unknown>) {
+  return {
+    title: String(data.title ?? ''),
+    content: typeof data.content === 'string' ? data.content : '',
+    tags: tagNames(data.tags),
+    isPinned: Boolean(data.isPinned),
+    isFavorite: Boolean(data.isFavorite),
+    blocks: Array.isArray(data.blocks) ? data.blocks : undefined,
+  };
+}
+
 export class BackgroundSyncService {
   private isRunning = false;
   private syncInterval: NodeJS.Timeout | null = null;
@@ -234,11 +252,11 @@ export class BackgroundSyncService {
   private getNoteApiCall(item: SyncQueueItem): () => Promise<any> {
     switch (item.operation) {
       case 'create':
-        return () => createNote(item.data);
+        return () => createNote(noteSyncPayload(item.data));
       case 'update':
         return () => {
           if (!item.serverId) throw new Error('Server ID required for update');
-          return updateNote(item.serverId, item.data);
+          return updateNote(item.serverId, noteSyncPayload(item.data) as any);
         };
       case 'delete':
         return () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -17,12 +17,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { AppIcon } from '@/components/AppIcon';
+import { AttachMenu } from '@/components/AttachMenu';
 import { SpeechWebView } from '@/components/SpeechWebView';
 import { TypingPlaceholder } from '@/components/TypingPlaceholder';
 import { HandwritingCanvas, DRAWING_MODAL_ORIENTATIONS } from '@/components/HandwritingCanvas';
 import { useToast } from '@/components/ToastContext';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { useIsOnline } from '@/lib/networkMonitor';
 import {
   interpretCapture,
   isBlankCapture,
@@ -30,6 +30,7 @@ import {
   type CaptureKind,
 } from '@/lib/captureIntent';
 import { saveCapture } from '@/lib/captureSave';
+import { useActionGate } from '@/lib/useActionGate';
 import { colors } from '@/theme/colors';
 import { getTypeTheme } from '@/theme/typeColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,6 +46,7 @@ export function CaptureCanvas() {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<CaptureAttachment[]>([]);
   const [drawing, setDrawing] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -53,18 +55,20 @@ export function CaptureCanvas() {
   const attachmentsRef = useRef<CaptureAttachment[]>([]);
   const voiceCommandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistInFlight = useRef(false);
+  const runExclusive = useActionGate();
 
-  const isOnline = useIsOnline();
   const { showSuccess, showError, showInfo } = useToast();
   const insets = useSafeAreaInsets();
 
   const displayText = interimSpeech
     ? `${text}${text.trim() ? ' ' : ''}${interimSpeech}`
     : text;
+  const deferredText = useDeferredValue(displayText);
+  const deferredAttachments = useDeferredValue(attachments);
 
   const intent = useMemo(
-    () => interpretCapture({ text: displayText, attachments }),
-    [displayText, attachments],
+    () => interpretCapture({ text: deferredText, attachments: deferredAttachments }),
+    [deferredText, deferredAttachments],
   );
   const theme = getTypeTheme(intent.kind);
 
@@ -86,6 +90,7 @@ export function CaptureCanvas() {
   const persist = useCallback(
     async (fromVoiceCommand = false) => {
       if (persistInFlight.current) return;
+      setAttachOpen(false);
       const currentText = `${committedTextRef.current}${interimSpeech ? ` ${interimSpeech}` : ''}`.trim();
       const currentAttachments = attachmentsRef.current;
       const currentIntent = interpretCapture({
@@ -104,20 +109,19 @@ export function CaptureCanvas() {
         const result = await saveCapture({
           intent: currentIntent,
           attachments: currentAttachments,
-          isOnline,
         });
         setStatus(result.message);
         showSuccess(result.message);
         clearBoard();
       } catch (error) {
-        console.error('[Capture] Save failed', error);
+        console.warn('[Capture] Save failed', error);
         showError(error instanceof Error ? error.message : 'Could not save. Try again.');
       } finally {
         persistInFlight.current = false;
         setLoading(false);
       }
     },
-    [clearBoard, interimSpeech, isOnline, showError, showInfo, showSuccess],
+    [clearBoard, interimSpeech, showError, showInfo, showSuccess],
   );
 
   const applySpeech = useCallback((spoken: string, isFinal: boolean) => {
@@ -156,16 +160,20 @@ export function CaptureCanvas() {
   });
 
   async function toggleMic() {
-    if (listening) {
-      await stop();
-      return;
-    }
-    committedTextRef.current = text;
-    setInterimSpeech('');
-    await start();
+    await runExclusive(async () => {
+      setAttachOpen(false);
+      if (listening) {
+        await stop();
+        return;
+      }
+      committedTextRef.current = text;
+      setInterimSpeech('');
+      await start();
+    });
   }
 
   async function addImages(fromCamera: boolean) {
+    await runExclusive(async () => {
     try {
       if (fromCamera) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -216,9 +224,11 @@ export function CaptureCanvas() {
       console.error('[Capture] Image pick failed', error);
       showError('Could not add image');
     }
+    });
   }
 
   async function addFile() {
+    await runExclusive(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', '*/*'],
@@ -244,6 +254,7 @@ export function CaptureCanvas() {
       console.error('[Capture] File pick failed', error);
       showError('Could not add file');
     }
+    });
   }
 
   function removeAttachment(uri: string) {
@@ -367,37 +378,45 @@ export function CaptureCanvas() {
 
           {status ? <Text style={styles.status}>{status}</Text> : null}
 
-          <View style={styles.toolbar}>
+          <View style={[styles.toolbar, { zIndex: 6 }]}>
+            <View style={styles.toolGroup}>
             <Pressable
               style={[styles.toolButton, listening && styles.toolButtonLive]}
               onPress={() => void toggleMic()}
               accessibilityLabel={listening ? 'Stop listening' : 'Speak'}
             >
-              <AppIcon name={listening ? 'mic' : 'mic-outline'} size={20} color={listening ? '#fff' : colors.primary} />
+              <AppIcon name={listening ? 'mic' : 'mic-outline'} size={18} color={listening ? '#fff' : colors.primary} />
             </Pressable>
-            <Pressable style={styles.toolButton} onPress={() => void addImages(false)} accessibilityLabel="Add images">
-              <AppIcon name="image-outline" size={20} color={colors.primary} />
-            </Pressable>
-            <Pressable style={styles.toolButton} onPress={() => void addImages(true)} accessibilityLabel="Take photo">
-              <AppIcon name="camera-outline" size={20} color={colors.primary} />
-            </Pressable>
-            <Pressable style={styles.toolButton} onPress={() => void addFile()} accessibilityLabel="Add file">
-              <AppIcon name="document-outline" size={20} color={colors.primary} />
-            </Pressable>
+            <AttachMenu
+              open={attachOpen}
+              onToggle={() => setAttachOpen((current) => !current)}
+              onSelect={(action) => {
+                if (action === 'camera') void addImages(true);
+                else if (action === 'library') void addImages(false);
+                else void addFile();
+              }}
+            />
             <Pressable
               style={styles.toolButton}
-              onPress={() => setDrawing(true)}
+              onPress={() => {
+                setAttachOpen(false);
+                setDrawing(true);
+              }}
               accessibilityLabel="Write by hand"
             >
-              <AppIcon name="pencil-outline" size={20} color={colors.primary} />
+              <AppIcon name="pencil-outline" size={18} color={colors.primary} />
             </Pressable>
             <Pressable
               style={styles.toolButton}
-              onPress={() => setFullScreen((current) => !current)}
+              onPress={() => {
+                setAttachOpen(false);
+                setFullScreen((current) => !current);
+              }}
               accessibilityLabel={fullScreen ? "Exit full screen" : "Write in full screen"}
             >
-              <AppIcon name={fullScreen ? 'contract-outline' : 'expand-outline'} size={20} color={colors.primary} />
+              <AppIcon name={fullScreen ? 'contract-outline' : 'expand-outline'} size={18} color={colors.primary} />
             </Pressable>
+            </View>
             <Pressable
               style={[
                 styles.saveButton,
@@ -407,7 +426,7 @@ export function CaptureCanvas() {
               disabled={empty || loading}
               accessibilityLabel={saveLabel(intent.kind, loading)}
             >
-              <Text style={[styles.saveButtonText, empty && styles.saveButtonTextDisabled]}>
+              <Text style={[styles.saveButtonText, empty && styles.saveButtonTextDisabled]} numberOfLines={1}>
                 {saveLabel(intent.kind, loading)}
               </Text>
             </Pressable>
@@ -417,11 +436,13 @@ export function CaptureCanvas() {
     </KeyboardAvoidingView>
     <Modal
       visible={drawing}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      animationType="fade"
+      presentationStyle="overFullScreen"
       supportedOrientations={[...DRAWING_MODAL_ORIENTATIONS]}
+      statusBarTranslucent
       onRequestClose={() => setDrawing(false)}
     >
+      <View style={{ flex: 1 }}>
       <HandwritingCanvas
         onCancel={() => setDrawing(false)}
         onComplete={(uris) => {
@@ -430,16 +451,18 @@ export function CaptureCanvas() {
             ...uris.map((uri, index) => ({
               type: 'drawing' as const,
               uri,
-              name: `drawing-${Date.now()}-${index + 1}.png`,
-              mimeType: 'image/png',
+              name: `drawing-${Date.now()}-${index + 1}.jpg`,
+              mimeType: 'image/jpeg',
             })),
           ]);
           setDrawing(false);
         }}
       />
+      </View>
     </Modal>
     </View>
   );
+}
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: 'transparent' },
@@ -525,6 +548,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'visible',
+    zIndex: 2,
   },
   paperFullScreen: {
     marginHorizontal: 0,
@@ -615,14 +640,22 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
     paddingTop: 8,
     marginTop: 4,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    width: '100%',
+  },
+  toolGroup: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   toolButton: {
-    width: 40,
+    width: 36,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
@@ -633,13 +666,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
   },
   saveButton: {
-    marginLeft: 'auto',
-    minWidth: 108,
+    flexShrink: 0,
     height: 40,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 16,
   },
   saveButtonText: {
     color: '#fff',

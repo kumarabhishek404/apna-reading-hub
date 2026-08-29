@@ -1,4 +1,4 @@
-export type NoteContainsKind = 'pdf' | 'link' | 'image';
+export type NoteContainsKind = 'pdf' | 'link' | 'image' | 'handwriting';
 export type SearchScheduleKind = 'alarm' | 'reminder';
 
 export type ParsedSearchQuery = {
@@ -36,6 +36,9 @@ export function parseSearchQuery(query: string): ParsedSearchQuery {
   } else if (/\b(links?|urls?|bookmarks?|websites?|webpages?|hyperlinks?|weblinks?)\b|लिंक/i.test(text)) {
     contains = 'link';
     text = text.replace(/\b(links?|urls?|bookmarks?|websites?|webpages?|hyperlinks?|weblinks?)\b|लिंक/gi, ' ');
+  } else if (/\b(handwrit(?:ing|ten)|drawings?|sketches?)\b/i.test(text)) {
+    contains = 'handwriting';
+    text = text.replace(/\b(handwrit(?:ing|ten)|drawings?|sketches?)\b/gi, ' ');
   } else if (/\b(images?|photos?|pictures?|pics?)\b/i.test(text)) {
     contains = 'image';
     text = text.replace(/\b(images?|photos?|pictures?|pics?)\b/gi, ' ');

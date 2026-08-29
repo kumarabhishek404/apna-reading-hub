@@ -29,7 +29,7 @@ export function apiUrl(path: string): string {
 
 export function assetUrl(path: string): string {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
 
   if (typeof window !== "undefined") {

@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/config/env';
 import { getAuthToken } from '@/lib/auth';
+import { networkMonitor, OfflineError } from '@/lib/networkMonitor';
 
 function networkErrorMessage(error: unknown, url: string) {
   const raw = error instanceof Error ? error.message : String(error);
@@ -15,6 +16,10 @@ function networkErrorMessage(error: unknown, url: string) {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!networkMonitor.isOnline()) {
+    throw new OfflineError(path);
+  }
+
   const token = await getAuthToken();
 
   const headers: Record<string, string> = {
@@ -51,7 +56,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers,
     });
   } catch (error) {
-    console.error('[API Client] Network failure', { url, error });
+    networkMonitor.reportUnreachable();
+    // warn (not error) so Expo LogBox does not cover the save UI
+    console.warn('[API Client] Network failure', { url });
     throw new Error(networkErrorMessage(error, url));
   }
 
@@ -94,6 +101,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   
   return result;
 }
+
+export { OfflineError };
 
 export const apiClient = {
   get: <T>(path: string) => request<T>(path),

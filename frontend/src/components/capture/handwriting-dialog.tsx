@@ -80,7 +80,7 @@ export function HandwritingDialog({ open, onClose, onSave }: Props) {
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, copy.width, copy.height);
     ctx.drawImage(canvas, 0, 0);
-    return copy.toDataURL("image/png");
+    return copy.toDataURL("image/jpeg", 0.7);
   }
 
   function snapshotCurrent() {
@@ -199,7 +199,7 @@ export function HandwritingDialog({ open, onClose, onSave }: Props) {
       if (!inkRef.current[i]) continue;
       const dataUrl = i === pageIndexRef.current ? flattenCanvas() : pagesRef.current[i];
       if (!dataUrl) continue;
-      const file = dataUrlToFile(dataUrl, `drawing-${Date.now()}-${i + 1}.png`);
+      const file = dataUrlToFile(dataUrl, `drawing-${Date.now()}-${i + 1}.jpg`);
       pages.push({ file, previewUrl: URL.createObjectURL(file) });
     }
     if (pages.length === 0) return;
@@ -210,11 +210,11 @@ export function HandwritingDialog({ open, onClose, onSave }: Props) {
   if (!open) return null;
 
   return (
-    <div className={cn("fixed inset-0 z-[80] flex flex-col bg-slate-950/70", fullScreen ? "p-0" : "p-3 sm:p-6")}>
+    <div className={cn("fixed inset-0 z-[80] flex h-dvh w-dvw flex-col bg-slate-950/70", fullScreen ? "p-0" : "p-3 sm:p-6")}>
       <div
         className={cn(
           "mx-auto flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl",
-          fullScreen ? "max-w-none rounded-none" : "max-w-5xl rounded-3xl",
+          fullScreen ? "max-h-none max-w-none rounded-none" : "max-w-5xl rounded-3xl",
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">

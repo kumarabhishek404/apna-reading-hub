@@ -1,6 +1,6 @@
 import { hasLink } from './linkify';
 
-export type NoteContainsKind = 'pdf' | 'link' | 'image';
+export type NoteContainsKind = 'pdf' | 'link' | 'image' | 'handwriting';
 
 type NoteLike = {
   title?: string;
@@ -35,8 +35,15 @@ export function noteContains(note: NoteLike, kind: NoteContainsKind): boolean {
     return blocks.some((block) => block.type === 'pdf') || /\[PDF:/i.test(note.content || '');
   }
 
+  if (kind === 'handwriting') {
+    return (
+      blocks.some((block) => block.type === 'handwriting') ||
+      /\[Handwriting:/i.test(note.content || '')
+    );
+  }
+
   if (kind === 'image') {
-    return blocks.some((block) => block.type === 'image' || block.type === 'handwriting');
+    return blocks.some((block) => block.type === 'image');
   }
 
   return noteHasUrl(note);
@@ -69,6 +76,9 @@ export function noteListMeta(note: NoteLike): string {
   }
   if (noteContains(note, 'image')) {
     return 'Contains photos';
+  }
+  if (noteContains(note, 'handwriting')) {
+    return 'Handwritten note';
   }
   return note.content || 'No content';
 }

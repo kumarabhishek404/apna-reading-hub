@@ -1,5 +1,10 @@
 import * as Notifications from 'expo-notifications';
-import { Audio } from 'expo-av';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioSource,
+} from 'expo-audio';
 import { Asset } from 'expo-asset';
 import * as TaskManager from 'expo-task-manager';
 import { AppState, Platform } from 'react-native';
@@ -20,7 +25,7 @@ const REMINDER_CATEGORY = 'reminder_category';
 const STOP_ALARM_ACTION = 'stop_alarm';
 const STOP_REMINDER_ACTION = 'stop_reminder';
 
-let activeSound: Audio.Sound | null = null;
+let activeSound: AudioPlayer | null = null;
 let playbackTimeout: ReturnType<typeof setTimeout> | null = null;
 let isPlaying = false;
 let channelsReady = false;
@@ -28,19 +33,21 @@ let categoriesReady = false;
 
 async function initializeAudio() {
   try {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+    await setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'duckOthers',
+      shouldRouteThroughEarpiece: false,
     });
   } catch (error) {
     console.error('[Audio] Failed to initialize audio mode:', error);
   }
 }
 
-async function resolveCustomSoundSource(soundId: NotificationSoundId) {
+async function resolveCustomSoundSource(
+  soundId: NotificationSoundId
+): Promise<AudioSource | null> {
   const option = getSoundOption(soundId);
   if (!option.assetModule) return null;
 
@@ -64,13 +71,12 @@ export async function playAlarmSound(
       return;
     }
 
-    const { sound } = await Audio.Sound.createAsync(source, {
-      shouldPlay: true,
-      isLooping: true,
-      volume: 1.0,
-    });
+    const player = createAudioPlayer(source);
+    player.loop = true;
+    player.volume = 1;
+    player.play();
 
-    activeSound = sound;
+    activeSound = player;
     isPlaying = true;
 
     playbackTimeout = setTimeout(() => {
@@ -90,12 +96,12 @@ export async function stopAlarmSound() {
 
     if (activeSound) {
       try {
-        await activeSound.stopAsync();
+        activeSound.pause();
       } catch {
         // ignore
       }
       try {
-        await activeSound.unloadAsync();
+        activeSound.remove();
       } catch {
         // ignore
       }

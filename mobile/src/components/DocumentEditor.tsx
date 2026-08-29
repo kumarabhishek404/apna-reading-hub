@@ -14,12 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { AppIcon } from './AppIcon';
+import { AttachMenu } from './AttachMenu';
 import { HandwritingCanvas, DRAWING_MODAL_ORIENTATIONS, HandwrittenPageImage } from './HandwritingCanvas';
 import { colors } from '@/theme/colors';
 import { LinkAwareTextInput } from './LinkAwareTextInput';
 import { openExternalUrl } from './LinkedText';
 import { isValidHttpUrl, normalizeUrl } from '@/lib/linkify';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
+import { useActionGate } from '@/lib/useActionGate';
 
 export type ContentBlock = {
   id: string;
@@ -47,8 +49,33 @@ export function DocumentEditor({
 }: DocumentEditorProps) {
   const [drawing, setDrawing] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
-  const addImageBlock = async () => {
+  const [attachOpen, setAttachOpen] = useState(false);
+  const runExclusive = useActionGate();
+
+  const addImageBlock = async (fromCamera = false) => {
+    await runExclusive(async () => {
     try {
+      if (fromCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (permission.status !== 'granted') {
+          Alert.alert('Camera needed', 'Allow camera access to snap a photo into this note.');
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+        if (!result.canceled && result.assets[0]) {
+          onChangeBlocks([
+            ...blocks,
+            {
+              id: Date.now().toString(),
+              type: 'image',
+              url: result.assets[0].uri,
+              order: blocks.length,
+            },
+          ]);
+        }
+        return;
+      }
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission needed', 'Please grant photo library permission to add images');
@@ -73,9 +100,11 @@ export function DocumentEditor({
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
     }
+    });
   };
 
   const addPdfBlock = async () => {
+    await runExclusive(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', '*/*'],
@@ -94,6 +123,7 @@ export function DocumentEditor({
     } catch (error) {
       Alert.alert('Error', 'Failed to pick file');
     }
+    });
   };
 
   const updateBlock = (id: string, updates: Partial<ContentBlock>) => {
@@ -316,19 +346,33 @@ export function DocumentEditor({
   );
 
   const toolbar = (
-    <View style={styles.toolbar}>
-      <Pressable style={styles.toolbarButton} onPress={addImageBlock} accessibilityLabel="Add image">
-        <AppIcon name="image" size={22} color={accentColor} />
-      </Pressable>
-      <Pressable style={styles.toolbarButton} onPress={addPdfBlock} accessibilityLabel="Add file">
-        <AppIcon name="document" size={22} color={accentColor} />
-      </Pressable>
-      <Pressable style={styles.toolbarButton} onPress={() => setDrawing(true)} accessibilityLabel="Write by hand">
+    <View style={[styles.toolbar, { zIndex: 8 }]}>
+      <AttachMenu
+        accentColor={accentColor}
+        open={attachOpen}
+        onToggle={() => setAttachOpen((current) => !current)}
+        onSelect={(action) => {
+          if (action === 'camera') void addImageBlock(true);
+          else if (action === 'library') void addImageBlock(false);
+          else void addPdfBlock();
+        }}
+      />
+      <Pressable
+        style={styles.toolbarButton}
+        onPress={() => {
+          setAttachOpen(false);
+          setDrawing(true);
+        }}
+        accessibilityLabel="Write by hand"
+      >
         <AppIcon name="pencil-outline" size={22} color={accentColor} />
       </Pressable>
       <Pressable
         style={styles.toolbarButton}
-        onPress={() => setFullScreen(true)}
+        onPress={() => {
+          setAttachOpen(false);
+          setFullScreen(true);
+        }}
         accessibilityLabel="Write in full screen"
       >
         <AppIcon name="expand-outline" size={22} color={accentColor} />
@@ -339,11 +383,13 @@ export function DocumentEditor({
   const sheet = (
     <Modal
       visible={drawing}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      animationType="fade"
+      presentationStyle="overFullScreen"
       supportedOrientations={[...DRAWING_MODAL_ORIENTATIONS]}
+      statusBarTranslucent
       onRequestClose={() => setDrawing(false)}
     >
+      <View style={{ flex: 1 }}>
       <HandwritingCanvas
         onCancel={() => setDrawing(false)}
         onComplete={(uris) => {
@@ -360,6 +406,7 @@ export function DocumentEditor({
           setDrawing(false);
         }}
       />
+      </View>
     </Modal>
   );
 
@@ -578,6 +625,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    overflow: 'visible',
   },
   toolbarButton: {
     width: 40,

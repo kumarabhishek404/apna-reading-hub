@@ -382,7 +382,7 @@ export async function setNetworkStatus(status: 'online' | 'offline'): Promise<vo
 
 export async function getNetworkStatus(): Promise<'online' | 'offline'> {
   const value = await AsyncStorage.getItem(STORAGE_KEYS.NETWORK_STATUS);
-  return (value as 'online' | 'offline') || 'online';
+  return (value as 'online' | 'offline') || 'offline';
 }
 
 // File storage helpers for PDFs

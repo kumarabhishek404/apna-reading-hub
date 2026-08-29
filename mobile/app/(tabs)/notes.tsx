@@ -29,10 +29,15 @@ import { useDataSync } from '@/lib/dataSync';
 import { noteContains, noteMatchesText, type NoteContainsKind } from '@/lib/noteContains';
 import { noteCardSnippet, noteHeadline } from '@/lib/noteHeadline';
 import {
+  blogOfflineRepository,
+  linkOfflineRepository,
   noteOfflineRepository,
+  pdfOfflineRepository,
   reminderOfflineRepository,
+  tagOfflineRepository,
 } from '@/lib/offlineRepositories/genericOfflineRepository';
 import { mergeServerAndLocal } from '@/lib/offlineMerge';
+import { networkMonitor } from '@/lib/networkMonitor';
 import { parseSearchQuery } from '@/lib/searchQuery';
 import { colors } from '@/theme/colors';
 import { useFabBottomOffset, useTabContentPaddingBottom } from '@/theme/layout';
@@ -56,13 +61,14 @@ const FILTERS: Array<{ id: FilterId; label: string }> = [
   { id: 'link', label: 'Links' },
   { id: 'pdf', label: 'PDFs' },
   { id: 'image', label: 'Photos' },
+  { id: 'handwriting', label: 'Handwritten' },
   { id: 'reminder', label: 'Reminders' },
 ];
 
 const TYPE_OPTIONS: Array<{
   key: FilterId;
   label: string;
-  icon: 'apps-outline' | 'link-outline' | 'document-outline' | 'image-outline' | 'notifications-outline';
+  icon: 'apps-outline' | 'link-outline' | 'document-outline' | 'image-outline' | 'pencil-outline' | 'notifications-outline';
   accent: string;
   muted: string;
   dark: string;
@@ -72,6 +78,7 @@ const TYPE_OPTIONS: Array<{
   { key: 'link', label: 'Links', icon: 'link-outline', accent: colors.link.primary, muted: colors.link.muted, dark: colors.link.dark, soft: colors.link.soft },
   { key: 'pdf', label: 'PDFs', icon: 'document-outline', accent: colors.pdf.primary, muted: colors.pdf.muted, dark: colors.pdf.dark, soft: colors.pdf.soft },
   { key: 'image', label: 'Photos', icon: 'image-outline', accent: colors.blog.primary, muted: colors.blog.muted, dark: colors.blog.dark, soft: colors.blog.soft },
+  { key: 'handwriting', label: 'Handwritten', icon: 'pencil-outline', accent: colors.note.primary, muted: colors.note.muted, dark: colors.note.dark, soft: colors.note.soft },
   { key: 'reminder', label: 'Reminders', icon: 'notifications-outline', accent: colors.reminder.primary, muted: colors.reminder.muted, dark: colors.reminder.dark, soft: colors.reminder.soft },
 ];
 
@@ -144,6 +151,11 @@ function entryMatches(
     return !text || noteMatchesText(entry.item, text);
   }
 
+  if (kind === 'handwriting') {
+    if (!(entry.kind === 'note' && noteContains(entry.item, 'handwriting'))) return false;
+    return !text || noteMatchesText(entry.item, text);
+  }
+
   if (tag) {
     const names =
       'tags' in entry.item && Array.isArray(entry.item.tags)
@@ -163,6 +175,44 @@ function entryMatches(
   return true;
 }
 
+function combineBoard(
+  notes: NoteItem[],
+  reminders: ReminderItem[],
+  blogs: BlogItem[],
+  links: LinkItem[],
+  pdfs: PdfItem[],
+): BoardEntry[] {
+  return [
+    ...notes.map((item) => ({ kind: 'note' as const, item })),
+    ...reminders.map((item) => ({ kind: 'reminder' as const, item })),
+    ...blogs.map((item) => ({ kind: 'blog' as const, item })),
+    ...links.map((item) => ({ kind: 'link' as const, item })),
+    ...pdfs.map((item) => ({ kind: 'pdf' as const, item })),
+  ].sort((a, b) => new Date(b.item.createdAt).getTime() - new Date(a.item.createdAt).getTime());
+}
+
+async function loadLocalBoard(): Promise<{ entries: BoardEntry[]; tags: TagItem[] }> {
+  const [notes, reminders, blogs, links, pdfs, tags] = await Promise.all([
+    noteOfflineRepository.getAllEntities('note'),
+    reminderOfflineRepository.getAllEntities('reminder'),
+    blogOfflineRepository.getAllEntities('blog'),
+    linkOfflineRepository.getAllEntities('link'),
+    pdfOfflineRepository.getAllEntities('pdf'),
+    tagOfflineRepository.getAllEntities('tag').catch(() => [] as TagItem[]),
+  ]);
+
+  return {
+    entries: combineBoard(
+      notes as NoteItem[],
+      reminders as ReminderItem[],
+      blogs as BlogItem[],
+      links as LinkItem[],
+      pdfs as PdfItem[],
+    ),
+    tags: tags as TagItem[],
+  };
+}
+
 function cardCopy(entry: BoardEntry) {
   if (entry.kind === 'note') {
     const title = noteHeadline(entry.item);
@@ -171,7 +221,7 @@ function cardCopy(entry: BoardEntry) {
       title,
       snippet: noteCardSnippet(entry.item, title),
       images: (entry.item.blocks ?? [])
-        .filter((block) => block.type === 'image' && block.url)
+        .filter((block) => (block.type === 'image' || block.type === 'handwriting') && block.url)
         .map((block) => block.url as string),
       tags: entry.item.tags?.map((tag) => tag.name) ?? [],
       scheduleLabel: undefined as string | undefined,
@@ -240,57 +290,77 @@ export default function NotesScreen() {
 
   const load = useCallback(async () => {
     try {
+      if (!networkMonitor.isOnline()) {
+        const local = await loadLocalBoard();
+        setEntries(local.entries);
+        setTags(local.tags);
+        setError(null);
+        return;
+      }
+
       const [notesRes, remindersRes, blogsRes, linksRes, pdfsRes, tagsRes] = await Promise.all([
-        getNotes(),
-        getReminders(),
-        getBlogs().catch(() => ({ blogs: [] as BlogItem[] })),
-        getLinks().catch(() => ({ links: [] as LinkItem[] })),
-        getPdfs().catch(() => ({ pdfs: [] as PdfItem[] })),
-        getTags().catch(() => ({ tags: [] as TagItem[] })),
+        getNotes().catch(() => null),
+        getReminders().catch(() => null),
+        getBlogs().catch(() => null),
+        getLinks().catch(() => null),
+        getPdfs().catch(() => null),
+        getTags().catch(() => null),
       ]);
+
+      if (!notesRes && !remindersRes && !blogsRes && !linksRes && !pdfsRes && !tagsRes) {
+        networkMonitor.reportUnreachable();
+        const local = await loadLocalBoard();
+        setEntries(local.entries);
+        setTags(local.tags);
+        setError(null);
+        return;
+      }
 
       await Promise.all([
-        noteOfflineRepository.hydrateFromServer('note', notesRes.notes),
-        reminderOfflineRepository.hydrateFromServer('reminder', remindersRes.reminders),
+        notesRes ? noteOfflineRepository.hydrateFromServer('note', notesRes.notes) : Promise.resolve(),
+        remindersRes
+          ? reminderOfflineRepository.hydrateFromServer('reminder', remindersRes.reminders)
+          : Promise.resolve(),
+        blogsRes ? blogOfflineRepository.hydrateFromServer('blog', blogsRes.blogs) : Promise.resolve(),
+        linksRes ? linkOfflineRepository.hydrateFromServer('link', linksRes.links) : Promise.resolve(),
+        pdfsRes ? pdfOfflineRepository.hydrateFromServer('pdf', pdfsRes.pdfs) : Promise.resolve(),
+        tagsRes ? tagOfflineRepository.hydrateFromServer('tag', tagsRes.tags) : Promise.resolve(),
       ]);
 
-      const [offlineNotes, offlineReminders] = await Promise.all([
-        noteOfflineRepository.getAllEntities('note'),
-        reminderOfflineRepository.getAllEntities('reminder'),
-      ]);
-
-      const notes = mergeServerAndLocal(notesRes.notes, offlineNotes as NoteItem[], 'note');
-      const reminders = mergeServerAndLocal(
-        remindersRes.reminders,
-        offlineReminders as ReminderItem[],
-        'reminder',
-      );
-
-      const combined: BoardEntry[] = [
-        ...notes.map((item) => ({ kind: 'note' as const, item })),
-        ...reminders.map((item) => ({ kind: 'reminder' as const, item })),
-        ...blogsRes.blogs.map((item) => ({ kind: 'blog' as const, item })),
-        ...linksRes.links.map((item) => ({ kind: 'link' as const, item })),
-        ...pdfsRes.pdfs.map((item) => ({ kind: 'pdf' as const, item })),
-      ].sort((a, b) => new Date(b.item.createdAt).getTime() - new Date(a.item.createdAt).getTime());
-
-      setEntries(combined);
-      setTags(tagsRes.tags || []);
-      setError(null);
-    } catch (err) {
-      console.error('[Notes] Failed to load from server, trying offline storage', err);
-      try {
-        const [offlineNotes, offlineReminders] = await Promise.all([
+      const [offlineNotes, offlineReminders, offlineBlogs, offlineLinks, offlinePdfs, offlineTags] =
+        await Promise.all([
           noteOfflineRepository.getAllEntities('note'),
           reminderOfflineRepository.getAllEntities('reminder'),
+          blogOfflineRepository.getAllEntities('blog'),
+          linkOfflineRepository.getAllEntities('link'),
+          pdfOfflineRepository.getAllEntities('pdf'),
+          tagOfflineRepository.getAllEntities('tag').catch(() => [] as TagItem[]),
         ]);
-        setEntries([
-          ...offlineNotes.map((item) => ({ kind: 'note' as const, item: item as NoteItem })),
-          ...offlineReminders.map((item) => ({ kind: 'reminder' as const, item: item as ReminderItem })),
-        ]);
+
+      setEntries(
+        combineBoard(
+          mergeServerAndLocal(notesRes?.notes ?? [], offlineNotes as NoteItem[], 'note'),
+          mergeServerAndLocal(
+            remindersRes?.reminders ?? [],
+            offlineReminders as ReminderItem[],
+            'reminder',
+          ),
+          mergeServerAndLocal(blogsRes?.blogs ?? [], offlineBlogs as BlogItem[], 'blog'),
+          mergeServerAndLocal(linksRes?.links ?? [], offlineLinks as LinkItem[], 'link'),
+          mergeServerAndLocal(pdfsRes?.pdfs ?? [], offlinePdfs as PdfItem[], 'pdf'),
+        ),
+      );
+      setTags(tagsRes?.tags?.length ? tagsRes.tags : (offlineTags as TagItem[]));
+      setError(null);
+    } catch (err) {
+      console.warn('[Notes] Failed to load from server, trying offline storage', err);
+      try {
+        const local = await loadLocalBoard();
+        setEntries(local.entries);
+        setTags(local.tags);
         setError(null);
       } catch (offlineErr) {
-        console.error('[Notes] Failed to load from offline storage', offlineErr);
+        console.warn('[Notes] Failed to load from offline storage', offlineErr);
         setError('Could not load notes');
       }
     } finally {

@@ -96,4 +96,19 @@ describe('noteContains', () => {
     assert.equal(noteContains(note({ title: 'www.instagram.com/p/1' }), 'link'), true);
     assert.equal(noteContains(note({ content: 'just writing' }), 'link'), false);
   });
+
+  it('finds handwritten drawings separately from photos', () => {
+    const drawing = note({
+      title: 'Sketch',
+      blocks: [{ type: 'handwriting', content: 'Handwritten note', url: 'data:image/jpeg;base64,xx', order: 0 }],
+    });
+    const photo = note({
+      blocks: [{ type: 'image', content: 'cover.jpg', url: '/uploads/a.jpg', order: 0 }],
+    });
+    assert.equal(noteContains(drawing, 'handwriting'), true);
+    assert.equal(noteContains(drawing, 'image'), false);
+    assert.equal(noteContains(photo, 'handwriting'), false);
+    assert.equal(noteContains(photo, 'image'), true);
+    assert.equal(parseSearchQuery('handwritten notes').contains, 'handwriting');
+  });
 });

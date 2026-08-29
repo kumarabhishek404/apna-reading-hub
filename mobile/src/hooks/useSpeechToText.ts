@@ -33,92 +33,122 @@ export function useSpeechToText(options: {
   const [usingWebView, setUsingWebView] = useState(false);
   const nativeRef = useRef<NativeSpeech | null>(loadNativeSpeech());
   const subscriptions = useRef<Array<{ remove: () => void }>>([]);
+  const busyRef = useRef(false);
+  const listeningRef = useRef(false);
   const onTranscriptRef = useRef(options.onTranscript);
   const onErrorRef = useRef(options.onError);
+  const langRef = useRef(options.lang);
   onTranscriptRef.current = options.onTranscript;
   onErrorRef.current = options.onError;
+  langRef.current = options.lang;
 
   const clearNativeListeners = useCallback(() => {
     subscriptions.current.forEach((sub) => sub.remove());
     subscriptions.current = [];
   }, []);
 
-  useEffect(() => () => {
-    clearNativeListeners();
+  const haltNative = useCallback(() => {
+    const module = nativeRef.current?.ExpoSpeechRecognitionModule;
     try {
-      nativeRef.current?.ExpoSpeechRecognitionModule.stop();
-    } catch {
-      // already stopped
-    }
-  }, [clearNativeListeners]);
-
-  const start = useCallback(async () => {
-    const native = nativeRef.current;
-    if (native?.ExpoSpeechRecognitionModule) {
-      try {
-        const available = native.ExpoSpeechRecognitionModule.isRecognitionAvailable?.() ?? true;
-        if (available) {
-          const permission = await native.ExpoSpeechRecognitionModule.requestPermissionsAsync();
-          if (!permission.granted) {
-            onErrorRef.current?.('Allow the microphone to speak notes, alarms, and reminders.');
-            return false;
-          }
-          clearNativeListeners();
-          subscriptions.current.push(
-            native.ExpoSpeechRecognitionModule.addListener('result', (event) => {
-              const transcript = Array.isArray(event?.results)
-                ? event.results.map((item: { transcript?: string }) => item.transcript || '').join('')
-                : event?.transcript || '';
-              if (transcript) {
-                onTranscriptRef.current(transcript, Boolean(event?.isFinal));
-              }
-            }),
-          );
-          subscriptions.current.push(
-            native.ExpoSpeechRecognitionModule.addListener('error', (event) => {
-              onErrorRef.current?.(event?.message || event?.error || 'Could not hear you');
-              setListening(false);
-            }),
-          );
-          subscriptions.current.push(
-            native.ExpoSpeechRecognitionModule.addListener('end', () => {
-              setListening(false);
-            }),
-          );
-          native.ExpoSpeechRecognitionModule.start({
-            lang: options.lang || 'en-IN',
-            interimResults: true,
-            continuous: true,
-          });
-          setUsingWebView(false);
-          setListening(true);
-          return true;
-        }
-      } catch (error) {
-        console.warn('[Speech] Native recognition failed, using WebView fallback', error);
-      }
-    }
-
-    if (Platform.OS === 'ios') {
-      onErrorRef.current?.(
-        'Voice needs a development build on iPhone. You can still type, or attach a file.',
-      );
-      return false;
-    }
-
-    setUsingWebView(true);
-    setListening(true);
-    return true;
-  }, [clearNativeListeners, options.lang]);
-
-  const stop = useCallback(async () => {
-    try {
-      nativeRef.current?.ExpoSpeechRecognitionModule.stop();
+      module?.abort?.();
     } catch {
       // ignore
     }
-    setListening(false);
+    try {
+      module?.stop();
+    } catch {
+      // already stopped
+    }
   }, []);
+
+  const stop = useCallback(async () => {
+    haltNative();
+    clearNativeListeners();
+    listeningRef.current = false;
+    setListening(false);
+    setUsingWebView(false);
+  }, [clearNativeListeners, haltNative]);
+
+  useEffect(
+    () => () => {
+      haltNative();
+      clearNativeListeners();
+    },
+    [clearNativeListeners, haltNative],
+  );
+
+  const start = useCallback(async () => {
+    if (busyRef.current) return false;
+    busyRef.current = true;
+    try {
+      if (listeningRef.current) {
+        await stop();
+      }
+
+      const native = nativeRef.current;
+      if (native?.ExpoSpeechRecognitionModule) {
+        try {
+          const available = native.ExpoSpeechRecognitionModule.isRecognitionAvailable?.() ?? true;
+          if (available) {
+            const permission = await native.ExpoSpeechRecognitionModule.requestPermissionsAsync();
+            if (!permission.granted) {
+              onErrorRef.current?.('Allow the microphone to speak notes, alarms, and reminders.');
+              return false;
+            }
+            clearNativeListeners();
+            subscriptions.current.push(
+              native.ExpoSpeechRecognitionModule.addListener('result', (event) => {
+                const transcript = Array.isArray(event?.results)
+                  ? event.results.map((item: { transcript?: string }) => item.transcript || '').join('')
+                  : event?.transcript || '';
+                if (transcript) {
+                  onTranscriptRef.current(transcript, Boolean(event?.isFinal));
+                }
+              }),
+            );
+            subscriptions.current.push(
+              native.ExpoSpeechRecognitionModule.addListener('error', (event) => {
+                onErrorRef.current?.(event?.message || event?.error || 'Could not hear you');
+                listeningRef.current = false;
+                setListening(false);
+              }),
+            );
+            subscriptions.current.push(
+              native.ExpoSpeechRecognitionModule.addListener('end', () => {
+                listeningRef.current = false;
+                setListening(false);
+              }),
+            );
+            native.ExpoSpeechRecognitionModule.start({
+              lang: langRef.current || 'en-IN',
+              interimResults: true,
+              continuous: true,
+            });
+            setUsingWebView(false);
+            listeningRef.current = true;
+            setListening(true);
+            return true;
+          }
+        } catch (error) {
+          console.warn('[Speech] Native recognition failed, using WebView fallback', error);
+        }
+      }
+
+      if (Platform.OS === 'ios') {
+        onErrorRef.current?.(
+          'Voice needs a development build on iPhone. You can still type, or attach a file.',
+        );
+        return false;
+      }
+
+      setUsingWebView(true);
+      listeningRef.current = true;
+      setListening(true);
+      return true;
+    } finally {
+      busyRef.current = false;
+    }
+  }, [clearNativeListeners, stop]);
 
   return {
     listening,

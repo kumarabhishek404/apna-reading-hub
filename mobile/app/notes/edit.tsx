@@ -17,6 +17,7 @@ import { TagSelector } from '@/components/TagSelector';
 import { DocumentEditor, type ContentBlock } from '@/components/DocumentEditor';
 import { LinkAwareTextInput } from '@/components/LinkAwareTextInput';
 import { persistNoteTitle } from '@/lib/noteHeadline';
+import { persistMediaUrl } from '@/lib/persistMedia';
 import { useToast } from '@/components/ToastContext';
 import { AppIcon } from '@/components/AppIcon';
 import { colors } from '@/theme/colors';
@@ -93,7 +94,7 @@ export default function EditNoteScreen() {
             case 'text':
               return block.content || '';
             case 'image':
-              return `[Image: ${block.url}]`;
+              return block.content || '';
             case 'pdf':
               return `[PDF: ${block.content}]`;
             case 'url':
@@ -101,7 +102,7 @@ export default function EditNoteScreen() {
             case 'checklist':
               return `[${block.checked ? '☑' : '☐'} ${block.content}]`;
             case 'handwriting':
-              return `[Handwriting: ${block.url}]`;
+              return block.content || 'Handwritten note';
             case 'video':
               return `[Video: ${block.url}]`;
             default:
@@ -110,19 +111,41 @@ export default function EditNoteScreen() {
         })
         .join('\n');
 
+      const durableBlocks = await Promise.all(
+        blocks.map(async (block, index) => {
+          const mimeType =
+            block.type === 'pdf'
+              ? 'application/pdf'
+              : block.type === 'handwriting'
+                ? 'image/jpeg'
+                : 'image/jpeg';
+          const url =
+            (block.type === 'handwriting' || block.type === 'image' || block.type === 'pdf') &&
+            block.url
+              ? await persistMediaUrl(block.url, {
+                  name: block.content || undefined,
+                  mimeType,
+                  upload: block.type !== 'handwriting' && networkMonitor.isOnline(),
+                })
+              : block.url || null;
+
+          return {
+            type: block.type,
+            content: block.content || null,
+            url,
+            checked: block.checked || false,
+            order: index,
+            format: block.format,
+            color: block.color,
+          };
+        }),
+      );
+
       const payload = {
-        title: persistNoteTitle({ title, content, blocks }),
+        title: persistNoteTitle({ title, content, blocks: durableBlocks }),
         content,
         tags: tags as any,
-        blocks: blocks.map((block, index) => ({
-          type: block.type,
-          content: block.content || null,
-          url: block.url || null,
-          checked: block.checked || false,
-          order: index,
-          format: block.format,
-          color: block.color,
-        })),
+        blocks: durableBlocks,
       };
 
       const saveOffline = async () => {
@@ -143,7 +166,7 @@ export default function EditNoteScreen() {
         showSuccess('Note saved');
         router.back();
       } catch (error) {
-        console.error('[Note Edit] API call failed, saving offline', error);
+        console.warn('[Note Edit] API call failed, saving offline', error);
         try {
           await saveOffline();
         } catch {

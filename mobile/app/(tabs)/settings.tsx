@@ -14,7 +14,7 @@ import { SoundPicker } from '@/components/SoundPicker';
 import { useToast } from '@/components/ToastContext';
 import { clearSession, getStoredSession, type AuthSession } from '@/lib/auth';
 import { backgroundSync } from '@/lib/backgroundSync';
-import { useIsOnline } from '@/lib/networkMonitor';
+import { networkMonitor, useForcedOffline, useIsOnline } from '@/lib/networkMonitor';
 import {
   getPreferredAlarmSound,
   getPreferredReminderSound,
@@ -43,8 +43,9 @@ export default function SettingsScreen() {
     pendingSyncItems: 0,
     failedSyncItems: 0,
   });
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
   const isOnline = useIsOnline();
+  const forcedOffline = useForcedOffline();
   const tabPaddingBottom = useTabContentPaddingBottom();
 
   useEffect(() => {
@@ -232,6 +233,36 @@ export default function SettingsScreen() {
           })}
         </View>
 
+        {__DEV__ ? (
+          <>
+            <Text style={styles.sectionLabel}>Developer</Text>
+            <Pressable
+              style={styles.forceOfflineRow}
+              onPress={() => {
+                void networkMonitor.setForcedOffline(!forcedOffline).then(() => {
+                  showInfo(
+                    !forcedOffline
+                      ? 'App will save locally without calling the server. Metro can stay connected.'
+                      : 'Live server saves are on again.',
+                  );
+                });
+              }}
+            >
+              <View style={styles.forceOfflineCopy}>
+                <Text style={styles.forceOfflineTitle}>Simulate offline</Text>
+                <Text style={styles.forceOfflineHint}>
+                  Test local saves without airplane mode (keeps Metro connected)
+                </Text>
+              </View>
+              <View style={[styles.forceOfflinePill, forcedOffline && styles.forceOfflinePillOn]}>
+                <Text style={[styles.forceOfflinePillText, forcedOffline && styles.forceOfflinePillTextOn]}>
+                  {forcedOffline ? 'On' : 'Off'}
+                </Text>
+              </View>
+            </Pressable>
+          </>
+        ) : null}
+
         <Text style={styles.sectionLabel}>Sync</Text>
         <View style={styles.syncPanel}>
           <View style={styles.syncStat}>
@@ -407,6 +438,48 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  forceOfflineRow: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  forceOfflineCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  forceOfflineTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  forceOfflineHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
+  forceOfflinePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.primaryMuted,
+  },
+  forceOfflinePillOn: {
+    backgroundColor: colors.error,
+  },
+  forceOfflinePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  forceOfflinePillTextOn: {
+    color: '#fff',
   },
   typeRow: {
     flexDirection: 'row',

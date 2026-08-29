@@ -8,7 +8,7 @@ import { TagSelector } from '@/components/TagSelector';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { noteRepository } from '@/lib/offlineRepositories/noteOfflineRepository';
-import { useIsOnline } from '@/lib/networkMonitor';
+import { runOnlineOrLocal } from '@/lib/offlineSave';
 import { getTypeTheme } from '@/theme/typeColors';
 
 const TYPE = 'note' as const;
@@ -21,7 +21,6 @@ export default function CreateNoteScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
-  const isOnline = useIsOnline();
 
   async function submit() {
     const newErrors: { title?: string } = {};
@@ -34,25 +33,26 @@ export default function CreateNoteScreen() {
     setErrors({});
     setLoading(true);
     try {
-      if (isOnline) {
-        await createNote({ title, content, tags, isPinned: false, isFavorite: false });
-        setLoading(false);
-        showSuccess('Note created successfully');
-        router.back();
-      } else {
-        await noteRepository.createNote({
-          title,
-          content,
-          tags: tags.map((t) => ({ id: t, name: t })),
-          isPinned: false,
-          isFavorite: false,
-        });
-        setLoading(false);
+      const { savedLocally } = await runOnlineOrLocal(
+        () => createNote({ title, content, tags, isPinned: false, isFavorite: false }),
+        () =>
+          noteRepository.createNote({
+            title,
+            content,
+            tags: tags.map((t) => ({ id: t, name: t })),
+            isPinned: false,
+            isFavorite: false,
+          }),
+      );
+      setLoading(false);
+      if (savedLocally) {
         showInfo('Note saved locally. Will sync when online.');
-        router.back();
+      } else {
+        showSuccess('Note created successfully');
       }
+      router.back();
     } catch (error) {
-      console.error('[Note Create] Failed', error);
+      console.warn('[Note Create] Failed', error);
       setLoading(false);
       showError('Could not create note. Please try again.');
     }

@@ -10,11 +10,10 @@ import {
   type ImageStyle,
   type StyleProp,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { Canvas, Fill, Group, Path, Skia, useCanvasRef } from '@shopify/react-native-skia';
-import * as FileSystem from 'expo-file-system';
+import { Canvas, Fill, Group, ImageFormat, Path, Skia, useCanvasRef } from '@shopify/react-native-skia';
 import { AppIcon } from '@/components/AppIcon';
 import { colors } from '@/theme/colors';
 
@@ -77,6 +76,19 @@ function marginPath(height: number) {
   path.moveTo(52, 0);
   path.lineTo(52, height);
   return path;
+}
+
+function waitFrames(count = 2) {
+  return new Promise<void>((resolve) => {
+    const step = (left: number) => {
+      if (left <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(() => step(left - 1));
+    };
+    step(count);
+  });
 }
 
 function StrokePath({ stroke }: { stroke: Stroke }) {
@@ -142,6 +154,7 @@ export function HandwritingCanvas({
   const [pageCount, setPageCount] = useState(1);
   const [fullScreen, setFullScreen] = useState(false);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const landscape = windowWidth > windowHeight;
 
   useEffect(() => {
@@ -212,27 +225,35 @@ export function HandwritingCanvas({
     const points = currentPointsRef.current;
     const live = points.length ? [...strokesRef.current, liveStroke(points)] : strokesRef.current;
     pagesRef.current[pageIndexRef.current] = live;
-    if (live.length === 0) {
-      snapshotsRef.current[pageIndexRef.current] = null;
-      currentPointsRef.current = [];
-      setStrokes([]);
-      setCurrent(null);
-      return;
-    }
-    const snapshot = canvasRef.current?.makeImageSnapshot();
     strokesRef.current = live;
     currentPointsRef.current = [];
     setStrokes(live);
     setCurrent(null);
+    if (live.length === 0) {
+      snapshotsRef.current[pageIndexRef.current] = null;
+      currentPointsRef.current = [];
+      strokesRef.current = [];
+      setStrokes([]);
+      setCurrent(null);
+      return;
+    }
+
+    await waitFrames(1);
+    let snapshot = canvasRef.current?.makeImageSnapshot();
+    if (!snapshot) {
+      await waitFrames(2);
+      snapshot = canvasRef.current?.makeImageSnapshot();
+    }
+
+    strokesRef.current = live;
+    currentPointsRef.current = [];
+    setStrokes(live);
+    setCurrent(null);
+
     if (!snapshot) return;
-    const base64 = snapshot.encodeToBase64();
-    const dir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-    if (!dir) return;
-    const uri = `${dir}drawing-page-${pageIndexRef.current}-${Date.now()}.png`;
-    await FileSystem.writeAsStringAsync(uri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    snapshotsRef.current[pageIndexRef.current] = uri;
+    const base64 = snapshot.encodeToBase64(ImageFormat.JPEG, 72);
+    if (!base64) return;
+    snapshotsRef.current[pageIndexRef.current] = `data:image/jpeg;base64,${base64}`;
   }
 
   function undo() {
@@ -304,9 +325,30 @@ export function HandwritingCanvas({
   const margin = paperSize.height > 0 ? marginPath(paperSize.height) : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={[styles.header, landscape && styles.headerLandscape]}>
+    <View
+      style={[
+        styles.safe,
+        fullScreen && styles.safeFullScreen,
+        {
+          paddingTop: fullScreen ? 0 : insets.top,
+          paddingBottom: fullScreen ? 0 : insets.bottom,
+          paddingLeft: fullScreen ? 0 : insets.left,
+          paddingRight: fullScreen ? 0 : insets.right,
+        },
+      ]}
+    >
+      <StatusBar style="dark" hidden={fullScreen} />
+      <View
+        style={[
+          styles.header,
+          landscape && styles.headerLandscape,
+          fullScreen && {
+            paddingTop: Math.max(insets.top, 6),
+            paddingLeft: Math.max(insets.left, 6),
+            paddingRight: Math.max(insets.right, 6),
+          },
+        ]}
+      >
         <Pressable
           style={styles.headerBtn}
           onPress={onCancel}
@@ -315,7 +357,6 @@ export function HandwritingCanvas({
         >
           <AppIcon name="close" size={22} color={colors.text} />
         </Pressable>
-        {fullScreen ? null : (
         <View style={styles.pageNav}>
           <Pressable
             style={styles.headerBtn}
@@ -345,8 +386,6 @@ export function HandwritingCanvas({
             <Text style={styles.addPageText}>Page</Text>
           </Pressable>
         </View>
-        )}
-        {fullScreen ? null : (
         <View style={styles.orientRow}>
           <Pressable
             style={[styles.orientBtn, !landscape && styles.orientBtnOn]}
@@ -363,7 +402,6 @@ export function HandwritingCanvas({
             <AppIcon name="phone-landscape-outline" size={16} color={landscape ? '#fff' : colors.primary} />
           </Pressable>
         </View>
-        )}
         <Pressable
           style={styles.headerBtn}
           onPress={() => setFullScreen((current) => !current)}
@@ -414,7 +452,7 @@ export function HandwritingCanvas({
           <Fill color={PAPER} />
           {rules ? <Path path={rules} color={RULE} style="stroke" strokeWidth={1} /> : null}
           {margin ? <Path path={margin} color={MARGIN} style="stroke" strokeWidth={1.25} /> : null}
-          <Group layer>
+          <Group>
             {strokes.map((stroke, index) => (
               <StrokePath key={index} stroke={stroke} />
             ))}
@@ -423,7 +461,18 @@ export function HandwritingCanvas({
         </Canvas>
       </View>
 
-      <View style={[styles.dock, landscape && styles.dockLandscape, fullScreen && styles.dockImmersive]}>
+      <View
+        style={[
+          styles.dock,
+          landscape && styles.dockLandscape,
+          fullScreen && styles.dockImmersive,
+          fullScreen && {
+            paddingBottom: Math.max(insets.bottom, 8),
+            paddingLeft: Math.max(insets.left, 12),
+            paddingRight: Math.max(insets.right, 12),
+          },
+        ]}
+      >
         <View style={styles.swatchRow}>
           {PEN_COLORS.map((color) => {
             const selected = tool === 'pen' && penColor === color;
@@ -486,7 +535,7 @@ export function HandwritingCanvas({
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -495,8 +544,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E7E3D6',
   },
+  safeFullScreen: {
+    backgroundColor: PAPER,
+  },
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     paddingHorizontal: 6,
     paddingBottom: 6,
@@ -512,9 +565,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pageNav: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 168,
   },
   title: {
     flexShrink: 1,
@@ -582,6 +637,8 @@ const styles = StyleSheet.create({
   paperFullScreen: {
     marginHorizontal: 0,
     borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   dock: {
     paddingHorizontal: 12,

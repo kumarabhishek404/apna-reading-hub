@@ -1,76 +1,73 @@
 import { useEffect, useState } from 'react';
-import NetInfo from '@react-native-community/netinfo';
-import { setNetworkStatus, getNetworkStatus } from './storage';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setNetworkStatus } from './storage';
+import { statusFromNetInfo, type NetworkStatus } from './networkStatus';
 
-type NetworkStatus = 'online' | 'offline';
+export type { NetworkStatus } from './networkStatus';
+export { OfflineError, isOfflineError, statusFromNetInfo } from './networkStatus';
+
+const FORCE_OFFLINE_KEY = 'apna.force_offline';
 
 class NetworkMonitorClass {
   private listeners: Set<(status: NetworkStatus) => void> = new Set();
-  private currentStatus: NetworkStatus = 'online';
-  private intervalId: NodeJS.Timeout | null = null;
+  private currentStatus: NetworkStatus = 'offline';
+  private forcedOffline = false;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private unsubscribeNetInfo: (() => void) | null = null;
 
-  /**
-   * Initialize the network monitor
-   */
   async init(): Promise<void> {
-    // Load saved status
-    const savedStatus = await getNetworkStatus();
-    this.currentStatus = savedStatus;
+    this.forcedOffline = (await AsyncStorage.getItem(FORCE_OFFLINE_KEY)) === '1';
 
-    // Check current network state
     const netInfo = await NetInfo.fetch();
-    this.currentStatus = netInfo.isConnected ? 'online' : 'offline';
+    this.currentStatus = statusFromNetInfo(netInfo);
     await setNetworkStatus(this.currentStatus);
+    this.notify();
 
-    console.log('[NetworkMonitor] Initialized', { status: this.currentStatus });
+    console.log('[NetworkMonitor] Initialized', {
+      status: this.getStatus(),
+      forcedOffline: this.forcedOffline,
+    });
 
-    // Set up network state listener
-    NetInfo.addEventListener(this.handleNetworkChange.bind(this));
+    this.unsubscribeNetInfo?.();
+    this.unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      void this.handleNetworkChange(state);
+    });
 
-    // Start periodic checks (as a fallback)
     this.startPeriodicChecks();
   }
 
-  /**
-   * Handle network state changes
-   */
-  private async handleNetworkChange(state: any): Promise<void> {
-    const newStatus = state.isConnected ? 'online' : 'offline';
+  private notify() {
+    const status = this.getStatus();
+    this.listeners.forEach((listener) => listener(status));
+  }
 
-    if (newStatus !== this.currentStatus) {
-      this.currentStatus = newStatus;
-      await setNetworkStatus(newStatus);
-
-      console.log('[NetworkMonitor] Network status changed', { status: newStatus });
-
-      // Notify all listeners
-      this.listeners.forEach((listener) => listener(newStatus));
-
-      // If we came back online, trigger sync
-      if (newStatus === 'online') {
-        console.log('[NetworkMonitor] Network restored, triggering sync');
-        // This will be handled by the background sync service
-      }
+  private async applyDetectedStatus(newStatus: NetworkStatus): Promise<void> {
+    if (newStatus === this.currentStatus) return;
+    this.currentStatus = newStatus;
+    await setNetworkStatus(newStatus);
+    console.log('[NetworkMonitor] Network status changed', {
+      detected: newStatus,
+      visible: this.getStatus(),
+    });
+    this.notify();
+    if (this.getStatus() === 'online') {
+      console.log('[NetworkMonitor] Network restored, triggering sync');
     }
   }
 
-  /**
-   * Start periodic network checks
-   */
-  private startPeriodicChecks(): void {
-    this.intervalId = setInterval(async () => {
-      const netInfo = await NetInfo.fetch();
-      const newStatus = netInfo.isConnected ? 'online' : 'offline';
-
-      if (newStatus !== this.currentStatus) {
-        await this.handleNetworkChange(netInfo);
-      }
-    }, 30000); // Check every 30 seconds
+  private async handleNetworkChange(state: NetInfoState): Promise<void> {
+    await this.applyDetectedStatus(statusFromNetInfo(state));
   }
 
-  /**
-   * Stop periodic checks
-   */
+  private startPeriodicChecks(): void {
+    if (this.intervalId) return;
+    this.intervalId = setInterval(async () => {
+      const netInfo = await NetInfo.fetch();
+      await this.applyDetectedStatus(statusFromNetInfo(netInfo));
+    }, 30000);
+  }
+
   stopPeriodicChecks(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
@@ -78,66 +75,77 @@ class NetworkMonitorClass {
     }
   }
 
-  /**
-   * Add a listener for network status changes
-   */
   addListener(listener: (status: NetworkStatus) => void): () => void {
     this.listeners.add(listener);
+    listener(this.getStatus());
 
-    // Immediately call with current status
-    listener(this.currentStatus);
-
-    // Return unsubscribe function
     return () => {
       this.listeners.delete(listener);
     };
   }
 
-  /**
-   * Get current network status
-   */
   getStatus(): NetworkStatus {
-    return this.currentStatus;
+    return this.forcedOffline ? 'offline' : this.currentStatus;
   }
 
-  /**
-   * Check if currently online
-   */
   isOnline(): boolean {
-    return this.currentStatus === 'online';
+    return this.getStatus() === 'online';
+  }
+
+  isForcedOffline(): boolean {
+    return this.forcedOffline;
+  }
+
+  async setForcedOffline(forced: boolean): Promise<void> {
+    this.forcedOffline = forced;
+    await AsyncStorage.setItem(FORCE_OFFLINE_KEY, forced ? '1' : '0');
+    console.log('[NetworkMonitor] Forced offline', { forced });
+    this.notify();
   }
 
   /**
-   * Cleanup
+   * A fetch failed at the network layer. Treat the device as offline so saves
+   * go to SQLite instead of retrying Vercel in airplane mode.
    */
+  reportUnreachable(): void {
+    if (this.currentStatus === 'offline') return;
+    console.warn('[NetworkMonitor] Fetch failed, switching to offline');
+    void this.applyDetectedStatus('offline');
+  }
+
   cleanup(): void {
     this.stopPeriodicChecks();
-    // NetInfo automatically cleans up listeners
+    this.unsubscribeNetInfo?.();
+    this.unsubscribeNetInfo = null;
     this.listeners.clear();
     console.log('[NetworkMonitor] Cleaned up');
   }
 }
 
-// Singleton instance
 export const networkMonitor = new NetworkMonitorClass();
 
-// React hook for network status
 export function useNetworkStatus(): NetworkStatus {
-  const [status, setStatus] = useState<NetworkStatus>('online');
+  const [status, setStatus] = useState<NetworkStatus>(() => networkMonitor.getStatus());
 
   useEffect(() => {
-    const unsubscribe = networkMonitor.addListener((newStatus) => {
-      setStatus(newStatus);
-    });
-
-    return unsubscribe;
+    return networkMonitor.addListener(setStatus);
   }, []);
 
   return status;
 }
 
-// React hook for online/offline boolean
 export function useIsOnline(): boolean {
-  const status = useNetworkStatus();
-  return status === 'online';
+  return useNetworkStatus() === 'online';
+}
+
+export function useForcedOffline(): boolean {
+  const [forced, setForced] = useState(() => networkMonitor.isForcedOffline());
+
+  useEffect(() => {
+    return networkMonitor.addListener(() => {
+      setForced(networkMonitor.isForcedOffline());
+    });
+  }, []);
+
+  return forced;
 }

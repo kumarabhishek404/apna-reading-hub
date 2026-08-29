@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { LogBox, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -17,6 +17,11 @@ import { colors } from '@/theme/colors';
 import '@/services/notifications';
 import { ensureNotificationSetup } from '@/services/notifications';
 
+LogBox.ignoreLogs([
+  'Network request failed',
+  '[API Client] Network failure',
+]);
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 const splashApi = SplashScreen as typeof SplashScreen & {
   setOptions?: (options: { duration?: number; fade?: boolean }) => void;
@@ -28,6 +33,7 @@ export default function RootLayout() {
     ionicons: require('../assets/fonts/ionicons.ttf'),
   });
   const [splashGone, setSplashGone] = useState(false);
+  const [servicesReady, setServicesReady] = useState(false);
   const fontsReady = fontsLoaded || Boolean(fontError);
 
   useEffect(() => {
@@ -39,6 +45,8 @@ export default function RootLayout() {
         console.log('[App] Offline services initialized');
       } catch (error) {
         console.error('[App] Failed to initialize offline services', error);
+      } finally {
+        setServicesReady(true);
       }
     };
 
@@ -57,7 +65,7 @@ export default function RootLayout() {
     return (
       <View style={styles.boot}>
         <StatusBar style="dark" />
-        <AppSplash ready={fontsReady} onPainted={hideNativeSplash} onFinished={finishSplash} />
+        <AppSplash ready={fontsReady && servicesReady} onPainted={hideNativeSplash} onFinished={finishSplash} />
       </View>
     );
   }

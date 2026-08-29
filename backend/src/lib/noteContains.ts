@@ -17,7 +17,13 @@ export function noteContainsMongoClause(kind: NoteContainsKind | null | undefine
 
   if (kind === "image") {
     return {
-      $or: [{ "blocks.type": "image" }, { "blocks.type": "handwriting" }],
+      $or: [{ "blocks.type": "image" }],
+    };
+  }
+
+  if (kind === "handwriting") {
+    return {
+      $or: [{ "blocks.type": "handwriting" }, { content: { $regex: "\\[Handwriting:", $options: "i" } }],
     };
   }
 

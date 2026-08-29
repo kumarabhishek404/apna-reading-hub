@@ -8,7 +8,7 @@ import { TagSelector } from '@/components/TagSelector';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { blogOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
-import { useIsOnline } from '@/lib/networkMonitor';
+import { runOnlineOrLocal } from '@/lib/offlineSave';
 import { getTypeTheme } from '@/theme/typeColors';
 
 const TYPE = 'blog' as const;
@@ -22,7 +22,6 @@ export default function CreateBlogScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
-  const isOnline = useIsOnline();
 
   async function submit() {
     const newErrors: { title?: string; url?: string } = {};
@@ -43,25 +42,26 @@ export default function CreateBlogScreen() {
     setErrors({});
     setLoading(true);
     try {
-      if (isOnline) {
-        await createBlog({ title, url, content, tags, isFavorite: false });
-        setLoading(false);
-        showSuccess('Blog created successfully');
-        router.back();
-      } else {
-        await blogOfflineRepository.createEntity('blog', {
-          title,
-          url,
-          content,
-          tags: tags.map(t => ({ id: t, name: t })),
-          isFavorite: false,
-        });
-        setLoading(false);
+      const { savedLocally } = await runOnlineOrLocal(
+        () => createBlog({ title, url, content, tags, isFavorite: false }),
+        () =>
+          blogOfflineRepository.createEntity('blog', {
+            title,
+            url,
+            content,
+            tags: tags.map((t) => ({ id: t, name: t })),
+            isFavorite: false,
+          }),
+      );
+      setLoading(false);
+      if (savedLocally) {
         showInfo('Blog saved locally. Will sync when online.');
-        router.back();
+      } else {
+        showSuccess('Blog created successfully');
       }
+      router.back();
     } catch (error) {
-      console.error('[Blog Create] Failed', error);
+      console.warn('[Blog Create] Failed', error);
       setLoading(false);
       showError('Could not create blog. Please try again.');
     }

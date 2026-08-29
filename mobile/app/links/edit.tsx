@@ -11,9 +11,11 @@ import { TagSelector } from '@/components/TagSelector';
 import { TypeThemedScreen } from '@/components/TypeThemedScreen';
 import { useToast } from '@/components/ToastContext';
 import { linkOfflineRepository } from '@/lib/offlineRepositories/genericOfflineRepository';
-import { useIsOnline } from '@/lib/networkMonitor';
+import { runOnlineOrLocal } from '@/lib/offlineSave';
+import { isLocalEntityId } from '@/lib/offlineMerge';
 import { colors } from '@/theme/colors';
 import { getTypeTheme } from '@/theme/typeColors';
+import type { LinkItem } from '@/types';
 
 const TYPE = 'link' as const;
 const theme = getTypeTheme(TYPE);
@@ -29,13 +31,21 @@ export default function EditLinkScreen() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [errors, setErrors] = useState<{ title?: string; url?: string }>({});
   const { showSuccess, showError, showInfo } = useToast();
-  const isOnline = useIsOnline();
 
   useEffect(() => {
     async function loadLink() {
       if (!id) return;
       try {
-        const data = await getLinkById(id);
+        const data = isLocalEntityId(id, 'link')
+          ? { link: await linkOfflineRepository.getEntity<LinkItem>('link', id) }
+          : await getLinkById(id).catch(async () => ({
+              link: await linkOfflineRepository.getEntity<LinkItem>('link', id),
+            }));
+        if (!data.link) {
+          showError('Could not load link');
+          router.back();
+          return;
+        }
         setTitle(data.link.title);
         setUrl(data.link.url);
         setDescription(data.link.description || '');
@@ -73,24 +83,25 @@ export default function EditLinkScreen() {
     setErrors({});
     setLoading(true);
     try {
-      if (isOnline) {
-        await updateLink(id, { title, url, description, tags: tags as any });
-        setLoading(false);
-        showSuccess('Link updated successfully');
-        router.back();
-      } else {
-        await linkOfflineRepository.updateEntity('link', id, {
-          title,
-          url,
-          description,
-          tags: tags.map(t => ({ id: t, name: t })),
-        });
-        setLoading(false);
+      const { savedLocally } = await runOnlineOrLocal(
+        () => updateLink(id, { title, url, description, tags: tags as any }),
+        () =>
+          linkOfflineRepository.updateEntity('link', id, {
+            title,
+            url,
+            description,
+            tags: tags.map((t) => ({ id: t, name: t })),
+          }),
+      );
+      setLoading(false);
+      if (savedLocally) {
         showInfo('Link saved locally. Will sync when online.');
-        router.back();
+      } else {
+        showSuccess('Link updated successfully');
       }
+      router.back();
     } catch (error) {
-      console.error('[Link Edit] Failed', error);
+      console.warn('[Link Edit] Failed', error);
       setLoading(false);
       showError('Could not update link. Please try again.');
     }
@@ -108,12 +119,11 @@ export default function EditLinkScreen() {
     if (!id) return;
     setDeleting(true);
     try {
-      if (isOnline) {
-        await deleteLink(id);
-      } else {
-        await linkOfflineRepository.deleteEntity('link', id);
-      }
-      showSuccess('Link deleted');
+      const { savedLocally } = await runOnlineOrLocal(
+        () => deleteLink(id).then(() => undefined),
+        () => linkOfflineRepository.deleteEntity('link', id),
+      );
+      showSuccess(savedLocally ? 'Link deleted on this device' : 'Link deleted');
       router.back();
     } catch (error) {
       console.error('[Link Edit] Delete failed', error);

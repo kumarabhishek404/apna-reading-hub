@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { HandwritingDialog } from "@/components/capture/handwriting-dialog";
 import { apiFetch, assetUrl } from "@/lib/api";
 import { persistNoteTitle } from "@/lib/noteHeadline";
+import { uploadOrEmbed } from "@/lib/mediaUpload";
 import { splitLinkSegments } from "@/lib/linkify";
 import type { NoteItem } from "@/lib/types";
 import { cn, parseTags } from "@/lib/utils";
@@ -108,16 +109,8 @@ export function NoteEditor({ noteId }: Props) {
       .finally(() => setLoading(false));
   }, [noteId]);
 
-  async function upload(file: File) {
-    const form = new FormData();
-    form.append("file", file);
-    const res = await apiFetch("/api/media/upload", { method: "POST", body: form });
-    if (!res.ok) throw new Error("Upload failed");
-    return res.json() as Promise<{ url: string; name: string }>;
-  }
-
   async function addFile(file: File, type: "image" | "pdf" | "handwriting") {
-    const uploaded = await upload(file);
+    const uploaded = await uploadOrEmbed(file);
     setBlocks((current) => [
       ...current,
       {
@@ -302,9 +295,9 @@ export function NoteEditor({ noteId }: Props) {
         onClose={() => setDrawing(false)}
         onSave={(pages) => {
           void (async () => {
-            const uploaded = [];
+            const uploaded: Array<{ url: string; name: string }> = [];
             for (const page of pages) {
-              uploaded.push(await upload(page.file));
+              uploaded.push(await uploadOrEmbed(page.file));
             }
             setBlocks((current) => [
               ...current,

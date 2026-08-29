@@ -133,7 +133,7 @@ export function CapturePage() {
             <p className="px-2 pt-3 text-xs font-medium text-slate-500">{intent.preview}</p>
           )}
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex min-w-0 items-center gap-2">
             <input
               ref={imageInput}
               type="file"
@@ -148,6 +148,7 @@ export function CapturePage() {
               className="hidden"
               onChange={(event) => addFiles(event.target.files, "pdf")}
             />
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
             <Button type="button" variant="outline" size="icon" onClick={() => imageInput.current?.click()}>
               <ImagePlus className="h-4 w-4" />
             </Button>
@@ -166,9 +167,10 @@ export function CapturePage() {
             >
               {fullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
+            </div>
             <Button
               type="button"
-              className={cn("ml-auto min-w-[140px] bg-gradient-to-r text-white", KIND_STYLES[intent.kind])}
+              className={cn("shrink-0 bg-gradient-to-r px-4 text-white", KIND_STYLES[intent.kind])}
               onClick={() => void persist()}
               disabled={loading}
             >
@@ -189,7 +191,7 @@ export function CapturePage() {
               type: "drawing" as const,
               uri: page.previewUrl,
               name: page.file.name,
-              mimeType: "image/png",
+              mimeType: "image/jpeg",
               file: page.file,
             })),
           ]);

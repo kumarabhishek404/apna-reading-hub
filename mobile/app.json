@@ -87,7 +87,12 @@
       ],
       "expo-asset",
       "expo-secure-store",
-      "expo-av",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Apna Notes to use the microphone so you can speak notes, alarms, and reminders."
+        }
+      ],
       "expo-document-picker",
       [
         "expo-image-picker",
